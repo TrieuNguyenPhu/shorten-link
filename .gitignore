@@ -15,3 +15,13 @@ frontend/dist/
 frontend/.env
 frontend/.env.*
 !frontend/.env.example
+
+# Isolated frontend preview
+.pnpm-store/
+node_modules/
+apps/web/node_modules/
+apps/web/.next/
+apps/web/out/
+apps/web/.env
+apps/web/.env.*
+!apps/web/.env.example

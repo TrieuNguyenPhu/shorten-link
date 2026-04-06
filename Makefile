@@ -4,11 +4,12 @@
 
 PYTHON ?= python
 NPM ?= npm
+PNPM ?= pnpm
 SAM ?= sam
 
 .PHONY: help install backend-install frontend-install dev frontend-dev \
 	test backend-test backend-unit-test lint frontend-lint build frontend-build \
-	sam-validate sam-build verify
+	sam-validate sam-build preview-install preview-dev preview-lint preview-build verify
 
 help:
 	@echo NPT Shorten Link legacy commands
@@ -19,7 +20,11 @@ help:
 	@echo make build            Build the React frontend and SAM application
 	@echo make sam-validate     Validate the SAM CloudFormation template
 	@echo make sam-build        Validate and build the SAM application
-	@echo make verify           Run all tests, lint and builds
+	@echo make preview-install  Install isolated Next.js preview dependencies
+	@echo make preview-dev      Run the isolated preview on port 3001
+	@echo make preview-lint     Lint the isolated preview
+	@echo make preview-build    Build the isolated static preview
+	@echo make verify           Run all legacy and preview checks
 
 install: backend-install frontend-install
 
@@ -58,4 +63,16 @@ sam-validate:
 sam-build: sam-validate
 	cd backend && $(SAM) build
 
-verify: backend-test frontend-lint frontend-build sam-build
+preview-install:
+	$(PNPM) install --frozen-lockfile
+
+preview-dev:
+	$(PNPM) dev:preview
+
+preview-lint:
+	$(PNPM) lint:preview
+
+preview-build:
+	$(PNPM) build:preview
+
+verify: backend-test frontend-lint frontend-build sam-build preview-lint preview-build
