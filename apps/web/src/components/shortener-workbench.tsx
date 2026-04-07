@@ -1,11 +1,17 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 
 import {
   createShortLink,
+  ShortenerApiError,
   type ShortLinkResult,
 } from "@/lib/shortener-api";
+
+type RequestState = "idle" | "loading" | "success" | "error";
+type CopyState = "idle" | "copying" | "copied" | "error";
+
+const minimumLoadingDurationMilliseconds = 400;
 
 function validateURL(value: string): string | null {
   const candidate = value.trim();
@@ -30,23 +36,93 @@ export function ShortenerWorkbench() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [result, setResult] = useState<ShortLinkResult | null>(null);
+  const [requestState, setRequestState] = useState<RequestState>("idle");
+  const [copyState, setCopyState] = useState<CopyState>("idle");
+  const requestInFlightRef = useRef(false);
+  const urlInputRef = useRef<HTMLInputElement>(null);
+  const resultPanelRef = useRef<HTMLDivElement>(null);
+
+  function focusResultPanel() {
+    window.requestAnimationFrame(() => resultPanelRef.current?.focus());
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (requestInFlightRef.current) {
+      return;
+    }
 
     const error = validateURL(url);
     setValidationError(error);
     if (error) {
+      urlInputRef.current?.focus();
       return;
     }
 
+    requestInFlightRef.current = true;
+    setRequestState("loading");
     setRequestError(null);
     setResult(null);
+    setCopyState("idle");
+    const loadingStartedAt = performance.now();
 
     try {
-      setResult(await createShortLink(url.trim()));
+      const created = await createShortLink(url.trim());
+      const remainingLoadingTime = Math.max(
+        0,
+        minimumLoadingDurationMilliseconds -
+          (performance.now() - loadingStartedAt),
+      );
+      if (remainingLoadingTime > 0) {
+        await new Promise<void>((resolve) => {
+          window.setTimeout(resolve, remainingLoadingTime);
+        });
+      }
+      setResult(created);
+      setRequestState("success");
+      focusResultPanel();
+    } catch (error) {
+      const remainingLoadingTime = Math.max(
+        0,
+        minimumLoadingDurationMilliseconds -
+          (performance.now() - loadingStartedAt),
+      );
+      if (remainingLoadingTime > 0) {
+        await new Promise<void>((resolve) => {
+          window.setTimeout(resolve, remainingLoadingTime);
+        });
+      }
+
+      if (error instanceof ShortenerApiError) {
+        setRequestError(
+          error.kind === "http"
+            ? `Python API trả về lỗi HTTP ${error.status}. Hãy thử lại.`
+            : "Python API trả về dữ liệu không đúng định dạng JSON legacy.",
+        );
+      } else {
+        setRequestError(
+          "Không kết nối được Python API. Kiểm tra kết nối rồi thử lại.",
+        );
+      }
+      setRequestState("error");
+      focusResultPanel();
+    } finally {
+      requestInFlightRef.current = false;
+    }
+  }
+
+  async function handleCopy() {
+    if (!result || copyState === "copying") {
+      return;
+    }
+
+    setCopyState("copying");
+    try {
+      const absoluteShortURL = new URL(result.path, window.location.origin);
+      await navigator.clipboard.writeText(absoluteShortURL.toString());
+      setCopyState("copied");
     } catch {
-      setRequestError("API hiện tại chưa thể tạo short link. Hãy thử lại.");
+      setCopyState("error");
     }
   }
 
@@ -68,6 +144,7 @@ export function ShortenerWorkbench() {
           <label htmlFor="target-url">URL cần rút gọn</label>
           <div className="shortener-form__controls">
             <input
+              ref={urlInputRef}
               id="target-url"
               name="url"
               type="url"
@@ -85,7 +162,21 @@ export function ShortenerWorkbench() {
               aria-describedby="target-url-help"
               required
             />
-            <button type="submit">Rút gọn URL</button>
+            <button
+              type="submit"
+              disabled={requestState === "loading"}
+              aria-busy={requestState === "loading"}
+              data-state={requestState}
+            >
+              {requestState === "loading" ? (
+                <>
+                  <span className="loading-spinner" aria-hidden="true" />
+                  Đang rút gọn…
+                </>
+              ) : (
+                "Rút gọn URL"
+              )}
+            </button>
           </div>
           <p
             id="target-url-help"
@@ -98,16 +189,59 @@ export function ShortenerWorkbench() {
         </form>
       </div>
 
-      <div className="result-panel" aria-live="polite">
-        {result ? (
+      <div
+        ref={resultPanelRef}
+        className="result-panel"
+        data-state={requestState}
+        aria-live="polite"
+        aria-busy={requestState === "loading"}
+        tabIndex={-1}
+      >
+        {requestState === "loading" ? (
+          <div className="result-panel__content">
+            <p className="result-panel__label">Đang gửi request</p>
+            <h3>Python API đang tạo short link.</h3>
+            <p>Giữ nguyên cửa sổ này trong khi request được xử lý.</p>
+          </div>
+        ) : requestState === "success" && result ? (
           <div className="result-panel__content">
             <p className="result-panel__label">Short link đã tạo</p>
-            <a href={result.path}>{result.path}</a>
+            <a className="result-panel__link" href={result.path}>
+              {result.path}
+            </a>
+            <button
+              className="copy-button"
+              type="button"
+              onClick={handleCopy}
+              disabled={copyState === "copying"}
+              aria-busy={copyState === "copying"}
+              data-state={copyState}
+            >
+              {copyState === "copying"
+                ? "Đang sao chép…"
+                : copyState === "copied"
+                  ? "Đã sao chép"
+                  : copyState === "error"
+                    ? "Thử sao chép lại"
+                    : "Sao chép link"}
+            </button>
+            <p
+              className="copy-status"
+              role="status"
+              aria-live="polite"
+              data-state={copyState}
+            >
+              {copyState === "copied"
+                ? "Short link đã được lưu vào clipboard."
+                : copyState === "error"
+                  ? "Không thể truy cập clipboard. Hãy chọn short link phía trên để sao chép thủ công."
+                  : null}
+            </p>
             <p>
               Mã <code>{result.code}</code> được trả trực tiếp từ Python API.
             </p>
           </div>
-        ) : requestError ? (
+        ) : requestState === "error" && requestError ? (
           <div className="result-panel__content" role="alert">
             <p className="result-panel__label">Không thể tạo link</p>
             <h3>Request chưa hoàn tất.</h3>
