@@ -1,26 +1,42 @@
 "use client";
 
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
 import {
   createShortLink,
   ShortenerApiError,
-  type ShortLinkResult,
+  type ShortLink,
 } from "@/lib/shortener-api";
 
 type RequestState = "idle" | "loading" | "success" | "error";
 type CopyState = "idle" | "copying" | "copied" | "error";
 
-const minimumLoadingDurationMilliseconds = 400;
+const aliasPattern = /^[a-z0-9-]{4,32}$/;
+const spinnerDelayMilliseconds = 150;
+const spinnerMinimumVisibleMilliseconds = 300;
+
+const errorMessages: Record<string, string> = {
+  invalid_url:
+    "URL chưa hợp lệ. Hãy dùng một địa chỉ đầy đủ bắt đầu bằng http:// hoặc https://.",
+  invalid_custom_alias:
+    "Alias phải có 4–32 ký tự thường, chữ số hoặc dấu gạch ngang.",
+  reserved_custom_alias:
+    "Alias này dành cho hệ thống. Hãy chọn một tên khác.",
+  invalid_expiration: "Thời hạn phải nằm trong khoảng 1–365 ngày.",
+  custom_alias_conflict: "Alias đã được sử dụng. Hãy chọn alias khác.",
+  code_generation_exhausted:
+    "Hệ thống chưa cấp được mã ngắn. Hãy thử lại sau ít phút.",
+  payload_too_large: "Dữ liệu gửi lên vượt giới hạn cho phép.",
+  unsupported_media_type: "API chỉ nhận request JSON.",
+};
 
 function validateURL(value: string): string | null {
-  const candidate = value.trim();
-  if (!candidate) {
+  if (!value.trim()) {
     return "Hãy nhập URL cần rút gọn.";
   }
 
   try {
-    const parsed = new URL(candidate);
+    const parsed = new URL(value);
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
       return "URL phải bắt đầu bằng http:// hoặc https://.";
     }
@@ -31,109 +47,234 @@ function validateURL(value: string): string | null {
   return null;
 }
 
+function validateAlias(value: string): string | null {
+  if (!value) {
+    return null;
+  }
+  return aliasPattern.test(value)
+    ? null
+    : "Dùng 4–32 ký tự thường, chữ số hoặc dấu gạch ngang.";
+}
+
+function validateExpiration(value: string): string | null {
+  if (!value) {
+    return null;
+  }
+  const days = Number(value);
+  return Number.isInteger(days) && days >= 1 && days <= 365
+    ? null
+    : "Chọn một số nguyên từ 1 đến 365.";
+}
+
+function formatDate(value: string | null): string {
+  if (!value) {
+    return "Không giới hạn";
+  }
+  return new Intl.DateTimeFormat("vi-VN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
 export function ShortenerWorkbench() {
   const [url, setURL] = useState("");
-  const [validationError, setValidationError] = useState<string | null>(null);
-  const [requestError, setRequestError] = useState<string | null>(null);
-  const [result, setResult] = useState<ShortLinkResult | null>(null);
+  const [alias, setAlias] = useState("");
+  const [expiration, setExpiration] = useState("");
+  const [touched, setTouched] = useState({
+    url: false,
+    alias: false,
+    expiration: false,
+  });
   const [requestState, setRequestState] = useState<RequestState>("idle");
+  const [showSpinner, setShowSpinner] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [result, setResult] = useState<ShortLink | null>(null);
   const [copyState, setCopyState] = useState<CopyState>("idle");
-  const requestInFlightRef = useRef(false);
   const urlInputRef = useRef<HTMLInputElement>(null);
+  const aliasInputRef = useRef<HTMLInputElement>(null);
+  const expirationInputRef = useRef<HTMLInputElement>(null);
   const resultPanelRef = useRef<HTMLDivElement>(null);
+  const requestRef = useRef<AbortController | null>(null);
+  const copyTimerRef = useRef<number | null>(null);
+  const spinnerDelayRef = useRef<number | null>(null);
+  const spinnerMinimumRef = useRef<number | null>(null);
+  const spinnerShownAtRef = useRef<number | null>(null);
 
-  function focusResultPanel() {
-    window.requestAnimationFrame(() => resultPanelRef.current?.focus());
+  const urlError = touched.url ? validateURL(url) : null;
+  const aliasError = touched.alias ? validateAlias(alias) : null;
+  const expirationError = touched.expiration
+    ? validateExpiration(expiration)
+    : null;
+
+  useEffect(() => {
+    const focusURLField = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        urlInputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener("keydown", focusURLField);
+    return () => {
+      window.removeEventListener("keydown", focusURLField);
+      requestRef.current?.abort();
+      if (copyTimerRef.current !== null) {
+        window.clearTimeout(copyTimerRef.current);
+      }
+      if (spinnerDelayRef.current !== null) {
+        window.clearTimeout(spinnerDelayRef.current);
+      }
+      if (spinnerMinimumRef.current !== null) {
+        window.clearTimeout(spinnerMinimumRef.current);
+      }
+    };
+  }, []);
+
+  function beginLoadingIndicator() {
+    if (spinnerDelayRef.current !== null) {
+      window.clearTimeout(spinnerDelayRef.current);
+    }
+    if (spinnerMinimumRef.current !== null) {
+      window.clearTimeout(spinnerMinimumRef.current);
+    }
+    spinnerShownAtRef.current = null;
+    setShowSpinner(false);
+    spinnerDelayRef.current = window.setTimeout(() => {
+      spinnerDelayRef.current = null;
+      spinnerShownAtRef.current = performance.now();
+      setShowSpinner(true);
+    }, spinnerDelayMilliseconds);
+  }
+
+  async function finishLoadingIndicator() {
+    if (spinnerDelayRef.current !== null) {
+      window.clearTimeout(spinnerDelayRef.current);
+      spinnerDelayRef.current = null;
+      return;
+    }
+
+    if (spinnerShownAtRef.current === null) {
+      return;
+    }
+
+    const remaining = Math.max(
+      0,
+      spinnerMinimumVisibleMilliseconds -
+        (performance.now() - spinnerShownAtRef.current),
+    );
+    if (remaining > 0) {
+      await new Promise<void>((resolve) => {
+        spinnerMinimumRef.current = window.setTimeout(() => {
+          spinnerMinimumRef.current = null;
+          resolve();
+        }, remaining);
+      });
+    }
+    spinnerShownAtRef.current = null;
+    setShowSpinner(false);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (requestInFlightRef.current) {
+    setTouched({ url: true, alias: true, expiration: true });
+
+    const nextURLError = validateURL(url);
+    const nextAliasError = validateAlias(alias);
+    const nextExpirationError = validateExpiration(expiration);
+    if (nextURLError || nextAliasError || nextExpirationError) {
+      setRequestState("error");
+      setRequestError("Kiểm tra lại các trường được đánh dấu rồi thử lại.");
+      if (nextURLError) {
+        urlInputRef.current?.focus();
+      } else if (nextAliasError) {
+        aliasInputRef.current?.focus();
+      } else {
+        expirationInputRef.current?.focus();
+      }
       return;
     }
 
-    const error = validateURL(url);
-    setValidationError(error);
-    if (error) {
-      urlInputRef.current?.focus();
-      return;
-    }
-
-    requestInFlightRef.current = true;
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
     setRequestState("loading");
     setRequestError(null);
-    setResult(null);
     setCopyState("idle");
-    const loadingStartedAt = performance.now();
+    beginLoadingIndicator();
 
     try {
-      const created = await createShortLink(url.trim());
-      const remainingLoadingTime = Math.max(
-        0,
-        minimumLoadingDurationMilliseconds -
-          (performance.now() - loadingStartedAt),
+      const created = await createShortLink(
+        {
+          url: url.trim(),
+          ...(alias ? { custom_alias: alias } : {}),
+          ...(expiration
+            ? { expires_in_days: Number(expiration) }
+            : {}),
+        },
+        controller.signal,
       );
-      if (remainingLoadingTime > 0) {
-        await new Promise<void>((resolve) => {
-          window.setTimeout(resolve, remainingLoadingTime);
-        });
+      await finishLoadingIndicator();
+      if (controller.signal.aborted || requestRef.current !== controller) {
+        return;
       }
       setResult(created);
       setRequestState("success");
-      focusResultPanel();
+      window.requestAnimationFrame(() => resultPanelRef.current?.focus());
     } catch (error) {
-      const remainingLoadingTime = Math.max(
-        0,
-        minimumLoadingDurationMilliseconds -
-          (performance.now() - loadingStartedAt),
-      );
-      if (remainingLoadingTime > 0) {
-        await new Promise<void>((resolve) => {
-          window.setTimeout(resolve, remainingLoadingTime);
-        });
+      if (controller.signal.aborted) {
+        return;
       }
-
-      if (error instanceof ShortenerApiError) {
-        setRequestError(
-          error.kind === "http"
-            ? `Python API trả về lỗi HTTP ${error.status}. Hãy thử lại.`
-            : "Python API trả về dữ liệu không đúng định dạng JSON legacy.",
-        );
-      } else {
-        setRequestError(
-          "Không kết nối được Python API. Kiểm tra kết nối rồi thử lại.",
-        );
+      await finishLoadingIndicator();
+      if (controller.signal.aborted || requestRef.current !== controller) {
+        return;
       }
+      const message =
+        error instanceof ShortenerApiError
+          ? (errorMessages[error.code] ??
+            "API không thể tạo link lúc này. Kiểm tra backend và thử lại.")
+          : "Không kết nối được API. Kiểm tra backend tại cổng 8080 rồi thử lại.";
+      setRequestError(message);
       setRequestState("error");
-      focusResultPanel();
-    } finally {
-      requestInFlightRef.current = false;
+      window.requestAnimationFrame(() => resultPanelRef.current?.focus());
     }
   }
 
   async function handleCopy() {
-    if (!result || copyState === "copying") {
+    if (!result) {
       return;
     }
 
-    setCopyState("copying");
     try {
-      const absoluteShortURL = new URL(result.path, window.location.origin);
-      await navigator.clipboard.writeText(absoluteShortURL.toString());
+      setCopyState("copying");
+      await navigator.clipboard.writeText(result.short_url);
       setCopyState("copied");
+      if (copyTimerRef.current !== null) {
+        window.clearTimeout(copyTimerRef.current);
+      }
+      copyTimerRef.current = window.setTimeout(
+        () => setCopyState("idle"),
+        2500,
+      );
     } catch {
       setCopyState("error");
     }
   }
 
   return (
-    <section className="task-surface" aria-labelledby="surface-title">
-      <div className="task-surface__copy">
-        <h2 id="surface-title">Tạo short link từ một URL.</h2>
-        <p>
-          Preview gửi đúng payload URL-only đến Python API hiện tại qua đường
-          dẫn cùng origin.
-        </p>
+    <section className="workbench" aria-labelledby="workbench-title">
+      <div className="workbench__form-panel">
+        <div className="workbench__heading">
+          <div>
+            <h2 id="workbench-title">Tạo một short link</h2>
+            <p>Alias và thời hạn đều không bắt buộc.</p>
+          </div>
+          <span
+            className="keyboard-hint"
+            aria-label="Phím tắt Control hoặc Command K"
+          >
+            Ctrl / ⌘ K
+          </span>
+        </div>
 
         <form
           id="shorten-form"
@@ -141,8 +282,8 @@ export function ShortenerWorkbench() {
           onSubmit={handleSubmit}
           noValidate
         >
-          <label htmlFor="target-url">URL cần rút gọn</label>
-          <div className="shortener-form__controls">
+          <div className="field field--wide">
+            <label htmlFor="target-url">URL đích</label>
             <input
               ref={urlInputRef}
               id="target-url"
@@ -152,78 +293,159 @@ export function ShortenerWorkbench() {
               autoComplete="url"
               placeholder="https://example.com/tai-lieu"
               value={url}
-              onChange={(event) => {
-                setURL(event.target.value);
-                if (validationError) {
-                  setValidationError(null);
-                }
-              }}
-              aria-invalid={Boolean(validationError)}
+              disabled={requestState === "loading"}
+              onChange={(event) => setURL(event.target.value)}
+              onBlur={() =>
+                setTouched((current) => ({ ...current, url: true }))
+              }
+              aria-invalid={Boolean(urlError)}
               aria-describedby="target-url-help"
               required
             />
-            <button
-              type="submit"
-              disabled={requestState === "loading"}
-              aria-busy={requestState === "loading"}
-              data-state={requestState}
+            <p
+              id="target-url-help"
+              className="field__help"
+              data-error={Boolean(urlError)}
             >
-              {requestState === "loading" ? (
-                <>
-                  <span className="loading-spinner" aria-hidden="true" />
-                  Đang rút gọn…
-                </>
-              ) : (
-                "Rút gọn URL"
-              )}
-            </button>
+              {urlError ??
+                "Chấp nhận URL HTTP hoặc HTTPS, tối đa 2.048 ký tự."}
+            </p>
           </div>
-          <p
-            id="target-url-help"
-            className="field-help"
-            data-error={Boolean(validationError)}
+
+          <div className="field-row">
+            <div className="field">
+              <label htmlFor="custom-alias">
+                Alias <span>tùy chọn</span>
+              </label>
+              <input
+                ref={aliasInputRef}
+                id="custom-alias"
+                name="custom_alias"
+                type="text"
+                autoComplete="off"
+                placeholder="tai-lieu-go"
+                minLength={4}
+                maxLength={32}
+                pattern="[a-z0-9-]{4,32}"
+                value={alias}
+                disabled={requestState === "loading"}
+                onChange={(event) =>
+                  setAlias(event.target.value.toLowerCase())
+                }
+                onBlur={() =>
+                  setTouched((current) => ({ ...current, alias: true }))
+                }
+                aria-invalid={Boolean(aliasError)}
+                aria-describedby="custom-alias-help"
+              />
+              <p
+                id="custom-alias-help"
+                className="field__help"
+                data-error={Boolean(aliasError)}
+              >
+                {aliasError ??
+                  "4–32 ký tự thường, chữ số hoặc dấu gạch ngang."}
+              </p>
+            </div>
+
+            <div className="field">
+              <label htmlFor="expires-in-days">
+                Thời hạn <span>tùy chọn</span>
+              </label>
+              <input
+                ref={expirationInputRef}
+                id="expires-in-days"
+                name="expires_in_days"
+                type="number"
+                inputMode="numeric"
+                placeholder="30"
+                min={1}
+                max={365}
+                step={1}
+                value={expiration}
+                disabled={requestState === "loading"}
+                onChange={(event) => setExpiration(event.target.value)}
+                onBlur={() =>
+                  setTouched((current) => ({
+                    ...current,
+                    expiration: true,
+                  }))
+                }
+                aria-invalid={Boolean(expirationError)}
+                aria-describedby="expires-in-days-help"
+              />
+              <p
+                id="expires-in-days-help"
+                className="field__help"
+                data-error={Boolean(expirationError)}
+              >
+                {expirationError ?? "Để trống nếu link không cần hết hạn."}
+              </p>
+            </div>
+          </div>
+
+          <button
+            className="primary-button"
+            type="submit"
+            disabled={requestState === "loading"}
+            data-state={requestState}
+            aria-busy={requestState === "loading"}
           >
-            {validationError ??
-              "Chấp nhận địa chỉ đầy đủ bắt đầu bằng http:// hoặc https://."}
+            {requestState === "loading" ? (
+              <>
+                {showSpinner ? (
+                  <span className="spinner" aria-hidden="true" />
+                ) : null}
+                Đang tạo link…
+              </>
+            ) : (
+              "Tạo short link"
+            )}
+          </button>
+
+          <p className="form-status" role="status" aria-live="polite">
+            {requestError}
           </p>
         </form>
       </div>
 
       <div
         ref={resultPanelRef}
-        className="result-panel"
+        className="workbench__result-panel"
         data-state={requestState}
         aria-live="polite"
-        aria-busy={requestState === "loading"}
         tabIndex={-1}
       >
-        {requestState === "loading" ? (
-          <div className="result-panel__content">
-            <p className="result-panel__label">Đang gửi request</p>
-            <h3>Python API đang tạo short link.</h3>
-            <p>Giữ nguyên cửa sổ này trong khi request được xử lý.</p>
-          </div>
-        ) : requestState === "success" && result ? (
-          <div className="result-panel__content">
-            <p className="result-panel__label">Short link đã tạo</p>
-            <a className="result-panel__link" href={result.path}>
-              {result.path}
+        {result ? (
+          <div className="result" key={result.code}>
+            <p className="result__status">
+              {requestState === "success"
+                ? "Link đã sẵn sàng"
+                : "Kết quả gần nhất"}
+            </p>
+            <a
+              className="result__url"
+              href={result.short_url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {result.short_url}
             </a>
             <button
               className="copy-button"
               type="button"
               onClick={handleCopy}
+              data-state={copyState}
               disabled={copyState === "copying"}
               aria-busy={copyState === "copying"}
-              data-state={copyState}
             >
               {copyState === "copying"
                 ? "Đang sao chép…"
                 : copyState === "copied"
-                  ? "Đã sao chép"
-                  : copyState === "error"
-                    ? "Thử sao chép lại"
-                    : "Sao chép link"}
+                ? "Đã sao chép"
+                : copyState === "error"
+                  ? "Sao chép lại"
+                  : "Sao chép link"}
             </button>
             <p
               className="copy-status"
@@ -232,30 +454,34 @@ export function ShortenerWorkbench() {
               data-state={copyState}
             >
               {copyState === "copied"
-                ? "Short link đã được lưu vào clipboard."
+                ? "Link đã được lưu vào clipboard."
                 : copyState === "error"
-                  ? "Không thể truy cập clipboard. Hãy chọn short link phía trên để sao chép thủ công."
+                  ? "Không thể truy cập clipboard. Hãy chọn link phía trên để sao chép thủ công."
                   : null}
             </p>
-            <p>
-              Mã <code>{result.code}</code> được trả trực tiếp từ Python API.
-            </p>
-          </div>
-        ) : requestState === "error" && requestError ? (
-          <div className="result-panel__content" role="alert">
-            <p className="result-panel__label">Không thể tạo link</p>
-            <h3>Request chưa hoàn tất.</h3>
-            <p>{requestError}</p>
+
+            <dl className="result__meta">
+              <div>
+                <dt>Mã</dt>
+                <dd>{result.code}</dd>
+              </div>
+              <div>
+                <dt>URL đích</dt>
+                <dd>{result.target_url}</dd>
+              </div>
+              <div>
+                <dt>Hết hạn</dt>
+                <dd>{formatDate(result.expires_at)}</dd>
+              </div>
+            </dl>
           </div>
         ) : (
-          <div className="result-panel__content">
-            <p className="result-panel__label">
-              POST /api/generate-short-url
-            </p>
+          <div className="result-empty">
+            <p className="result-empty__index">POST /api/v1/links</p>
             <h3>Kết quả xuất hiện tại đây.</h3>
             <p>
-              Preview đọc <code>short_url_code</code> và dựng đường dẫn{" "}
-              <code>/link/&#123;code&#125;</code>.
+              Short URL, mã, URL đích và thời hạn được trả trực tiếp từ API —
+              không dựng dữ liệu mẫu.
             </p>
           </div>
         )}

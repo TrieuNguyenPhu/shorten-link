@@ -10,52 +10,59 @@ export default function Home() {
           <span className="brand-mark" aria-hidden="true">
             npt/
           </span>
-          <span className="brand-domain">shortenlink</span>
+          <span className="brand-domain">shortenlink.dev</span>
         </Link>
-        <span className="preview-status">Frontend preview</span>
+        <a className="header-action" href="#shorten-form">
+          Tạo link ↓
+        </a>
       </header>
 
       <main className="site-main">
         <section className="intro" aria-labelledby="page-title">
-          <div className="intro__title">
-            <p className="intro__context">Bản xem trước · chưa production</p>
-            <h1 id="page-title">
-              Rút gọn URL. Giữ nguyên nền tảng hiện tại.
-            </h1>
+          <div>
+            <p className="intro__domain">npt-shortenlink.dev</p>
+            <h1 id="page-title">Link ngắn. Quyền kiểm soát nguyên vẹn.</h1>
           </div>
           <p className="intro__lede">
-            Giao diện này là hướng thử nghiệm cho NPT ShortenLink và sẽ dùng
-            AWS Lambda viết bằng Python cùng API hiện có. Ứng dụng React/Vite
-            vẫn là frontend production.
+            Dán URL HTTP hoặc HTTPS, chọn alias và thời hạn nếu cần. Hệ thống
+            trả về một đường dẫn sẵn để sao chép.
           </p>
         </section>
 
         <ShortenerWorkbench />
 
-        <section className="compatibility" aria-labelledby="compatibility-title">
-          <div className="compatibility__heading">
-            <h2 id="compatibility-title">Giới hạn của preview này.</h2>
-            <p>Không thay thế, không deploy, không đổi production route.</p>
+        <section className="guardrails" aria-labelledby="guardrails-title">
+          <div className="guardrails__heading">
+            <h2 id="guardrails-title">Quy tắc rõ trước khi tạo.</h2>
+            <p>Frontend và API cùng tuân theo một contract OpenAPI.</p>
           </div>
-          <dl className="compatibility-list">
+          <dl className="spec-list">
             <div>
-              <dt>Production frontend</dt>
-              <dd>React/Vite hiện tại</dd>
+              <dt>URL</dt>
+              <dd>HTTP hoặc HTTPS</dd>
+              <dd>Tối đa 2.048 ký tự</dd>
             </div>
             <div>
-              <dt>Backend</dt>
-              <dd>Python Lambda qua AWS SAM</dd>
+              <dt>Alias</dt>
+              <dd>4–32 ký tự</dd>
+              <dd>Chữ thường, số, gạch ngang</dd>
             </div>
             <div>
-              <dt>Trạng thái</dt>
-              <dd>URL-only preview, dùng legacy API</dd>
+              <dt>Thời hạn</dt>
+              <dd>1–365 ngày</dd>
+              <dd>Có thể để trống</dd>
+            </div>
+            <div>
+              <dt>Redirect</dt>
+              <dd>HTTP 302</dd>
+              <dd>Không cache vĩnh viễn</dd>
             </div>
           </dl>
         </section>
       </main>
 
       <footer className="site-footer">
-        <p>NPT ShortenLink · Frontend preview · Python + AWS SAM</p>
+        <p>npt-shortenlink.dev · OpenAPI-first · Go + Next.js · AWS SAM</p>
       </footer>
     </div>
   );

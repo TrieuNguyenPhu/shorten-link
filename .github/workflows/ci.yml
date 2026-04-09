@@ -1,4 +1,4 @@
-name: CV Baseline CI
+name: CI
 
 on:
   pull_request:
@@ -14,68 +14,19 @@ permissions:
   contents: read
 
 jobs:
-  backend-tests:
-    name: Python Lambda tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version-file: backend/.python-version
-          cache: pip
-          cache-dependency-path: |
-            backend/requirements.txt
-            backend/tests/requirements.txt
-
-      - name: Install backend test dependencies
-        run: python -m pip install -r backend/requirements.txt -r backend/tests/requirements.txt
-
-      - name: Run backend tests
-        run: python -m pytest backend/tests -ra
-
   frontend:
-    name: React frontend lint and build
+    name: Frontend lint and build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Set up npm
-        run: npm install --global npm@11.13.0
-
-      - name: Install frontend dependencies
-        run: npm --prefix frontend ci
-
-      - name: Lint frontend
-        run: npm --prefix frontend run lint
-
-      - name: Build frontend
-        run: npm --prefix frontend run build
-
-  preview:
-    name: Next.js preview lint and build
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
-          version: 10.33.2
           run_install: false
 
       - name: Set up Node.js
@@ -85,44 +36,113 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      - name: Install preview dependencies
+      - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Test preview
-        run: pnpm test:preview
+      - name: Test frontend
+        run: pnpm test:web
 
-      - name: Lint preview
-        run: pnpm lint:preview
+      - name: Lint frontend
+        run: pnpm lint:web
 
-      - name: Build preview
-        run: pnpm build:preview
+      - name: Build frontend
+        run: pnpm build:web
 
-  sam:
-    name: SAM validate and build
-    needs:
-      - backend-tests
+  dependency-audit:
+    name: Audit production dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.20.0
+
+      - name: Audit lockfile
+        run: pnpm audit:deps
+
+  backend:
+    name: Backend vet and test
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Set up Go
+        uses: actions/setup-go@v6
         with:
-          python-version-file: backend/.python-version
+          go-version-file: services/shortener-api/go.mod
+          cache: true
+          cache-dependency-path: services/shortener-api/go.sum
+
+      - name: Vet backend
+        working-directory: services/shortener-api
+        run: go vet ./...
+
+      - name: Test backend with race detector
+        working-directory: services/shortener-api
+        run: go test -race -count=1 ./...
+
+      - name: Scan reachable Go vulnerabilities
+        working-directory: services/shortener-api
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
+
+  api-contract:
+    name: Lint OpenAPI contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.20.0
+
+      - name: Lint OpenAPI specification
+        run: pnpm --package=@redocly/cli@2.40.0 dlx redocly lint openapi/openapi.yaml
+
+  infrastructure:
+    name: Validate and build AWS SAM
+    needs:
+      - backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: services/shortener-api/go.mod
+          cache: true
+          cache-dependency-path: services/shortener-api/go.sum
 
       - name: Set up AWS SAM CLI
         uses: aws-actions/setup-sam@v3
         with:
-          version: 1.160.1
+          version: 1.163.0
           use-installer: true
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Validate SAM template
-        working-directory: backend
-        run: sam validate --lint
+        run: sam validate --lint --template-file infra/aws/template.yaml
 
-      - name: Build SAM application
-        working-directory: backend
-        run: sam build
+      - name: Build Lambda artifact
+        run: sam build --parallel --template-file infra/aws/template.yaml
