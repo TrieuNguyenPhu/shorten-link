@@ -225,7 +225,7 @@ Không chạy goroutine “fire-and-forget” sau khi Lambda trả response; run
 
 ### 7.3 IaC và môi trường
 
-- AWS SAM khai báo API, Lambda, table, log groups, IAM, alarms và output; các resource edge có thể tách nested stack nếu deployment region yêu cầu.
+- AWS SAM hiện khai báo API, Lambda, table, log groups, IAM, edge resources và output; alarm vẫn thuộc Phase 4 và phải được thêm bằng IaC trước production.
 - `dev`, `staging`, `production` có stack/table/log riêng; không dùng chung dữ liệu.
 - Parameter Store/Secrets Manager chỉ cho secret thật. Config không nhạy cảm là template parameter/environment variable có validate lúc boot.
 - DynamoDB production bật point-in-time recovery; retention log/budget được khai báo rõ để tránh tài nguyên vô thời hạn ngoài ý muốn.
