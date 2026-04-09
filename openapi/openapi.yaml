@@ -1,0 +1,477 @@
+openapi: 3.0.3
+info:
+  title: NPT Shorten Link API
+  version: 1.0.0
+  license:
+    name: Proprietary
+  description: |
+    Contract HTTP cho MVP của npt-shortenlink.dev.
+
+    API hiện là public, không yêu cầu authentication. Mọi lỗi do ứng dụng trả về
+    dùng envelope `error`; trường `fields` được dự phòng cho lỗi theo field và có
+    thể vắng trong implementation hiện tại.
+servers:
+  - url: https://npt-shortenlink.dev
+    description: Production, đi qua CloudFront
+tags:
+  - name: Links
+    description: Tạo, đọc metadata và resolve short link
+  - name: Operations
+    description: Endpoint vận hành tối thiểu
+paths:
+  /api/v1/links:
+    post:
+      tags:
+        - Links
+      summary: Tạo short link
+      description: |
+        Tạo một mã ngẫu nhiên, hoặc giữ đúng `custom_alias` nếu alias hợp lệ và
+        chưa tồn tại. `expires_in_days` được tính từ thời điểm tạo theo UTC.
+      operationId: createLink
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLinkRequest"
+            examples:
+              generatedCode:
+                summary: Tạo mã tự động
+                value:
+                  url: https://example.com/articles/clean-architecture
+                  expires_in_days: 30
+              customAlias:
+                summary: Dùng alias do người dùng chọn
+                value:
+                  url: https://example.com/docs
+                  custom_alias: clean-go
+      responses:
+        "201":
+          description: Link được tạo; `status` luôn là `active` tại thời điểm trả response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LinkEnvelope"
+              example:
+                data:
+                  code: clean-go
+                  short_url: https://npt-shortenlink.dev/link/clean-go
+                  target_url: https://example.com/docs
+                  status: active
+                  created_at: "2026-07-22T08:30:00Z"
+                  expires_at: "2026-08-21T08:30:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/AliasConflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "415":
+          $ref: "#/components/responses/UnsupportedMediaType"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/CodeGenerationExhausted"
+
+  /api/v1/links/{code}:
+    get:
+      tags:
+        - Links
+      summary: Lấy metadata của short link
+      description: |
+        Trả metadata nếu item còn tồn tại. Link hết hạn hoặc đã bị vô hiệu hóa
+        vẫn trả `200` cùng `status` tương ứng; sau khi DynamoDB TTL xóa item,
+        endpoint trả `404` vì không còn dữ liệu để phân biệt.
+      operationId: getLinkMetadata
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Code"
+      responses:
+        "200":
+          description: Metadata hiện tại của link.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LinkEnvelope"
+              examples:
+                active:
+                  summary: Link đang hoạt động
+                  value:
+                    data:
+                      code: k7m2qx9
+                      short_url: https://npt-shortenlink.dev/link/k7m2qx9
+                      target_url: https://example.com/docs
+                      status: active
+                      created_at: "2026-07-22T08:30:00Z"
+                      expires_at: null
+                expired:
+                  summary: Item hết hạn nhưng TTL chưa xóa vật lý
+                  value:
+                    data:
+                      code: old-link
+                      short_url: https://npt-shortenlink.dev/link/old-link
+                      target_url: https://example.com/archive
+                      status: expired
+                      created_at: "2026-06-01T00:00:00Z"
+                      expires_at: "2026-06-30T00:00:00Z"
+        "404":
+          $ref: "#/components/responses/LinkNotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /link/{code}:
+    get:
+      tags:
+        - Links
+      summary: Chuyển hướng tới URL đích
+      description: |
+        Chỉ link có `status=active` được resolve. Response dùng `302` để không tạo
+        permanent redirect ngoài kiểm soát. Client phải đọc header `Location`.
+      operationId: resolveLink
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Code"
+      responses:
+        "302":
+          description: Chuyển hướng tạm thời tới target URL.
+          headers:
+            Location:
+              description: Absolute `http` hoặc `https` target URL đã lưu.
+              required: true
+              schema:
+                type: string
+                format: uri
+              example: https://example.com/docs
+        "404":
+          $ref: "#/components/responses/LinkNotFound"
+        "410":
+          $ref: "#/components/responses/LinkGone"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /healthz:
+    get:
+      tags:
+        - Operations
+      summary: Kiểm tra liveness
+      description: Kiểm tra process/router; không truy vấn DynamoDB.
+      operationId: getHealth
+      security: []
+      responses:
+        "200":
+          description: Process đang phản hồi.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: ok
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+components:
+  parameters:
+    Code:
+      name: code
+      in: path
+      required: true
+      description: Mã ngẫu nhiên hoặc custom alias, phân biệt chữ thường theo contract hiện tại.
+      schema:
+        type: string
+        minLength: 4
+        maxLength: 32
+        pattern: "^[a-z0-9-]{4,32}$"
+      example: k7m2qx9
+
+  schemas:
+    CreateLinkRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          format: uri
+          minLength: 1
+          maxLength: 2048
+          pattern: "^[hH][tT][tT][pP][sS]?://"
+          description: Absolute URL dùng scheme `http` hoặc `https`; URL chứa embedded credentials/userinfo bị từ chối.
+          example: https://example.com/docs
+        custom_alias:
+          type: string
+          minLength: 4
+          maxLength: 32
+          pattern: "^[a-z0-9-]{4,32}$"
+          description: |
+            Alias tùy chọn. Một số tên hệ thống như `api`, `link`, `healthz`,
+            `admin`, `static` và `www` được reserve và sẽ bị từ chối.
+          example: clean-go
+        expires_in_days:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 365
+          description: Số ngày link còn hoạt động kể từ thời điểm tạo.
+          example: 30
+
+    Link:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - short_url
+        - target_url
+        - status
+        - created_at
+        - expires_at
+      properties:
+        code:
+          type: string
+          minLength: 4
+          maxLength: 32
+          pattern: "^[a-z0-9-]{4,32}$"
+          example: k7m2qx9
+        short_url:
+          type: string
+          format: uri
+          example: https://npt-shortenlink.dev/link/k7m2qx9
+        target_url:
+          type: string
+          format: uri
+          example: https://example.com/docs
+        status:
+          type: string
+          enum:
+            - active
+            - expired
+            - disabled
+          example: active
+        created_at:
+          type: string
+          format: date-time
+          description: Thời điểm UTC theo RFC 3339.
+          example: "2026-07-22T08:30:00Z"
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Thời điểm UTC theo RFC 3339, hoặc `null` nếu không hết hạn.
+          example: "2026-08-21T08:30:00Z"
+
+    LinkEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/Link"
+
+    Error:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Mã máy đọc ổn định; client không branch theo `message`.
+          example: invalid_url
+        message:
+          type: string
+          description: Thông báo an toàn cho người dùng, không chứa chi tiết nội bộ.
+          example: url must be an absolute http or https URL
+        fields:
+          type: object
+          description: Lỗi theo field, dự phòng cho phiên bản sau và có thể vắng.
+          additionalProperties:
+            type: string
+          example:
+            url: must be an absolute http or https URL
+
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/Error"
+
+    GatewayError:
+      type: object
+      additionalProperties: true
+      required:
+        - message
+      description: |
+        Lỗi do lớp managed gateway tạo trước khi request tới ứng dụng. Shape này
+        không phải application envelope ổn định; client phải ưu tiên HTTP status.
+      properties:
+        message:
+          type: string
+          example: Too Many Requests
+
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+          example: ok
+
+  responses:
+    BadRequest:
+      description: JSON hoặc dữ liệu đầu vào không hợp lệ.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          examples:
+            invalidJson:
+              summary: Request body không phải JSON hợp lệ
+              value:
+                error:
+                  code: invalid_request
+                  message: request body must be valid JSON
+            invalidUrl:
+              summary: URL không hợp lệ
+              value:
+                error:
+                  code: invalid_url
+                  message: url must be an absolute http or https URL
+            invalidAlias:
+              summary: Alias sai format
+              value:
+                error:
+                  code: invalid_custom_alias
+                  message: custom_alias must contain 4-32 lowercase letters, numbers, or hyphens
+            invalidExpiration:
+              summary: Expiration ngoài giới hạn
+              value:
+                error:
+                  code: invalid_expiration
+                  message: expires_in_days must be between 1 and 365
+
+    AliasConflict:
+      description: Custom alias đã được sử dụng.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            error:
+              code: custom_alias_conflict
+              message: custom_alias is already in use
+
+    PayloadTooLarge:
+      description: Request body vượt giới hạn 16 KiB của endpoint tạo link.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            error:
+              code: payload_too_large
+              message: request body must not exceed 16 KiB
+
+    UnsupportedMediaType:
+      description: Endpoint tạo link chỉ nhận media type `application/json`.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            error:
+              code: unsupported_media_type
+              message: Content-Type must be application/json
+
+    LinkNotFound:
+      description: Mã không tồn tại hoặc item đã bị DynamoDB TTL xóa.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            error:
+              code: link_not_found
+              message: link was not found
+
+    LinkGone:
+      description: Link còn item nhưng đã hết hạn hoặc bị vô hiệu hóa.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          examples:
+            expired:
+              value:
+                error:
+                  code: link_expired
+                  message: link has expired
+            disabled:
+              value:
+                error:
+                  code: link_disabled
+                  message: link is disabled
+
+    RateLimited:
+      description: |
+        Quá giới hạn request của ứng dụng hoặc lớp edge. Throttling tại API Gateway
+        xảy ra trước Lambda nên có thể trả gateway-native error thay vì `ErrorEnvelope`;
+        client phải xử lý ổn định theo HTTP status `429`, không phụ thuộc một body shape.
+      headers:
+        Retry-After:
+          description: Số giây đề nghị chờ, nếu lớp từ chối cung cấp.
+          schema:
+            type: integer
+            minimum: 0
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - $ref: "#/components/schemas/ErrorEnvelope"
+              - $ref: "#/components/schemas/GatewayError"
+          examples:
+            application:
+              value:
+                error:
+                  code: rate_limited
+                  message: too many requests; retry later
+            gateway:
+              value:
+                message: Too Many Requests
+
+    CodeGenerationExhausted:
+      description: Không cấp được mã duy nhất sau số lần retry hữu hạn.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            error:
+              code: code_generation_exhausted
+              message: could not allocate a short code; retry later
+
+    InternalError:
+      description: Lỗi nội bộ không được tiết lộ chi tiết.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            error:
+              code: internal_error
+              message: an unexpected error occurred
