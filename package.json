@@ -5,21 +5,15 @@
   "description": "A clean, serverless URL shortener for npt-shortenlink.dev",
   "packageManager": "pnpm@10.33.2",
   "scripts": {
-    "dev:api": "go run ./services/shortener-api/cmd/api",
     "dev:web": "pnpm --dir apps/web dev",
     "build:web": "pnpm --dir apps/web build",
     "lint:web": "pnpm --dir apps/web lint",
     "test:web": "pnpm --dir apps/web test",
-    "format:check:api": "node scripts/check-go-format.mjs",
-    "vet:api": "go vet ./services/shortener-api/...",
-    "test:api": "go test ./services/shortener-api/...",
-    "test:api:race": "go test -race -count=1 ./services/shortener-api/...",
     "audit:deps": "pnpm audit --prod --audit-level moderate",
-    "vuln:api": "go -C services/shortener-api run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...",
     "codegraph:init": "codegraph init .",
     "codegraph:status": "codegraph status .",
     "codegraph:sync": "codegraph sync .",
-    "verify": "pnpm test:web && pnpm lint:web && pnpm build:web && pnpm format:check:api && pnpm vet:api && pnpm test:api"
+    "verify": "pnpm test:web && pnpm lint:web && pnpm build:web"
   },
   "engines": {
     "node": ">=22.20.0"
