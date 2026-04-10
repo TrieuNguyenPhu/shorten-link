@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -227,5 +228,35 @@ func TestPanicRecoveryReturnsSafeJSON(t *testing.T) {
 	}
 	if !strings.Contains(response.Body.String(), `"code":"internal_error"`) {
 		t.Fatalf("response body = %s", response.Body.String())
+	}
+}
+
+func TestConcurrentCustomAliasHasSingleWinner(t *testing.T) {
+	router := newTestRouter()
+	payload := []byte(`{"url":"https://example.com/docs","custom_alias":"shared-alias"}`)
+	start := make(chan struct{})
+	statuses := make(chan int, 2)
+	var workers sync.WaitGroup
+
+	for range 2 {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			<-start
+			response := router.request(http.MethodPost, "/api/v1/links", payload, "application/json")
+			statuses <- response.Code
+		}()
+	}
+
+	close(start)
+	workers.Wait()
+	close(statuses)
+
+	counts := map[int]int{}
+	for status := range statuses {
+		counts[status]++
+	}
+	if counts[http.StatusCreated] != 1 || counts[http.StatusConflict] != 1 {
+		t.Fatalf("statuses = %#v, want one 201 and one 409", counts)
 	}
 }
