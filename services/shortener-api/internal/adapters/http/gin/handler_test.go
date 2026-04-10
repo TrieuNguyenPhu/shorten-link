@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -37,7 +38,7 @@ func newTestRouter() *ginTestRouter {
 		handlerClock{now: time.Date(2026, time.July, 22, 8, 30, 0, 0, time.UTC)},
 	)
 	handler := NewHandler(application, "https://npt-shortenlink.dev")
-	return &ginTestRouter{handler: http.Handler(NewRouter(handler, nil))}
+	return &ginTestRouter{handler: http.Handler(NewRouter(handler, []string{"http://localhost:3000"}))}
 }
 
 type ginTestRouter struct {
@@ -142,5 +143,46 @@ func TestLinkMetadata(t *testing.T) {
 	}
 	if envelope.Data.Status != "active" || envelope.Data.TargetURL != "https://example.com/docs" {
 		t.Fatalf("metadata = %#v", envelope.Data)
+	}
+}
+
+func TestSecurityBoundaries(t *testing.T) {
+	router := newTestRouter()
+
+	deniedRequest := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	deniedRequest.Header.Set("Origin", "https://evil.example")
+	denied := httptest.NewRecorder()
+	router.handler.ServeHTTP(denied, deniedRequest)
+	if denied.Code != http.StatusForbidden {
+		t.Fatalf("denied origin status = %d, want 403", denied.Code)
+	}
+
+	allowedRequest := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	allowedRequest.Header.Set("Origin", "http://localhost:3000")
+	allowedRequest.Header.Set(requestIDHeader, "client-request-123")
+	allowed := httptest.NewRecorder()
+	router.handler.ServeHTTP(allowed, allowedRequest)
+	if allowed.Code != http.StatusOK {
+		t.Fatalf("allowed origin status = %d, want 200", allowed.Code)
+	}
+	if value := allowed.Header().Get("Access-Control-Allow-Origin"); value != "http://localhost:3000" {
+		t.Fatalf("allow origin = %q", value)
+	}
+	if value := allowed.Header().Get(requestIDHeader); value != "client-request-123" {
+		t.Fatalf("request ID = %q", value)
+	}
+
+	preflightRequest := httptest.NewRequest(http.MethodOptions, "/api/v1/links", nil)
+	preflightRequest.Header.Set("Origin", "http://localhost:3000")
+	preflight := httptest.NewRecorder()
+	router.handler.ServeHTTP(preflight, preflightRequest)
+	if preflight.Code != http.StatusNoContent {
+		t.Fatalf("preflight status = %d, want 204", preflight.Code)
+	}
+
+	oversized := strings.Repeat("x", int(maxCreateLinkRequestBytes)+1)
+	response := router.request(http.MethodPost, "/api/v1/links", []byte(oversized), "application/json")
+	if response.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("oversized status = %d, want 413", response.Code)
 	}
 }
