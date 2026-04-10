@@ -9,6 +9,7 @@ func NewRouter(handler *Handler, _ []string) *gin.Engine {
 	_ = router.SetTrustedProxies(nil)
 
 	router.GET("/healthz", handler.Health)
+	router.GET("/link/:code", handler.Resolve)
 	router.POST("/api/v1/links", handler.Create)
 
 	return router
