@@ -123,3 +123,24 @@ func TestResolveRedirect(t *testing.T) {
 		t.Fatalf("Location = %q", location)
 	}
 }
+
+func TestLinkMetadata(t *testing.T) {
+	router := newTestRouter()
+	payload := []byte(`{"url":"https://example.com/docs","custom_alias":"my-docs","expires_in_days":30}`)
+	created := router.request(http.MethodPost, "/api/v1/links", payload, "application/json")
+	if created.Code != http.StatusCreated {
+		t.Fatalf("create status = %d, want 201", created.Code)
+	}
+
+	response := router.request(http.MethodGet, "/api/v1/links/my-docs", nil, "")
+	if response.Code != http.StatusOK {
+		t.Fatalf("metadata status = %d, want 200", response.Code)
+	}
+	var envelope linkEnvelope
+	if err := json.Unmarshal(response.Body.Bytes(), &envelope); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if envelope.Data.Status != "active" || envelope.Data.TargetURL != "https://example.com/docs" {
+		t.Fatalf("metadata = %#v", envelope.Data)
+	}
+}
