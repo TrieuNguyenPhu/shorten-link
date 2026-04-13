@@ -9,6 +9,34 @@ Parameters:
     AllowedPattern: "^[a-z][a-z0-9-]{1,15}$"
     Description: Short environment suffix used in physical resource names.
 
+  DomainName:
+    Type: String
+    Default: npt-shortenlink.dev
+    AllowedPattern: "^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$"
+    ConstraintDescription: Enter a valid lower-case DNS name.
+
+  CorsAllowedOrigins:
+    Type: CommaDelimitedList
+    Default: https://npt-shortenlink.dev
+    Description: Exact browser origins allowed by the HTTP API and Go application.
+
+Globals:
+  Function:
+    Runtime: provided.al2023
+    Architectures:
+      - arm64
+    MemorySize: 256
+    Timeout: 10
+    Environment:
+      Variables:
+        LINKS_TABLE_NAME: !Ref LinksTable
+        PUBLIC_BASE_URL: !Sub "https://${DomainName}"
+        STORAGE_DRIVER: dynamodb
+        CORS_ALLOWED_ORIGINS: !Join [",", !Ref CorsAllowedOrigins]
+    Tags:
+      Application: npt-shortenlink
+      Environment: !Ref EnvironmentName
+
 Resources:
   LinksTable:
     Type: AWS::DynamoDB::Table
@@ -26,7 +54,157 @@ Resources:
       SSESpecification:
         SSEEnabled: true
 
+  ShortenerFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-shortener-api"
+      RetentionInDays: 30
+
+  ShortenerFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Least-privilege execution role for the URL shortener Lambda.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: WriteLambdaLogs
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${ShortenerFunctionLogGroup}:*"
+        - PolicyName: ReadWriteLinksByPrimaryKey
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                Resource: !GetAtt LinksTable.Arn
+
+  ShortenerHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Description: HTTP API for link creation, lookup, redirect, and health checks.
+      StageName: "$default"
+      FailOnWarnings: true
+      PropagateTags: true
+      CorsConfiguration:
+        AllowCredentials: false
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+          - X-Request-Id
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowOrigins: !Ref CorsAllowedOrigins
+        ExposeHeaders:
+          - Location
+          - X-Request-Id
+        MaxAge: 600
+      DefinitionBody:
+        openapi: "3.0.1"
+        info:
+          title: !Sub "${AWS::StackName}-http-api"
+          version: "1.0"
+        paths:
+          /api/v1/links:
+            post: {}
+          /api/v1/links/{code}:
+            get:
+              parameters:
+                - name: code
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+          /link/{code}:
+            get:
+              parameters:
+                - name: code
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+          /healthz:
+            get: {}
+      Tags:
+        Application: npt-shortenlink
+        Environment: !Ref EnvironmentName
+
+  ShortenerFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-shortener-api"
+      Description: Go HTTP API for creating and resolving short links.
+      CodeUri: ../../services/shortener-api
+      Handler: bootstrap
+      Role: !GetAtt ShortenerFunctionRole.Arn
+      LoggingConfig:
+        ApplicationLogLevel: INFO
+        LogFormat: JSON
+        LogGroup: !Ref ShortenerFunctionLogGroup
+        SystemLogLevel: INFO
+      Events:
+        CreateLink:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ShortenerHttpApi
+            Method: POST
+            Path: /api/v1/links
+            PayloadFormatVersion: "2.0"
+        GetLink:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ShortenerHttpApi
+            Method: GET
+            Path: /api/v1/links/{code}
+            PayloadFormatVersion: "2.0"
+        RedirectLink:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ShortenerHttpApi
+            Method: GET
+            Path: /link/{code}
+            PayloadFormatVersion: "2.0"
+        HealthCheck:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ShortenerHttpApi
+            Method: GET
+            Path: /healthz
+            PayloadFormatVersion: "2.0"
+
 Outputs:
   LinksTableName:
     Description: DynamoDB table used by the shortener API.
     Value: !Ref LinksTable
+
+  HttpApiId:
+    Description: API Gateway HTTP API identifier.
+    Value: !Ref ShortenerHttpApi
+
+  HttpApiEndpoint:
+    Description: Regional HTTP API endpoint.
+    Value: !Sub "https://${ShortenerHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}"
+
+  ShortenerFunctionArn:
+    Description: Go shortener Lambda ARN.
+    Value: !GetAtt ShortenerFunction.Arn
