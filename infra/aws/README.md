@@ -33,7 +33,47 @@ sam validate --lint --template-file infra/aws/template.yaml
 sam build --template-file infra/aws/template.yaml
 ```
 
-## Deploy
+The root Makefile also exposes the mutation-free end-to-end plan:
+
+```bash
+make deploy-dry-run CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/replace-me HOSTED_ZONE_ID=ZREPLACE_ME
+```
+
+## Recommended deployment
+
+From a fresh clone, the supported operator workflow is one command:
+
+```bash
+make deploy CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/replace-me HOSTED_ZONE_ID=ZREPLACE_ME
+```
+
+It performs these stages in order and stops on the first failure:
+
+1. validate tool versions, required parameters, and AWS identity;
+2. install the frozen pnpm lockfile and run frontend/backend verification;
+3. run dependency, vulnerability, OpenAPI, and SAM validation;
+4. build and deploy the CloudFormation stack;
+5. read bucket/distribution/site values from stack outputs;
+6. publish immutable assets before mutable HTML;
+7. invalidate CloudFront and wait for completion;
+8. smoke-test the frontend and `/healthz`.
+
+The following Make variables have defaults and may be overridden on the same
+command:
+
+| Variable | Default |
+|---|---|
+| `AWS_REGION` | `ap-southeast-1` |
+| `STACK_NAME` | `npt-shortenlink-prod` |
+| `ENVIRONMENT_NAME` | `prod` |
+| `DOMAIN_NAME` | `npt-shortenlink.dev` |
+| `CORS_ALLOWED_ORIGINS` | `https://<DOMAIN_NAME>` |
+| `AWS_PROFILE` | Uses the standard AWS credential chain |
+
+`CERTIFICATE_ARN` and `HOSTED_ZONE_ID` intentionally have no defaults. This
+prevents a clone from mutating an unintended account or DNS zone.
+
+## Manual SAM deployment
 
 Replace both placeholder values before running:
 
@@ -51,11 +91,18 @@ sam deploy \
     CorsAllowedOrigins=https://npt-shortenlink.dev
 ```
 
+The manual command only deploys CloudFormation. It does not publish the
+frontend, wait for a CloudFront invalidation, or run public smoke tests; prefer
+`make deploy` for a complete release.
+
 CloudFormation retains the DynamoDB table, frontend bucket, and log groups when the stack is deleted or those resources are replaced. This protects link data and logs, but they must be cleaned up explicitly when they are no longer needed.
 
 ## Publish the static frontend
 
 Production uses relative `/api/*` requests through the same CloudFront domain, so no public API base URL is required at build time. Run `pnpm build:web` to produce the static export in `apps/web/out`, then read `FrontendBucketName` and `CloudFrontDistributionId` from the stack outputs. Upload content-hashed Next.js assets first with a one-year immutable policy, then upload HTML and other mutable files with immediate revalidation:
+
+`make deploy` performs this sequence automatically. The commands below are the
+manual recovery/reference procedure:
 
 ```bash
 aws s3 sync apps/web/out/_next/static "s3://$FRONTEND_BUCKET/_next/static" \
