@@ -1,0 +1,104 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  shorten-link-backend
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 10
+
+    Tracing: Active
+    # You can add LoggingConfig parameters such as the Logformat, Log Group, and SystemLogLevel or ApplicationLogLevel. Learn more here https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html#sam-function-loggingconfig.
+    LoggingConfig:
+      LogFormat: JSON
+  Api:
+    TracingEnabled: true
+Resources:
+  # API Gateway definition
+  MyApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: dev
+      OpenApiVersion: '2.0'
+  
+  # Function to generate short URL for the given URL
+  GenerateShortUrlFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: generate_short_url/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+      - x86_64
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GenerateShortUrlApi:
+          Type: Api
+          Properties:
+            Path: /api/generate-short-url
+            Method: post
+            RestApiId: !Ref MyApi
+
+  # Function to get original URL from short URL
+  GetUrlFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: get_url/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+      - x86_64
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GetUrlApi:
+          Type: Api
+          Properties:
+            Path: /link/{short_url}
+            Method: get
+            RestApiId: !Ref MyApi
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: UrlShortenTableAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                Resource: !GetAtt UrlShortenTable.Arn
+
+  # DynamoDB Table to store URL and Short URL
+  UrlShortenTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: UrlShortenTable
+      AttributeDefinitions:
+        - AttributeName: short_url
+          AttributeType: S
+      KeySchema:
+        - AttributeName: short_url
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+Outputs:
+  ApiBaseUrl:
+    Description: Base URL for API Gateway stage.
+    Value: !Sub "https://${MyApi}.execute-api.${AWS::Region}.amazonaws.com/dev"
+
+  GenerateShortUrlEndpoint:
+    Description: Endpoint to create a short URL.
+    Value: !Sub "https://${MyApi}.execute-api.${AWS::Region}.amazonaws.com/dev/api/generate-short-url"

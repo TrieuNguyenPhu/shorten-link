@@ -1,0 +1,17 @@
+# Global
+.DS_Store
+Thumbs.db
+
+# Backend
+backend/.aws-sam/
+backend/.pytest_cache/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.venv/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
