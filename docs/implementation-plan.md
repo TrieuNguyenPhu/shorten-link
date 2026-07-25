@@ -1,6 +1,21 @@
-# Kế hoạch triển khai `npt-shortenlink.dev`
+# Kế hoạch và trạng thái triển khai `npt-shortenlink.dev`
 
-> Trạng thái: kế hoạch triển khai theo thứ tự phụ thuộc. Contract HTTP chuẩn nằm tại [`openapi/openapi.yaml`](../openapi/openapi.yaml); quyết định kiến trúc nằm tại [`docs/architecture.md`](./architecture.md); cổng kiểm chứng giao diện nằm tại [`docs/hallmark-qa.md`](./hallmark-qa.md).
+> Cập nhật ngày 26/07/2026: `main` chỉ còn source v2. Phase 0–2 đã có bằng
+> chứng local/CI; Phase 3 đã có IaC nhưng chưa có bằng chứng deploy staging;
+> Phase 4–5 vẫn là gate bắt buộc trước production; Phase 6 nằm ngoài MVP.
+> Contract HTTP chuẩn nằm tại [`openapi/openapi.yaml`](../openapi/openapi.yaml);
+> quyết định kiến trúc nằm tại [`docs/architecture.md`](./architecture.md); cổng
+> kiểm chứng giao diện nằm tại [`docs/hallmark-qa.md`](./hallmark-qa.md).
+
+| Phase | Trạng thái source | Gate còn lại |
+|---|---|---|
+| 0 · Contract và nền móng | Hoàn thành | Duy trì lint/contract review trong CI |
+| 1 · Backend vertical slice | Hoàn thành | Duy trì test, race test và security scan |
+| 2 · Frontend/design system | Hoàn thành | Duy trì lint/build và Hallmark evidence |
+| 3 · DynamoDB/AWS staging | IaC đã validate/build | Deploy staging và chạy smoke/concurrency/retention checks |
+| 4 · Security/reliability/observability | Chưa hoàn thành | WAF, alarm, dashboard, load/SLO và runbook |
+| 5 · DNS/production | Chưa bắt đầu | Staging sign-off, cutover và rollback rehearsal |
+| 6 · Analytics/tài khoản | Ngoài MVP | Chỉ mở khi có capability/acceptance criteria riêng |
 
 ## 1. Mục tiêu và ranh giới
 
@@ -87,10 +102,10 @@ Các bước:
 
 Exit criteria:
 
-- [ ] Mọi ví dụ request/response trong tài liệu khớp OpenAPI.
-- [ ] Frontend và backend cùng dùng `/api/v1/links`, không có contract song song.
-- [ ] Không còn quyết định kiến trúc bắt buộc nào bị để ngầm.
-- [ ] `pnpm install --frozen-lockfile` chạy từ root mà không tạo lockfile thứ hai.
+- [x] Mọi ví dụ request/response trong tài liệu khớp OpenAPI.
+- [x] Frontend và backend cùng dùng `/api/v1/links`, không có contract song song.
+- [x] Không còn quyết định kiến trúc bắt buộc nào bị để ngầm.
+- [x] `pnpm install --frozen-lockfile` chạy từ root mà không tạo lockfile thứ hai.
 
 ### Phase 1 — Backend vertical slice chạy local
 
@@ -113,11 +128,11 @@ Kiểm thử bắt buộc:
 
 Exit criteria:
 
-- [ ] Bốn route local khớp OpenAPI, bao gồm `Location` của `302`.
+- [x] Bốn route local khớp OpenAPI, bao gồm `Location` của `302`.
 - [x] Cùng một alias được tạo đồng thời chỉ có một request thành công.
-- [ ] Không package nào trong `domain` hoặc `application` import Gin/AWS SDK.
-- [ ] Log không chứa full target URL, request body hoặc secret.
-- [ ] Tất cả test backend và race detector pass.
+- [x] Không package nào trong `domain` hoặc `application` import Gin/AWS SDK.
+- [x] Log không chứa full target URL, request body hoặc secret.
+- [x] Tất cả test backend và race detector pass.
 
 ### Phase 2 — Frontend Next.js và design system
 
@@ -133,11 +148,11 @@ Các bước:
 
 Exit criteria:
 
-- [ ] `pnpm lint:web` và `pnpm build:web` pass từ root.
-- [ ] Không có horizontal scroll ở `320`, `375`, `414`, `768` và khi quét liên tục đến `1920` px.
-- [ ] First screen tại `1280×800` thấy được headline, diễn giải, form và primary action không cần cuộn.
-- [ ] Keyboard-only hoàn thành được luồng tạo và copy link.
-- [ ] Hallmark self-critique có mọi trục `>= 3`; gate sweep có bằng chứng `58/58`; audit phát hành là `0 critical · 0 major · 0 minor`.
+- [x] `pnpm lint:web` và `pnpm build:web` pass từ root.
+- [x] Không có horizontal scroll ở `320`, `375`, `414`, `768` và khi quét liên tục đến `1920` px.
+- [x] First screen tại `1280×800` thấy được headline, diễn giải, form và primary action không cần cuộn.
+- [x] Keyboard-only hoàn thành được luồng tạo và copy link.
+- [x] Hallmark self-critique có mọi trục `>= 3`; gate sweep có bằng chứng `58/58`; audit phát hành là `0 critical · 0 major · 0 minor`.
 
 ### Phase 3 — DynamoDB và AWS staging
 
