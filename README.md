@@ -1,466 +1,350 @@
-# Shorten Link
+<div align="center">
 
-Công cụ **rút gọn URL** full-stack, cho phép người dùng:
+# NPT ShortenLink
 
-1. Nhập một URL dài → nhận lại một URL ngắn
-2. Truy cập URL ngắn → tự động chuyển hướng (redirect) về URL gốc
+**A serverless URL shortener built to stay simple at the edge and explicit in the code.**
 
-**Domain production**: `https://npt-shortenlink.dev`
+Rút gọn URL, chọn alias, đặt thời hạn và resolve link qua một domain duy nhất —
+với frontend tĩnh, API serverless và hạ tầng được mô tả bằng AWS SAM/CloudFormation.
 
----
+[![CI](https://github.com/TrieuNguyenPhu/shorten-link/actions/workflows/ci.yml/badge.svg)](https://github.com/TrieuNguyenPhu/shorten-link/actions/workflows/ci.yml)
 
-## Kiến Trúc Tổng Quan (AWS Serverless)
+`Domain reserved: npt-shortenlink.dev` ·
+[Kiến trúc](docs/architecture.md) ·
+[OpenAPI](openapi/openapi.yaml) ·
+[Hallmark QA](docs/hallmark-qa.md) ·
+[Kế hoạch triển khai](docs/implementation-plan.md)
 
-![Architecture Diagram](Architecture.png)
+</div>
 
-Luồng hoạt động chính:
+> [!IMPORTANT]
+> Repository này lưu hai thế hệ được tách bạch. Bản **v1 tháng 06/2026** là
+> baseline khớp với hồ sơ dự án; bản **v2 development preview** là một đợt
+> tái kiến trúc đang phát triển và chưa thay thế v1/CV baseline.
+
+| Track | Trạng thái | Stack chính | Tham chiếu |
+|---|---|---|---|
+| **v1 — CV baseline** | Snapshot ổn định, có thể tái lập | Python 3.12 Lambda, React/Vite, API Gateway REST, DynamoDB, AWS SAM | [`cv-2026-06-python-react-sam`](https://github.com/TrieuNguyenPhu/shorten-link/tree/cv-2026-06-python-react-sam) |
+| **v2 — current rebuild** | Development preview, chưa deploy | Go/Gin, Next.js, API Gateway HTTP API, DynamoDB, S3, CloudFront, AWS SAM | Source hiện tại và [roadmap](docs/implementation-plan.md) |
+
+> [!NOTE]
+> `npt-shortenlink.dev` là canonical domain đã đăng ký. Public deployment đang
+> được dựng lại; Quick Start bên dưới là cách tái lập demo đáng tin cậy hiện tại.
+
+## Vì sao project này tồn tại?
+
+URL shortener nhìn nhỏ, nhưng là một bài toán đủ tốt để thể hiện những quyết định
+khó thấy trong CRUD thông thường: collision, redirect caching, TTL bất đồng bộ,
+validation ở trust boundary, cấu trúc Lambda, CDN routing và khả năng rollback.
+
+V2 tập trung vào bốn mục tiêu:
+
+- **Redirect đúng trước, analytics sau:** đường nóng chỉ đi qua CloudFront, HTTP API, Lambda và DynamoDB.
+- **Domain độc lập framework:** rule tạo/resolve link có thể test mà không khởi động Gin hoặc AWS.
+- **Một contract HTTP:** frontend, local server và Lambda cùng tuân theo [`openapi/openapi.yaml`](openapi/openapi.yaml).
+- **Hạ tầng tái lập được:** API, storage, static hosting, CDN và DNS đều nằm trong SAM/CloudFormation.
+
+## Khả năng chính
+
+| Khả năng | v1 baseline | v2 source hiện tại |
+|---|:---:|:---:|
+| Tạo short URL và redirect | Có | Có |
+| Custom alias | — | Có, `4–32` ký tự thường/số/gạch ngang |
+| Expiration | — | Có, `1–365` ngày + DynamoDB TTL |
+| Metadata/status API | — | Có: `active`, `expired`, `disabled` |
+| Collision-safe create | Random code xác suất lớn | Conditional write + retry hữu hạn |
+| Static frontend | React/Vite | Next.js static export |
+| Backend runtime | 2 Python Lambda | 1 Go Lambda chạy local hoặc Lambda |
+| Infrastructure as code | SAM cho backend | SAM cho API, Lambda, DynamoDB, S3, CloudFront và Route 53 |
+| UI release gate | Manual review | Hallmark + browser evidence bắt buộc |
+
+## Kiến trúc v2
+
+Sơ đồ dưới đây mô tả **resource và wiring đã có trong source SAM v2**, không phải
+tuyên bố rằng rebuild đã được deploy production. ACM certificate là prerequisite
+được truyền vào stack qua parameter, không phải resource do template tạo.
 
 ```mermaid
 flowchart LR
-    User["👤 User"] --> CF["CloudFront CDN"]
-    CF --> S3["S3 Static\n(Frontend)"]
-    CF --> APIGW["API Gateway"]
-    APIGW --> Cognito["Cognito\n(Auth)"]
-    APIGW --> Lambda1["Lambda\nGenerate Short URL"]
-    APIGW --> Lambda2["Lambda\nGet URL (Redirect)"]
-    Lambda1 --> DDB["DynamoDB\nUrlShortenTable"]
-    Lambda2 --> DDB
+    User["Người dùng"] -->|HTTPS| DNS["Route 53"]
+    DNS --> Edge["CloudFront"]
+    ACM["External ACM certificate\nus-east-1"] -. TLS parameter .-> Edge
+
+    Edge -->|"/*"| Web["S3 private\nNext.js static export"]
+    Edge -->|"/api/* · /link/* · /healthz"| API["API Gateway HTTP API"]
+    API --> Lambda["Go Lambda · Gin\nprovided.al2023 · arm64"]
+    Lambda --> Table["DynamoDB on-demand\nPITR · TTL"]
+    Lambda --> Observe["CloudWatch Logs\nLambda X-Ray tracing"]
 ```
 
-| Thành phần | Vai trò |
+| Thành phần | Trách nhiệm |
 |---|---|
-| **CloudFront** | CDN, phân phối frontend & route API requests |
-| **S3** | Host static files (build frontend React) |
-| **API Gateway** | REST API endpoint, route `/api/*` và `/link/*` |
-| **Cognito** | Authen/Author (có trong sơ đồ kiến trúc, chưa triển khai trong code) |
-| **Lambda (x2)** | Xử lý logic tạo short URL & redirect |
-| **DynamoDB** | Lưu trữ mapping `short_url ↔ original_url` |
+| **CloudFront** | Phân phối static assets và route `/api/*`, `/link/*`, `/healthz` cùng origin |
+| **S3 + OAC** | Lưu Next.js static export trong bucket private, chỉ CloudFront được đọc |
+| **API Gateway HTTP API** | Nhận request v2 và chuyển payload sang Lambda |
+| **Go Lambda + Gin** | Validation, use case orchestration, error mapping và redirect |
+| **DynamoDB** | Lưu link theo partition key `code`, conditional create, PITR và TTL |
+| **Route 53 + ACM** | Stack tạo alias A/AAAA; certificate TLS có sẵn được truyền qua parameter |
 
----
+CloudFront production dùng relative request nên browser không cần biết execute-api
+URL. Local frontend mới dùng `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080`.
 
-## Cấu Trúc Thư Mục
+<details>
+<summary><strong>Dependency rule của Go clean architecture</strong></summary>
+
+```mermaid
+flowchart TB
+    Bootstrap["cmd/api · composition root"] --> HTTP["Inbound adapter · Gin/Lambda"]
+    Bootstrap --> Adapters["Outbound adapters\nDynamoDB · memory · clock · generator"]
+    HTTP --> App["Application services + ports"]
+    Adapters --> App
+    App --> Domain["Domain entities · status · errors · invariants"]
+```
+
+- `internal/domain` không biết JSON, HTTP, Gin hoặc AWS SDK.
+- `internal/application` định nghĩa use case và outbound ports.
+- `internal/adapters` triển khai HTTP, persistence, clock và code generation.
+- `cmd/api` chọn memory repository khi chạy local và DynamoDB khi chạy Lambda.
+
+</details>
+
+<details>
+<summary><strong>v1 architecture được mô tả trong CV</strong></summary>
+
+V1 dùng React/Vite trên S3/CloudFront, API Gateway REST, hai Python Lambda và
+DynamoDB on-demand. SAM v1 định nghĩa phần backend; topology S3/CloudFront được
+ghi lại trong README và sơ đồ kiến trúc của release.
+
+- [README v1](https://github.com/TrieuNguyenPhu/shorten-link/blob/cv-2026-06-python-react-sam/README.md)
+- [Architecture.png v1](https://github.com/TrieuNguyenPhu/shorten-link/blob/cv-2026-06-python-react-sam/Architecture.png)
+
+</details>
+
+## Tech stack
+
+| Lớp | Công nghệ | Phiên bản/pattern |
+|---|---|---|
+| Web | Next.js, React, TypeScript | Next `16.2.11`, React `19.2.8`, App Router, static export |
+| API | Go, Gin | Go `1.26.5`, Gin `1.11.0`, clean architecture |
+| Contract | OpenAPI | OpenAPI `3.0.3`, contract version `1.0.0` |
+| Runtime | AWS Lambda | `provided.al2023`, `arm64` |
+| Edge | CloudFront, S3 OAC, Route 53, ACM | Same-origin static + API routing |
+| Data | DynamoDB | `PAY_PER_REQUEST`, PITR, SSE, TTL |
+| IaC | AWS SAM/CloudFormation | Custom Makefile Lambda builder |
+| Tooling | pnpm, GNU Make, CodeGraph | pnpm `10.33.2`, root developer entrypoint |
+
+## Repository map
 
 ```text
 shorten-link/
-├── .gitignore                  # Ignore rules cho cả BE & FE
-├── .nvmrc                      # Pin Node.js version → 22.13.1
-├── Architecture.png            # Sơ đồ kiến trúc AWS
-├── README.md                   # Hướng dẫn chung
-│
-├── backend/                    # ← AWS SAM Application
-│   ├── template.yaml           # SAM/CloudFormation template (định nghĩa toàn bộ infra)
-│   ├── samconfig.toml          # Config deploy SAM (region, stack name, ...)
-│   ├── requirements.txt        # boto3
-│   ├── pytest.ini              # Pytest markers config
-│   ├── __init__.py
-│   │
-│   ├── generate_short_url/     # Lambda #1: Tạo short URL
-│   │   ├── __init__.py
-│   │   └── app.py              # Handler chính
-│   │
-│   ├── get_url/                # Lambda #2: Redirect từ short URL
-│   │   ├── __init__.py
-│   │   └── app.py              # Handler chính
-│   │
-│   ├── events/
-│   │   └── event.json          # Sample API Gateway event (dùng test local)
-│   │
-│   └── tests/
-│       ├── requirements.txt    # pytest, boto3, requests
-│       ├── unit/
-│       │   └── test_handler.py # 4 unit tests (mock DynamoDB)
-│       └── integration/
-│           └── test_api_gateway.py  # Live integration test
-│
-└── frontend/                   # ← React + Vite Application
-    ├── package.json            # Dependencies & scripts
-    ├── vite.config.js          # Vite config + API proxy
-    ├── index.html              # SPA entry point
-    ├── .env.example            # Environment variables template
-    ├── .env                    # Actual env (git-ignored)
-    ├── eslint.config.js        # ESLint flat config (React 18.3)
-    ├── public/
-    │   └── vite.svg            # Favicon
-    └── src/
-        ├── main.jsx            # React entry → render <App>
-        ├── App.jsx             # Root component → render <ShortenLink>
-        ├── ShortenLink.jsx     # Component chính (form + popup)
-        └── index.css           # Global styles
+├── apps/web/                    # Next.js static frontend
+├── services/shortener-api/      # Go/Gin API + clean architecture
+├── infra/aws/                   # SAM/CloudFormation stack
+├── openapi/                     # Source-of-truth HTTP contract
+├── docs/                        # Architecture, delivery and Hallmark QA
+├── .github/workflows/           # Quality and security gates
+├── Makefile                     # Repository-level commands
+├── go.work                      # Go workspace
+└── pnpm-workspace.yaml          # Frontend workspace
 ```
 
----
+## Chạy v2 local
 
-## Yêu Cầu Hệ Thống
+### Yêu cầu
 
 | Công cụ | Phiên bản |
-|---|---|
-| Node.js | 22.x (pin: `22.13.1` trong `.nvmrc`) |
-| npm | 11.x |
-| Python | 3.12.x (pin: `3.12.4` trong `backend/.python-version`) |
-| AWS CLI | Configured with valid credentials |
-| AWS SAM CLI | 1.160.1 |
+|---|---:|
+| Node.js | `>=22.20.0` |
+| pnpm | `10.33.2` |
+| Go | `1.26.5` |
+| GNU Make | Tuỳ chọn khi chạy local; bắt buộc để `sam build` Lambda artifact |
 
-Kiểm tra nhanh:
-
-```bash
-node --version     # v22.x
-npm --version      # 11.x
-python --version   # 3.12.x
-aws --version
-sam --version      # 1.160.1
-aws sts get-caller-identity
-```
-
----
-
-## Backend — Chi Tiết
-
-### Infrastructure (SAM Template)
-
-File [`template.yaml`](backend/template.yaml) định nghĩa toàn bộ AWS resources:
-
-| Resource | Type | Mô tả |
-|---|---|---|
-| `MyApi` | `AWS::Serverless::Api` | API Gateway, stage `dev`, OpenAPI 2.0 |
-| `GenerateShortUrlFunction` | `AWS::Serverless::Function` | Lambda Python 3.12, endpoint `POST /api/generate-short-url` |
-| `GetUrlFunction` | `AWS::Serverless::Function` | Lambda Python 3.12, endpoint `GET /link/{short_url}` |
-| `LambdaExecutionRole` | `AWS::IAM::Role` | IAM Role cho Lambda, quyền `dynamodb:GetItem` + `dynamodb:PutItem` |
-| `UrlShortenTable` | `AWS::DynamoDB::Table` | DynamoDB table, partition key = `short_url` (String), billing = `PAY_PER_REQUEST` |
-
-> [!IMPORTANT]
-> DynamoDB table chỉ có **1 attribute** trong key schema: `short_url` (HASH key). Không có sort key. Billing mode là **On-Demand** (PAY_PER_REQUEST) — không cần lo provisioned capacity.
-
----
-
-### API Endpoints
-
-#### `POST /api/generate-short-url` — Tạo Short URL
-
-File: [`generate_short_url/app.py`](backend/generate_short_url/app.py)
-
-```mermaid
-flowchart TD
-    A["POST /api/generate-short-url"] --> B{"Body có data?"}
-    B -- Không --> C["400: Request body is empty"]
-    B -- Có --> D["Parse JSON → lấy 'url'"]
-    D --> E["Random 15 ký tự\n(a-z, A-Z, 0-9)"]
-    E --> F["DynamoDB PutItem\n{short_url, original_url}"]
-    F -- OK --> G["200: {short_url_code}"]
-    F -- Error --> H["500: error message"]
-```
-
-**Logic chi tiết:**
-
-1. Nhận event từ API Gateway, parse `event['body']` (JSON string)
-2. Nếu body rỗng → trả `400`
-3. Lấy `body['url']` là URL gốc
-4. Sinh `short_url` = random 15 ký tự (chữ + số) dùng `random.choices()`
-5. Ghi vào DynamoDB table `UrlShortenTable` với `{short_url, original_url}`
-6. Trả về `{"short_url_code": "<15-char-code>"}` kèm CORS headers
-
-**Request / Response mẫu:**
+### Cách nhanh nhất
 
 ```bash
-# Request
-curl -X POST https://npt-shortenlink.dev/api/generate-short-url \
+pnpm install --frozen-lockfile
+make dev
+```
+
+- Web: `http://localhost:3000`
+- API: `http://localhost:8080`
+- Health: `http://localhost:8080/healthz`
+
+`make dev` chạy cả hai process. Nếu muốn log tách riêng, dùng hai terminal:
+
+```bash
+# terminal 1
+pnpm dev:api
+
+# terminal 2
+pnpm dev:web
+```
+
+Backend local mặc định dùng **in-memory repository**, vì vậy dữ liệu sẽ mất khi
+restart process. Không cần AWS credentials hoặc DynamoDB để phát triển UI/API.
+
+### Tạo link thử
+
+```bash
+curl -X POST http://localhost:8080/api/v1/links \
   -H "Content-Type: application/json" \
-  -d '{"url": "https://www.example.com/very-long-path"}'
-
-# Response (200)
-{"short_url_code": "aB3xYz7Kp2mN9wQ"}
+  -d '{
+    "url": "https://example.com/docs",
+    "custom_alias": "example-docs",
+    "expires_in_days": 30
+  }'
 ```
 
-> [!NOTE]
-> Chuỗi ngắn dài **15 ký tự**, sử dụng bảng chữ cái `a-zA-Z0-9` (62 ký tự) → `62^15 ≈ 7.7 × 10²⁶` tổ hợp — xác suất trùng cực thấp. Tuy nhiên, code **không kiểm tra trùng lặp** trước khi ghi.
+Sau đó mở:
 
----
-
-#### `GET /link/{short_url}` — Redirect về URL Gốc
-
-File: [`get_url/app.py`](backend/get_url/app.py)
-
-```mermaid
-flowchart TD
-    A["GET /link/{short_url}"] --> B["Lấy short_url từ\nevent.pathParameters"]
-    B --> C["DynamoDB GetItem\nKey: short_url"]
-    C --> D{"Tìm thấy?"}
-    D -- Có --> E["308 Permanent Redirect\nLocation: original_url"]
-    D -- Không --> F["404: URL not found"]
+```text
+http://localhost:8080/link/example-docs
 ```
 
-**Logic chi tiết:**
+## HTTP API
 
-1. Trích `short_url` từ `event['pathParameters']['short_url']`
-2. Query DynamoDB bằng `GetItem` với key `short_url`
-3. Nếu tìm thấy → trả HTTP **308** (Permanent Redirect) với header `Location: <original_url>`
-4. Nếu không tìm thấy → trả **404**
+| Method | Route | Success | Mục đích |
+|---|---|---:|---|
+| `POST` | `/api/v1/links` | `201` | Tạo random code hoặc custom alias |
+| `GET` | `/api/v1/links/{code}` | `200` | Đọc metadata và trạng thái hiện tại |
+| `GET` | `/link/{code}` | `302` | Redirect link đang active |
+| `GET` | `/healthz` | `200` | Liveness của process/router |
 
-> [!TIP]
-> HTTP 308 là "Permanent Redirect" — tương tự 301 nhưng **giữ nguyên method** của request gốc (GET vẫn là GET). Browser sẽ tự động follow redirect.
+Success response dùng envelope `data`; lỗi ứng dụng dùng envelope `error`:
 
----
-
-### Deploy Config
-
-File [`samconfig.toml`](backend/samconfig.toml):
-
-| Config | Giá trị |
-|---|---|
-| **Stack name** | `shorten-link-backend` |
-| **Region** | `ap-southeast-1` (Singapore) |
-| **Build** | cached + parallel |
-| **Deploy** | capability IAM, confirm changeset, disable rollback |
-| **Local dev** | warm containers `EAGER` (giảm cold start khi test local) |
-
----
-
-## Frontend — Chi Tiết
-
-### Tech Stack
-
-| Công nghệ | Version | Vai trò |
-|---|---|---|
-| React | 18.3.1 | UI library |
-| Vite | 5.4.8 | Build tool + dev server |
-| ESLint | 9.11.1 | Linting (flat config) |
-
-### Luồng Hoạt Động UI
-
-File chính: [`ShortenLink.jsx`](frontend/src/ShortenLink.jsx)
-
-```mermaid
-stateDiagram-v2
-    [*] --> FormView: Mở trang
-    FormView --> Loading: Click "Generate Short URL"
-    Loading --> PopupView: Nhận response OK
-    Loading --> FormView: Error
-    PopupView --> FormView: Click "Close"
-    PopupView --> PopupView: Click "Copy to Clipboard"
-```
-
-**States (React hooks):**
-
-| State | Kiểu | Mô tả |
-|---|---|---|
-| `link` | `string` | URL người dùng nhập vào |
-| `shortLink` | `string` | URL ngắn đã sinh (dạng `https://npt-shortenlink.dev/link/<code>`) |
-| `showPopup` | `boolean` | Hiện/ẩn popup kết quả |
-
-**Khi user click "Generate Short URL":**
-
-1. `fetch("/api/generate-short-url", { method: "POST", body: { url: link } })`
-2. Nhận `{ short_url_code }` → ghép với `VITE_BASE_URL` → `https://npt-shortenlink.dev/link/<code>`
-3. Hiện popup với URL ngắn + nút **Copy** + nút **Close**
-
----
-
-### API Proxy (Vite Dev Server)
-
-File: [`vite.config.js`](frontend/vite.config.js)
-
-```javascript
-proxy: {
-    "/api":  { target: env.VITE_API_PROXY_TARGET, changeOrigin: true },
-    "/link": { target: env.VITE_API_PROXY_TARGET, changeOrigin: true },
+```json
+{
+  "data": {
+    "code": "example-docs",
+    "short_url": "http://localhost:8080/link/example-docs",
+    "target_url": "https://example.com/docs",
+    "status": "active",
+    "created_at": "2026-07-23T00:00:00Z",
+    "expires_at": "2026-08-22T00:00:00Z"
+  }
 }
 ```
 
-Khi dev local, frontend chạy ở `localhost:5173` nhưng cần gọi API ở `localhost:3000` (SAM local) hoặc production. Vite proxy sẽ forward:
+Contract đầy đủ, schema lỗi và examples nằm tại
+[`openapi/openapi.yaml`](openapi/openapi.yaml).
 
-- `/api/*` → `VITE_API_PROXY_TARGET/api/*`
-- `/link/*` → `VITE_API_PROXY_TARGET/link/*`
-
-→ Giải quyết vấn đề **CORS** trong development.
-
----
-
-### Environment Variables
-
-File [`.env.example`](frontend/.env.example):
-
-| Variable | Mục đích | Giá trị production |
-|---|---|---|
-| `VITE_BASE_URL` | Prefix khi hiển thị short URL cho user | `https://npt-shortenlink.dev` |
-| `VITE_API_PROXY_TARGET` | Target cho Vite proxy (dev server) | `https://npt-shortenlink.dev` |
-
-Tạo file `.env` từ template:
+## Kiểm chứng
 
 ```bash
-cd frontend
-cp .env.example .env
+# Frontend lint/build + Go vet/test
+make verify
+
+# Thêm dependency audit, govulncheck, OpenAPI lint và SAM build
+make verify-all
 ```
 
-Khi chạy local với SAM, đổi cả 2 giá trị thành `http://localhost:3000`.
+Các target hữu ích khác:
 
----
-
-### Styling
-
-File: [`index.css`](frontend/src/index.css)
-
-| Thành phần | Chi tiết |
+| Lệnh | Kiểm tra/thao tác |
 |---|---|
-| Layout | CSS Grid, centered toàn trang (`place-items: center`) |
-| Card wrapper | max-width 640px, border-radius 12px, white background |
-| Buttons | Blue `#2563eb`, border-radius 8px |
-| Popup | Light cyan `#ecfeff`, cyan border `#a5f3fc` |
-
----
-
-## Luồng Dữ Liệu End-to-End
-
-```mermaid
-sequenceDiagram
-    actor User
-    participant FE as Frontend<br/>(React + Vite)
-    participant Proxy as Vite Proxy<br/>or CloudFront
-    participant APIGW as API Gateway
-    participant L1 as Lambda<br/>GenerateShortUrl
-    participant L2 as Lambda<br/>GetUrl
-    participant DB as DynamoDB
-
-    Note over User,DB: === Tạo Short URL ===
-    User->>FE: Nhập URL + click "Generate"
-    FE->>Proxy: POST /api/generate-short-url
-    Proxy->>APIGW: Forward request
-    APIGW->>L1: Invoke Lambda
-    L1->>DB: PutItem {short_url, original_url}
-    DB-->>L1: OK
-    L1-->>APIGW: 200 {short_url_code}
-    APIGW-->>Proxy: Response
-    Proxy-->>FE: Response
-    FE-->>User: Hiện popup với link ngắn
-
-    Note over User,DB: === Dùng Short URL ===
-    User->>Proxy: GET /link/abc123xyz...
-    Proxy->>APIGW: Forward request
-    APIGW->>L2: Invoke Lambda
-    L2->>DB: GetItem {short_url: "abc123xyz..."}
-    DB-->>L2: {original_url: "https://..."}
-    L2-->>APIGW: 308 Redirect + Location header
-    APIGW-->>Proxy: 308
-    Proxy-->>User: Browser redirect → original URL
-```
-
----
-
-## Quick Start (Local Development)
-
-### 1) Backend
-
-```bash
-cd backend
-pip install -r requirements.txt
-sam build
-sam local start-api
-```
-
-Backend local URL: `http://127.0.0.1:3000`
-
-Test nhanh:
-
-```bash
-curl -X POST http://127.0.0.1:3000/api/generate-short-url \
-  -H "Content-Type: application/json" \
-  -d '{"url": "https://example.com"}'
-```
-
-### 2) Frontend
-
-```bash
-cd frontend
-cp .env.example .env
-# Sửa .env: đổi cả 2 giá trị thành http://localhost:3000 (nếu test local)
-npm install
-npm run dev
-```
-
-Frontend chạy tại: `http://localhost:5173`
-
----
-
-## Testing
-
-### Unit Tests
-
-File: [`tests/unit/test_handler.py`](backend/tests/unit/test_handler.py) — **4 test cases**, mock DynamoDB bằng `unittest.mock`:
-
-| Test | Kiểm tra |
-|---|---|
-| `test_generate_short_url_success` | Tạo short URL thành công → 200, code dài 15 ký tự, `put_item` được gọi |
-| `test_generate_short_url_missing_body` | Body rỗng → 400 |
-| `test_get_url_success` | Tìm thấy URL → 308, Location header đúng |
-| `test_get_url_not_found` | Không tìm thấy → 404 |
-
-### Integration Test
-
-File: [`tests/integration/test_api_gateway.py`](backend/tests/integration/test_api_gateway.py):
-
-- Cần biến môi trường `API_BASE_URL` (URL thật đã deploy)
-- Gọi POST tới endpoint thật, verify status 200 và có `short_url_code`
-- Tự skip nếu không set `API_BASE_URL`
-
-### Chạy Tests
-
-```bash
-cd backend
-pip install -r tests/requirements.txt
-
-# Chỉ unit tests (integration tự skip)
-pytest tests
-
-# Cả unit + integration
-API_BASE_URL=https://<deployed-api-base-url> pytest tests
-```
-
----
-
-## Deploy
-
-### Backend (AWS)
-
-```bash
-cd backend
-sam build              # Build Lambda packages
-sam deploy --guided    # Deploy lên AWS (CloudFormation stack)
-```
-
-Sau khi deploy, đọc CloudFormation outputs:
-
-- `ApiBaseUrl` — Base URL của API Gateway
-- `GenerateShortUrlEndpoint` — Full URL endpoint tạo short URL
-
-### Frontend (Production)
-
-```bash
-cd frontend
-# Đảm bảo .env đã set giá trị production:
-# VITE_BASE_URL=https://npt-shortenlink.dev
-# VITE_API_PROXY_TARGET=https://npt-shortenlink.dev
-npm run build          # Output → frontend/dist/
-```
-
-Deploy thư mục `frontend/dist/` lên static hosting (S3 + CloudFront, Netlify, Vercel, etc.).
-
-### Cleanup
-
-Xóa toàn bộ resources đã deploy:
-
-```bash
-cd backend
-sam delete --stack-name shorten-link-backend
-```
-
----
-
-## Lưu Ý Quan Trọng
-
-> [!WARNING]
-> **Cognito** xuất hiện trong sơ đồ kiến trúc nhưng **chưa được triển khai** trong code. Hiện tại API hoàn toàn public, không có authentication/authorization.
+| `make test` | Go tests |
+| `make test-api-race` | Race detector; cần CGO compiler |
+| `make security` | pnpm production audit + reachable Go vulnerabilities |
+| `make openapi-lint` | Redocly lint với version đã pin |
+| `make sam-build` | Validate và cross-build Lambda `linux/arm64` |
+| `make codegraph-status` | Trạng thái graph code local |
 
 > [!NOTE]
-> - Code **không check trùng lặp** short URL trước khi ghi DynamoDB. Với 15 ký tự random (62^15 tổ hợp), xác suất collision cực thấp nhưng về mặt lý thuyết vẫn có thể xảy ra.
-> - CORS headers được set trực tiếp trong Lambda response (wildcard `*`), không qua API Gateway config.
-> - Frontend dùng **fetch API** thuần, không dùng thư viện HTTP nào (axios, etc.).
-> - `package.json` có một số devDependencies thừa từ webpack (`babel-loader`, `html-webpack-plugin`, `webpack`, `webpack-cli`, `webpack-dev-server`) — project ban đầu dùng webpack rồi chuyển sang Vite.
-> - Domain hiện tại: `https://npt-shortenlink.dev`. Giữ secret keys ngoài repository files.
+> Hallmark là release gate, không phải một npm script. Báo cáo browser gần nhất,
+> viewport matrix và ảnh bằng chứng nằm tại
+> [`docs/hallmark-report.md`](docs/hallmark-report.md).
+
+## AWS build và deploy
+
+SAM v2 khai báo một stack gồm Lambda, HTTP API, DynamoDB, S3 private, CloudFront,
+Route 53 records và log groups.
+
+```bash
+make sam-validate
+make sam-build
+make sam-deploy-guided
+```
+
+Ba lệnh trên chỉ validate, build và deploy **AWS stack**. Frontend static export
+phải được build/upload riêng và CloudFront cần invalidation theo hướng dẫn hạ tầng.
+
+Trước khi deploy cần:
+
+- AWS credentials/profile có quyền tạo các resource trong stack;
+- AWS CLI, AWS SAM CLI, Go `1.26.5` và GNU Make;
+- public Route 53 hosted zone cho domain;
+- ACM certificate đã `ISSUED` tại **`us-east-1`** cho CloudFront;
+- region ứng dụng mục tiêu, mặc định trong tài liệu là `ap-southeast-1`.
+
+DynamoDB table, frontend bucket và log groups dùng retention policy để giảm nguy
+cơ mất dữ liệu khi stack bị thay thế/xóa; các resource giữ lại phải được cleanup
+thủ công khi không còn cần thiết.
+
+Xem parameter, cache policy và quy trình upload static export tại
+[`infra/aws/README.md`](infra/aws/README.md).
+
+## Tái lập v1 baseline
+
+Không cần thay đổi working tree v2. Tạo một worktree riêng từ versioned baseline tag:
+
+```bash
+git worktree add ../shorten-link-v1 cv-2026-06-python-react-sam
+cd ../shorten-link-v1
+
+python -m pip install -r backend/requirements.txt -r backend/tests/requirements.txt
+python -m pytest backend/tests
+
+npm --prefix frontend ci
+npm --prefix frontend run lint
+npm --prefix frontend run build
+
+cd backend
+sam validate --lint
+sam build
+```
+
+Live integration test v1 là opt-in và tự skip khi không có `API_BASE_URL`.
+
+## Trạng thái và ranh giới hiện tại
+
+| Đã có trong source v2 | Chưa tuyên bố hoàn thành |
+|---|---|
+| Go/Gin clean architecture, memory + DynamoDB adapters | Public v2 deployment/live SLA |
+| Alias, expiration, metadata và redirect `302` | Authentication/Cognito |
+| Structured JSON logs, request ID, recovery, exact-origin CORS | WAF, dashboard và alarms |
+| S3 private, CloudFront OAC, Route 53 aliases | EventBridge/SQS analytics pipeline |
+| OpenAPI contract, test/security/build commands, Hallmark browser pass | Load/SLO evidence |
+
+API MVP hiện chưa có authentication. WAF, auth, analytics và observability nâng
+cao chỉ được thêm khi có use case và acceptance criteria riêng; chúng không được
+ngầm coi là đã triển khai chỉ vì xuất hiện trong tài liệu kiến trúc đích.
+
+## Release strategy
+
+1. **Giữ v1 tái lập được:** versioned tag cố định mốc Python/React/SAM đã mô tả trong CV.
+2. **Đưa frontend preview lên trước:** không đổi contract hoặc deployment v1.
+3. **Đưa Go/API/SAM v2 lên theo PR nhỏ:** build side-by-side, không overwrite stack v1.
+4. **Cutover có rollback:** smoke test trước khi đổi CloudFront/domain traffic.
+5. **Chỉ archive legacy sau ổn định:** deletion là PR độc lập, không trộn với migration.
+
+## Tài liệu
+
+- [System architecture](docs/architecture.md)
+- [Implementation plan](docs/implementation-plan.md)
+- [OpenAPI contract](openapi/openapi.yaml)
+- [Hallmark QA process](docs/hallmark-qa.md)
+- [Current Hallmark report](docs/hallmark-report.md)
+- [AWS deployment guide](infra/aws/README.md)
+- [Go API guide](services/shortener-api/README.md)
+- [Frontend guide](apps/web/README.md)
+
+## Tham khảo
+
+- [`nghiadaulau/serverless-url-shortener-aws`](https://github.com/nghiadaulau/serverless-url-shortener-aws) — pattern serverless/AWS ban đầu.
+- [`Nutlope/hallmark`](https://github.com/Nutlope/hallmark) — kỷ luật thiết kế và quy trình chống giao diện rập khuôn.
+- [`colbymchenry/codegraph`](https://github.com/colbymchenry/codegraph) — graph code local phục vụ navigation và impact analysis.
+
+## License
+
+Repository được công khai để phục vụ portfolio và technical review. Chưa có
+open-source license hoặc quyền tái phân phối được cấp.
