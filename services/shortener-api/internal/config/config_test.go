@@ -41,6 +41,50 @@ func TestLoadLambdaRequiresTable(t *testing.T) {
 	}
 }
 
+func TestLoadLambdaRequiresPublicConfiguration(t *testing.T) {
+	tests := []struct {
+		name               string
+		publicBaseURL      string
+		corsAllowedOrigins string
+	}{
+		{name: "public base URL"},
+		{
+			name:          "CORS allowed origins",
+			publicBaseURL: "https://npt-shortenlink.dev",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			clearConfigEnvironment(t)
+			t.Setenv("LINKS_TABLE_NAME", "links")
+			t.Setenv("PUBLIC_BASE_URL", test.publicBaseURL)
+			t.Setenv("CORS_ALLOWED_ORIGINS", test.corsAllowedOrigins)
+
+			if _, err := Load(true); err == nil {
+				t.Fatalf("Load(true) accepted missing %s", test.name)
+			}
+		})
+	}
+}
+
+func TestLoadLambdaConfiguration(t *testing.T) {
+	clearConfigEnvironment(t)
+	t.Setenv("LINKS_TABLE_NAME", "links")
+	t.Setenv("PUBLIC_BASE_URL", "https://npt-shortenlink.dev/")
+	t.Setenv("CORS_ALLOWED_ORIGINS", "https://npt-shortenlink.dev")
+
+	got, err := Load(true)
+	if err != nil {
+		t.Fatalf("Load(true) error = %v", err)
+	}
+	if got.StorageDriver != StorageDynamoDB || got.LinksTable != "links" ||
+		got.PublicBaseURL != "https://npt-shortenlink.dev" ||
+		!reflect.DeepEqual(got.CORSAllowedOrigins, []string{"https://npt-shortenlink.dev"}) {
+		t.Fatalf("Load(true) = %#v", got)
+	}
+}
+
 func TestLoadDynamoDBConfiguration(t *testing.T) {
 	clearConfigEnvironment(t)
 	t.Setenv("STORAGE_DRIVER", "dynamodb")
@@ -69,6 +113,8 @@ func TestLoadRejectsInvalidValues(t *testing.T) {
 	}{
 		{name: "storage driver", key: "STORAGE_DRIVER", value: "filesystem"},
 		{name: "public base URL", key: "PUBLIC_BASE_URL", value: "ftp://example.com"},
+		{name: "public base URL path", key: "PUBLIC_BASE_URL", value: "https://example.com/links"},
+		{name: "public base URL credentials", key: "PUBLIC_BASE_URL", value: "https://user:secret@example.com"},
 		{name: "CORS origin path", key: "CORS_ALLOWED_ORIGINS", value: "https://example.com/path"},
 	}
 
