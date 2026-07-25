@@ -48,6 +48,38 @@ jobs:
       - name: Build frontend
         run: pnpm build:web
 
+  backend:
+    name: Backend format, test, and security
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.work
+          cache-dependency-path: services/shortener-api/go.sum
+
+      - name: Check Go formatting
+        shell: bash
+        run: |
+          unformatted="$(gofmt -l services/shortener-api)"
+          if [[ -n "$unformatted" ]]; then
+            printf 'The following Go files need gofmt:\n%s\n' "$unformatted"
+            exit 1
+          fi
+
+      - name: Vet backend
+        run: go vet ./services/shortener-api/...
+
+      - name: Test backend with race detector
+        run: go test -race -count=1 ./services/shortener-api/...
+
+      - name: Scan backend dependencies
+        run: go -C services/shortener-api run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
+
   dependency-audit:
     name: Audit production dependencies
     runs-on: ubuntu-latest
