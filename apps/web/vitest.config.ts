@@ -13,7 +13,7 @@ export default defineConfig({
     environmentOptions: {
       jsdom: {
         pretendToBeVisual: true,
-        url: "http://localhost:3001",
+        url: "http://localhost:3000",
       },
     },
     setupFiles: "./vitest.setup.ts",

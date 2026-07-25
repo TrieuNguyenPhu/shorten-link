@@ -4,26 +4,26 @@ import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
-  subsets: ["latin", "vietnamese"],
+  subsets: ["latin"],
   display: "swap",
 });
 
 const inter = Inter({
   variable: "--font-inter",
-  subsets: ["latin", "vietnamese"],
+  subsets: ["latin"],
   display: "swap",
 });
 
 const jetBrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
-  subsets: ["latin", "vietnamese"],
+  subsets: ["latin"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "NPT ShortenLink — Frontend preview",
+  title: "NPT ShortenLink — Rút gọn URL",
   description:
-    "Bản xem trước frontend cho ứng dụng rút gọn URL dùng AWS Lambda và Python API hiện tại.",
+    "Tạo short link với alias và thời hạn tùy chọn tại npt-shortenlink.dev.",
 };
 
 export default function RootLayout({
@@ -32,11 +32,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="vi"
-      className={`${spaceGrotesk.variable} ${inter.variable} ${jetBrainsMono.variable}`}
-    >
-      <body>{children}</body>
+    <html lang="vi">
+      <body
+        className={`${spaceGrotesk.variable} ${inter.variable} ${jetBrainsMono.variable}`}
+      >
+        {children}
+      </body>
     </html>
   );
 }

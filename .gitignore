@@ -1,27 +1,40 @@
-# Global
+# JavaScript / Next.js
+node_modules/
+.pnpm-store/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+
+# Go
+bin/
+dist/
+*.test
+*.out
+coverage-api.out
+
+# AWS SAM
+.aws-sam/
+samconfig.toml
+
+# CodeGraph local indexes
+/.codegraph/
+/.codegraph-*/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+
+# Editors and operating systems
 .DS_Store
 Thumbs.db
+.idea/
+.vscode/
 
-# Backend
-backend/.aws-sam/
-backend/.pytest_cache/
-backend/__pycache__/
-backend/**/__pycache__/
-backend/.venv/
-
-# Frontend
-frontend/node_modules/
-frontend/dist/
-frontend/.env
-frontend/.env.*
-!frontend/.env.example
-
-# Isolated frontend preview
-.pnpm-store/
-node_modules/
-apps/web/node_modules/
-apps/web/.next/
-apps/web/out/
-apps/web/.env
-apps/web/.env.*
-!apps/web/.env.example
+# Logs
+*.log
+pnpm-debug.log*
