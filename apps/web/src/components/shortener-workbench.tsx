@@ -12,6 +12,7 @@ type RequestState = "idle" | "loading" | "success" | "error";
 type CopyState = "idle" | "copying" | "copied" | "error";
 
 const aliasPattern = /^[a-z0-9-]{4,32}$/;
+const maximumURLLength = 2048;
 const spinnerDelayMilliseconds = 150;
 const spinnerMinimumVisibleMilliseconds = 300;
 
@@ -31,14 +32,24 @@ const errorMessages: Record<string, string> = {
 };
 
 function validateURL(value: string): string | null {
-  if (!value.trim()) {
+  const normalized = value.trim();
+  if (!normalized) {
     return "Hãy nhập URL cần rút gọn.";
+  }
+  if (normalized.length > maximumURLLength) {
+    return "URL không được vượt quá 2.048 ký tự.";
   }
 
   try {
-    const parsed = new URL(value);
+    const parsed = new URL(normalized);
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
       return "URL phải bắt đầu bằng http:// hoặc https://.";
+    }
+    if (!parsed.hostname) {
+      return "URL phải có tên miền hợp lệ.";
+    }
+    if (parsed.username || parsed.password) {
+      return "URL không được chứa thông tin đăng nhập.";
     }
   } catch {
     return "URL chưa đúng định dạng. Ví dụ: https://example.com/tai-lieu";
@@ -292,6 +303,7 @@ export function ShortenerWorkbench() {
               inputMode="url"
               autoComplete="url"
               placeholder="https://example.com/tai-lieu"
+              maxLength={maximumURLLength}
               value={url}
               disabled={requestState === "loading"}
               onChange={(event) => setURL(event.target.value)}

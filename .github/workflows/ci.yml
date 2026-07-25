@@ -84,6 +84,9 @@ jobs:
           cache: true
           cache-dependency-path: services/shortener-api/go.sum
 
+      - name: Check backend formatting
+        run: gofmt -l services/shortener-api | tee /tmp/unformatted-go-files && test ! -s /tmp/unformatted-go-files
+
       - name: Vet backend
         working-directory: services/shortener-api
         run: go vet ./...

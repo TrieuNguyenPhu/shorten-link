@@ -17,8 +17,8 @@ Environment variables:
 | --- | --- | --- |
 | `STORAGE_DRIVER` | `memory` locally, `dynamodb` on Lambda | `memory` or `dynamodb` |
 | `LINKS_TABLE_NAME` | — | Required for DynamoDB |
-| `PUBLIC_BASE_URL` | `http://localhost:8080` | Canonical base used in `short_url` |
-| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | Comma-separated exact origins |
+| `PUBLIC_BASE_URL` | `http://localhost:8080` locally; required on Lambda | Canonical origin used in `short_url` |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` locally; required on Lambda | Comma-separated exact origins |
 | `HTTP_ADDR` | `:8080` | Local listen address |
 | `PORT` | `8080` | Used when `HTTP_ADDR` is unset |
 

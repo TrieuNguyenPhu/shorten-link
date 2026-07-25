@@ -18,7 +18,7 @@ OPENAPI_SPEC ?= openapi/openapi.yaml
 REDOCLY_VERSION ?= 2.40.0
 
 .PHONY: help install dev dev-api dev-web \
-	lint-web build build-web format-api tidy-api vet-api test test-api test-api-race \
+	lint-web build build-web format-api check-format-api tidy-api vet-api test test-api test-api-race \
 	verify verify-all security audit-deps vuln-api openapi-lint \
 	sam-validate sam-build sam-deploy-guided \
 	codegraph-init codegraph-status codegraph-sync codegraph-index
@@ -37,6 +37,7 @@ help:
 	@echo   make verify-all           Add security, OpenAPI and SAM validation/build
 	@echo   make test                 Run backend tests
 	@echo   make test-api-race        Run Go race tests; requires a CGO compiler
+	@echo   make check-format-api     Fail if committed Go files need gofmt
 	@echo   make security             Audit pnpm and reachable Go vulnerabilities
 	@echo   make openapi-lint         Lint the OpenAPI contract with pinned Redocly
 	@echo.
@@ -74,6 +75,9 @@ build-web:
 
 format-api:
 	$(GO) fmt ./services/shortener-api/...
+
+check-format-api:
+	$(PNPM) format:check:api
 
 tidy-api:
 	$(GO) -C services/shortener-api mod tidy
