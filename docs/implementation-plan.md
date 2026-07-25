@@ -36,7 +36,7 @@ Các mục sau **không chặn MVP**: tài khoản người dùng, dashboard nhi
 
 - Tên miền sản phẩm: `npt-shortenlink.dev`.
 - Backend: Go `1.26.5+`, Gin, clean architecture; chạy local như HTTP server và đóng gói thành một Lambda cho AWS.
-- Frontend: Next.js App Router, TypeScript strict, quản lý bằng `pnpm`; baseline hiện tại là Next.js `16` và pnpm `10`.
+- Frontend: Next.js App Router, TypeScript strict, quản lý bằng `pnpm`; baseline hiện tại là Next.js `16.2`, TypeScript `6` và pnpm `11`.
 - Bộ ảnh tham khảo ban đầu (đã xóa khỏi repository sau khi chắt lọc) cung cấp hai loại tín hiệu:
   - tín hiệu hệ thống: HTTP API, Lambda, DynamoDB single-table, conditional write, TTL, EventBridge, SQS/DLQ, Cognito, WAF, CloudWatch/X-Ray, load test và canary;
   - tín hiệu thị giác: nền xanh đen, chữ sáng, accent xanh lam tiết chế, bố cục editorial kỹ thuật, đường viền mảnh và mật độ thông tin cao.

@@ -15,7 +15,7 @@ The stack provisions:
 
 - AWS CLI + credentials/profile có quyền deploy stack và upload frontend.
 - AWS SAM CLI, Go `1.26.5+` và GNU Make để build Lambda qua Makefile.
-- Node.js `22.20+` và pnpm `10.33+` để build static frontend.
+- Node.js `24.18` LTS và pnpm `11.17+` để build static frontend.
 - An existing public Route 53 hosted zone containing `npt-shortenlink.dev`.
 - An issued ACM certificate in **us-east-1** that covers the domain. CloudFront requires its viewer certificate in that region even when the stack is deployed elsewhere.
 - The backend Makefile target `build-ShortenerFunction`. SAM invokes it from `services/shortener-api` and expects the `bootstrap` artifact in `$(ARTIFACTS_DIR)`.

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "A clean, serverless URL shortener for npt-shortenlink.dev",
-  "packageManager": "pnpm@10.33.2",
+  "packageManager": "pnpm@11.17.0",
   "scripts": {
     "dev:api": "go run ./services/shortener-api/cmd/api",
     "dev:web": "pnpm --dir apps/web dev",
@@ -22,12 +22,6 @@
     "verify": "pnpm test:web && pnpm lint:web && pnpm build:web && pnpm format:check:api && pnpm vet:api && pnpm test:api"
   },
   "engines": {
-    "node": ">=22.20.0"
-  },
-  "pnpm": {
-    "overrides": {
-      "postcss": "8.5.23",
-      "sharp": "0.35.3"
-    }
+    "node": ">=24.18.0 <25"
   }
 }

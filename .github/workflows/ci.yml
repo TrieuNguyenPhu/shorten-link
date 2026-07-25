@@ -22,7 +22,7 @@ jobs:
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v6
@@ -30,9 +30,9 @@ jobs:
           run_install: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: 22.20.0
+          node-version: 24.18.0
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
@@ -54,7 +54,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v6
@@ -62,9 +62,9 @@ jobs:
           run_install: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: 22.20.0
+          node-version: 24.18.0
 
       - name: Audit lockfile
         run: pnpm audit:deps
@@ -75,10 +75,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: services/shortener-api/go.mod
           cache: true
@@ -105,7 +105,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v6
@@ -113,9 +113,9 @@ jobs:
           run_install: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: 22.20.0
+          node-version: 24.18.0
 
       - name: Lint OpenAPI specification
         run: pnpm --package=@redocly/cli@2.40.0 dlx redocly lint openapi/openapi.yaml
@@ -128,10 +128,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: services/shortener-api/go.mod
           cache: true
@@ -140,7 +140,7 @@ jobs:
       - name: Set up AWS SAM CLI
         uses: aws-actions/setup-sam@v3
         with:
-          version: 1.163.0
+          version: 1.164.0
           use-installer: true
           token: ${{ secrets.GITHUB_TOKEN }}
 

@@ -124,14 +124,14 @@ ghi lại trong README và sơ đồ kiến trúc của release.
 
 | Lớp | Công nghệ | Phiên bản/pattern |
 |---|---|---|
-| Web | Next.js, React, TypeScript | Next `16.2.11`, React `19.2.8`, App Router, static export |
-| API | Go, Gin | Go `1.26.5`, Gin `1.11.0`, clean architecture |
+| Web | Next.js, React, TypeScript | Next `16.2.12`, React `19.2.8`, TypeScript `6.0.3`, App Router, static export |
+| API | Go, Gin | Go `1.26.5`, Gin `1.12.0`, clean architecture |
 | Contract | OpenAPI | OpenAPI `3.0.3`, contract version `1.0.0` |
 | Runtime | AWS Lambda | `provided.al2023`, `arm64` |
 | Edge | CloudFront, S3 OAC, Route 53, ACM | Same-origin static + API routing |
 | Data | DynamoDB | `PAY_PER_REQUEST`, PITR, SSE, TTL |
 | IaC | AWS SAM/CloudFormation | Custom Makefile Lambda builder |
-| Tooling | pnpm, GNU Make, CodeGraph | pnpm `10.33.2`, root developer entrypoint |
+| Tooling | Node.js, pnpm, GNU Make, CodeGraph | Node.js `24.18.0` LTS, pnpm `11.17.0`, root developer entrypoint |
 
 ## Repository map
 
@@ -154,8 +154,8 @@ shorten-link/
 
 | Công cụ | Phiên bản |
 |---|---:|
-| Node.js | `>=22.20.0` |
-| pnpm | `10.33.2` |
+| Node.js | `24.18.0` LTS |
+| pnpm | `11.17.0` |
 | Go | `1.26.5` |
 | GNU Make | Tuỳ chọn khi chạy local; bắt buộc để `sam build` Lambda artifact |
 
