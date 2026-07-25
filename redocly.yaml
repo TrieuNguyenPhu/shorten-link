@@ -1,0 +1,8 @@
+extends:
+  - recommended
+
+rules:
+  # This repository is intentionally proprietary and has no public license URL.
+  info-license-strict: off
+  # A redirect-only operation correctly returns 302 and has no 2xx response.
+  operation-2xx-response: off
