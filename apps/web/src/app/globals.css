@@ -235,6 +235,10 @@ code {
 }
 
 .shortener-form button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
   background: var(--color-accent);
   padding-inline: var(--space-lg);
   color: var(--color-accent-ink);
@@ -251,6 +255,16 @@ code {
 .shortener-form button:disabled {
   cursor: not-allowed;
   opacity: 0.58;
+}
+
+.loading-spinner {
+  width: var(--space-md);
+  height: var(--space-md);
+  flex: 0 0 auto;
+  border: var(--rule-thin) solid var(--color-accent-ink);
+  border-right-color: var(--color-accent);
+  border-radius: 50%;
+  animation: loading-spin var(--dur-slow) linear infinite;
 }
 
 .field-help {
@@ -331,16 +345,69 @@ code {
   white-space: nowrap;
 }
 
+.result-panel:focus-visible,
 .result-panel :focus-visible {
   outline-color: var(--color-accent-on-dark);
 }
 
-.result-panel a:active {
+.result-panel a:active,
+.copy-button:active {
   color: var(--color-accent-on-dark);
+}
+
+.copy-button:active {
+  transform: translateY(var(--space-3xs));
 }
 
 .result-panel code {
   color: var(--color-paper);
+}
+
+.copy-button {
+  min-height: var(--control-height);
+  justify-self: start;
+  border: var(--rule-thin) solid var(--color-accent-on-dark);
+  border-radius: var(--radius-control);
+  background: var(--color-graphite);
+  padding-inline: var(--space-md);
+  color: var(--color-paper);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.copy-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.copy-button[data-state="copied"] {
+  background: var(--color-accent-on-dark);
+  color: var(--color-graphite);
+}
+
+.copy-button[data-state="error"] {
+  border-color: var(--color-paper);
+}
+
+.copy-status {
+  min-height: 1lh;
+  font-size: var(--text-sm);
+}
+
+.copy-status[data-state="copied"] {
+  color: var(--color-accent-on-dark);
+}
+
+.copy-status[data-state="error"] {
+  color: var(--color-paper);
+}
+
+@keyframes loading-spin {
+  to {
+    transform: rotate(1turn);
+  }
 }
 
 .compatibility {
@@ -388,13 +455,18 @@ code {
 
 @media (hover: hover) and (pointer: fine) {
   .brand:hover,
-  .shortener-form button:hover {
+  .shortener-form button:hover,
+  .copy-button:hover {
     color: var(--color-accent);
   }
 
   .shortener-form button:hover {
     color: var(--color-accent-ink);
     transform: translateY(calc(var(--space-3xs) * -1));
+  }
+
+  .copy-button:hover {
+    color: var(--color-accent-on-dark);
   }
 }
 
@@ -452,5 +524,13 @@ code {
 
   .shortener-form button {
     transform: none;
+  }
+
+  .copy-button {
+    transform: none;
+  }
+
+  .loading-spinner {
+    animation: none;
   }
 }
