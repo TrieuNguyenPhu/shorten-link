@@ -9,7 +9,8 @@ SAM ?= sam
 
 .PHONY: help install backend-install frontend-install dev frontend-dev \
 	test backend-test backend-unit-test lint frontend-lint build frontend-build \
-	sam-validate sam-build preview-install preview-dev preview-lint preview-build verify
+	sam-validate sam-build preview-install preview-dev preview-test preview-lint \
+	preview-build verify
 
 help:
 	@echo NPT Shorten Link legacy commands
@@ -22,6 +23,7 @@ help:
 	@echo make sam-build        Validate and build the SAM application
 	@echo make preview-install  Install isolated Next.js preview dependencies
 	@echo make preview-dev      Run the isolated preview on port 3001
+	@echo make preview-test     Test the isolated preview interactions
 	@echo make preview-lint     Lint the isolated preview
 	@echo make preview-build    Build the isolated static preview
 	@echo make verify           Run all legacy and preview checks
@@ -69,10 +71,13 @@ preview-install:
 preview-dev:
 	$(PNPM) dev:preview
 
+preview-test:
+	$(PNPM) test:preview
+
 preview-lint:
 	$(PNPM) lint:preview
 
 preview-build:
 	$(PNPM) build:preview
 
-verify: backend-test frontend-lint frontend-build sam-build preview-lint preview-build
+verify: backend-test frontend-lint frontend-build sam-build preview-test preview-lint preview-build
