@@ -1,7 +1,9 @@
 # Kế hoạch và trạng thái triển khai `npt-shortenlink.dev`
 
-> Cập nhật ngày 26/07/2026: `main` chỉ còn source v2. Phase 0–2 đã có bằng
-> chứng local/CI; Phase 3 đã có IaC nhưng chưa có bằng chứng deploy staging;
+> Cập nhật ngày 26/07/2026: Next.js và OpenAPI là baseline đang hoạt động.
+> Backend Go và AWS infrastructure được rollback khỏi cây source để đưa lại
+> bằng các pull request nhỏ, có dependency và validation rõ ràng. Thứ tự review
+> nằm tại [`docs/backend-infra-pr-plan.md`](./backend-infra-pr-plan.md).
 > Phase 4–5 vẫn là gate bắt buộc trước production; Phase 6 nằm ngoài MVP.
 > Contract HTTP chuẩn nằm tại [`openapi/openapi.yaml`](../openapi/openapi.yaml);
 > quyết định kiến trúc nằm tại [`docs/architecture.md`](./architecture.md); cổng
@@ -10,9 +12,9 @@
 | Phase | Trạng thái source | Gate còn lại |
 |---|---|---|
 | 0 · Contract và nền móng | Hoàn thành | Duy trì lint/contract review trong CI |
-| 1 · Backend vertical slice | Hoàn thành | Duy trì test, race test và security scan |
+| 1 · Backend vertical slice | Đang review lại theo capability | Merge tuần tự backend PR; duy trì test, race test và security scan |
 | 2 · Frontend/design system | Hoàn thành | Duy trì lint/build và Hallmark evidence |
-| 3 · DynamoDB/AWS staging | IaC đã validate/build | Deploy staging và chạy smoke/concurrency/retention checks |
+| 3 · DynamoDB/AWS staging | Đang review lại theo resource group | Merge tuần tự infrastructure PR, sau đó validate/build trước staging |
 | 4 · Security/reliability/observability | Chưa hoàn thành | WAF, alarm, dashboard, load/SLO và runbook |
 | 5 · DNS/production | Chưa bắt đầu | Staging sign-off, cutover và rollback rehearsal |
 | 6 · Analytics/tài khoản | Ngoài MVP | Chỉ mở khi có capability/acceptance criteria riêng |
