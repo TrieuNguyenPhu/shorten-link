@@ -228,3 +228,24 @@ func TestResolveMapsLinkState(t *testing.T) {
 		})
 	}
 }
+
+func TestGetMetadataReportsExpiredStatus(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, time.July, 22, 8, 30, 0, 0, time.UTC)
+	past := now.Add(-time.Minute)
+	repository := newTestRepository()
+	if err := repository.Create(ctx, domain.Link{
+		Code: "expired", TargetURL: "https://example.com", Enabled: true, CreatedAt: now, ExpiresAt: &past,
+	}); err != nil {
+		t.Fatalf("seed repository: %v", err)
+	}
+	service := NewLinkService(repository, &sequenceGenerator{}, fixedClock{now: now})
+
+	view, err := service.GetMetadata(ctx, "expired")
+	if err != nil {
+		t.Fatalf("GetMetadata() error = %v", err)
+	}
+	if view.Status != domain.LinkStatusExpired {
+		t.Fatalf("status = %q, want expired", view.Status)
+	}
+}

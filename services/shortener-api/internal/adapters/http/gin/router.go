@@ -11,6 +11,7 @@ func NewRouter(handler *Handler, _ []string) *gin.Engine {
 	router.GET("/healthz", handler.Health)
 	router.GET("/link/:code", handler.Resolve)
 	router.POST("/api/v1/links", handler.Create)
+	router.GET("/api/v1/links/:code", handler.Metadata)
 
 	return router
 }

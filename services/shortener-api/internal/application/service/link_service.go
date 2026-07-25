@@ -129,6 +129,14 @@ func (s *LinkService) Resolve(ctx context.Context, code string) (domain.Link, er
 	return link, nil
 }
 
+func (s *LinkService) GetMetadata(ctx context.Context, code string) (LinkView, error) {
+	link, err := s.repository.GetByCode(ctx, code)
+	if err != nil {
+		return LinkView{}, fmt.Errorf("get link metadata: %w", err)
+	}
+	return LinkView{Link: link, Status: link.StatusAt(s.clock.Now())}, nil
+}
+
 func newLink(code, targetURL string, createdAt time.Time, expiresAt *time.Time) domain.Link {
 	return domain.Link{
 		Code:      code,
