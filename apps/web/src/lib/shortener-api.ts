@@ -4,9 +4,25 @@ interface LegacyShortenResponse {
   short_url_code: string;
 }
 
+export type ShortenerApiErrorKind = "http" | "invalid-response";
+
 export interface ShortLinkResult {
   code: string;
   path: string;
+}
+
+export class ShortenerApiError extends Error {
+  constructor(
+    public readonly kind: ShortenerApiErrorKind,
+    public readonly status?: number,
+  ) {
+    super(
+      kind === "http"
+        ? `Legacy API request failed with status ${status}.`
+        : "Legacy API returned an invalid response.",
+    );
+    this.name = "ShortenerApiError";
+  }
 }
 
 function isLegacyShortenResponse(
@@ -33,12 +49,18 @@ export async function createShortLink(url: string): Promise<ShortLinkResult> {
   });
 
   if (!response.ok) {
-    throw new Error("Legacy API request failed.");
+    throw new ShortenerApiError("http", response.status);
   }
 
-  const payload: unknown = await response.json();
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    throw new ShortenerApiError("invalid-response");
+  }
+
   if (!isLegacyShortenResponse(payload)) {
-    throw new Error("Legacy API returned an invalid response.");
+    throw new ShortenerApiError("invalid-response");
   }
 
   const code = payload.short_url_code.trim();
