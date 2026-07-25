@@ -77,6 +77,27 @@ describe("ShortenerWorkbench", () => {
     expect(screen.getByLabelText("URL đích")).toHaveFocus();
   });
 
+  it.each([
+    {
+      name: "embedded credentials",
+      url: "https://user:secret@example.com/docs",
+      message: "URL không được chứa thông tin đăng nhập.",
+    },
+    {
+      name: "a URL over 2,048 characters",
+      url: `https://example.com/${"a".repeat(2030)}`,
+      message: "URL không được vượt quá 2.048 ký tự.",
+    },
+  ])("rejects $name before calling the API", ({ url, message }) => {
+    render(<ShortenerWorkbench />);
+
+    submit({ url });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.getByText(message)).toBeInTheDocument();
+    expect(screen.getByLabelText("URL đích")).toHaveFocus();
+  });
+
   it("sends optional fields and focuses the successful result", async () => {
     fetchMock.mockResolvedValue(successResponse());
     render(<ShortenerWorkbench />);
