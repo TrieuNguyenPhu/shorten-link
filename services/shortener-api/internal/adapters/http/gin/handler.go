@@ -22,6 +22,7 @@ const maxCreateLinkRequestBytes int64 = 16 << 10
 type linkApplication interface {
 	Create(ctx context.Context, input service.CreateLinkInput) (service.LinkView, error)
 	Resolve(ctx context.Context, code string) (domain.Link, error)
+	GetMetadata(ctx context.Context, code string) (service.LinkView, error)
 }
 
 type Handler struct {
@@ -160,6 +161,15 @@ func (h *Handler) Resolve(c *gin.Context) {
 		return
 	}
 	c.Redirect(http.StatusFound, link.TargetURL)
+}
+
+func (h *Handler) Metadata(c *gin.Context) {
+	view, err := h.links.GetMetadata(c.Request.Context(), c.Param("code"))
+	if err != nil {
+		writeDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, h.linkEnvelope(view))
 }
 
 func (h *Handler) linkEnvelope(view service.LinkView) linkEnvelope {
