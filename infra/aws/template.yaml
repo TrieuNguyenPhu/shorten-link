@@ -1,0 +1,550 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Serverless URL shortener infrastructure for npt-shortenlink.dev.
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: prod
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Deployment environment written to resource tags and Lambda configuration.
+
+  DomainName:
+    Type: String
+    Default: npt-shortenlink.dev
+    AllowedPattern: "^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$"
+    ConstraintDescription: Enter a valid lower-case DNS name.
+
+  CertificateArn:
+    Type: String
+    AllowedPattern: "^arn:aws:acm:us-east-1:[0-9]{12}:certificate/[0-9a-fA-F-]+$"
+    ConstraintDescription: CloudFront requires an ACM certificate ARN issued in us-east-1.
+    Description: ACM certificate in us-east-1 that covers DomainName.
+
+  HostedZoneId:
+    Type: String
+    AllowedPattern: "^Z[A-Z0-9]+$"
+    ConstraintDescription: Enter a Route 53 public hosted zone ID such as Z123EXAMPLE.
+    Description: Route 53 public hosted zone that contains DomainName.
+
+  CorsAllowedOrigins:
+    Type: CommaDelimitedList
+    Default: https://npt-shortenlink.dev
+    Description: Exact browser origins allowed by API Gateway and the Go application; never use wildcard in production.
+
+  CorsAllowedHeaders:
+    Type: CommaDelimitedList
+    Default: Content-Type,Authorization,X-Request-Id
+    Description: Request headers accepted by HTTP API CORS preflight.
+
+  CorsMaxAgeSeconds:
+    Type: Number
+    Default: 600
+    MinValue: 0
+    MaxValue: 86400
+    Description: Browser CORS preflight cache duration.
+
+  ApiThrottleBurstLimit:
+    Type: Number
+    Default: 50
+    MinValue: 1
+    Description: HTTP API token-bucket burst capacity per route.
+
+  ApiThrottleRateLimit:
+    Type: Number
+    Default: 25
+    MinValue: 1
+    Description: HTTP API steady-state requests per second per route.
+
+  FunctionMemorySize:
+    Type: Number
+    Default: 256
+    AllowedValues:
+      - 128
+      - 256
+      - 512
+      - 1024
+    Description: Memory allocated to the Go Lambda function in MiB.
+
+  FunctionTimeoutSeconds:
+    Type: Number
+    Default: 10
+    MinValue: 1
+    MaxValue: 29
+    Description: Lambda timeout; kept below the HTTP API integration timeout.
+
+  FunctionReservedConcurrency:
+    Type: Number
+    Default: 20
+    MinValue: 1
+    Description: Bounds Lambda concurrency and downstream DynamoDB pressure.
+
+  LogRetentionDays:
+    Type: Number
+    Default: 30
+    AllowedValues:
+      - 1
+      - 3
+      - 5
+      - 7
+      - 14
+      - 30
+      - 60
+      - 90
+      - 120
+      - 150
+      - 180
+      - 365
+    Description: CloudWatch log retention for Lambda and HTTP API access logs.
+
+  CloudFrontPriceClass:
+    Type: String
+    Default: PriceClass_100
+    AllowedValues:
+      - PriceClass_100
+      - PriceClass_200
+      - PriceClass_All
+    Description: CloudFront edge-location price class.
+
+Globals:
+  Function:
+    Runtime: provided.al2023
+    Architectures:
+      - arm64
+    MemorySize: !Ref FunctionMemorySize
+    Timeout: !Ref FunctionTimeoutSeconds
+    Tracing: Active
+    Environment:
+      Variables:
+        LINKS_TABLE_NAME: !Ref LinksTable
+        PUBLIC_BASE_URL: !Sub "https://${DomainName}"
+        STORAGE_DRIVER: dynamodb
+        CORS_ALLOWED_ORIGINS: !Join [",", !Ref CorsAllowedOrigins]
+        LOG_LEVEL: INFO
+    Tags:
+      Application: npt-shortenlink
+      Environment: !Ref EnvironmentName
+
+Resources:
+  LinksTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: code
+          AttributeType: S
+      KeySchema:
+        - AttributeName: code
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      Tags:
+        - Key: Application
+          Value: npt-shortenlink
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  ShortenerFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-shortener-api"
+      RetentionInDays: !Ref LogRetentionDays
+      Tags:
+        - Key: Application
+          Value: npt-shortenlink
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  HttpApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub "/aws/http-api/${AWS::StackName}"
+      RetentionInDays: !Ref LogRetentionDays
+      Tags:
+        - Key: Application
+          Value: npt-shortenlink
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  ShortenerFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Least-privilege execution role for the URL shortener Lambda.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: WriteStructuredLambdaLogs
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${ShortenerFunctionLogGroup}:*"
+        - PolicyName: ReadWriteLinksByPrimaryKey
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                Resource: !GetAtt LinksTable.Arn
+        - PolicyName: WriteXRayTelemetry
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - xray:PutTelemetryRecords
+                  - xray:PutTraceSegments
+                Resource: "*"
+      Tags:
+        - Key: Application
+          Value: npt-shortenlink
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  ShortenerHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Description: HTTP API for link creation, lookup, redirect, and health checks.
+      StageName: "$default"
+      FailOnWarnings: true
+      PropagateTags: true
+      AccessLogSettings:
+        DestinationArn: !GetAtt HttpApiAccessLogGroup.Arn
+        Format: >-
+          {"requestId":"$context.requestId","requestTime":"$context.requestTime","httpMethod":"$context.httpMethod","routeKey":"$context.routeKey","status":"$context.status","responseLength":"$context.responseLength","integrationError":"$context.integrationErrorMessage"}
+      DefaultRouteSettings:
+        DetailedMetricsEnabled: true
+        ThrottlingBurstLimit: !Ref ApiThrottleBurstLimit
+        ThrottlingRateLimit: !Ref ApiThrottleRateLimit
+      CorsConfiguration:
+        AllowCredentials: false
+        AllowHeaders: !Ref CorsAllowedHeaders
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowOrigins: !Ref CorsAllowedOrigins
+        ExposeHeaders:
+          - Location
+          - X-Request-Id
+        MaxAge: !Ref CorsMaxAgeSeconds
+      DefinitionBody:
+        openapi: "3.0.1"
+        info:
+          title: !Sub "${AWS::StackName}-http-api"
+          version: "1.0"
+        paths:
+          /api/v1/links:
+            post: {}
+          /api/v1/links/{code}:
+            get:
+              parameters:
+                - name: code
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+          /link/{code}:
+            get:
+              parameters:
+                - name: code
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+          /healthz:
+            get: {}
+      Tags:
+        Application: npt-shortenlink
+        Environment: !Ref EnvironmentName
+
+  ShortenerFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-shortener-api"
+      Description: Go HTTP API for creating and resolving short links.
+      CodeUri: ../../services/shortener-api
+      Handler: bootstrap
+      Role: !GetAtt ShortenerFunctionRole.Arn
+      ReservedConcurrentExecutions: !Ref FunctionReservedConcurrency
+      LoggingConfig:
+        ApplicationLogLevel: INFO
+        LogFormat: JSON
+        LogGroup: !Ref ShortenerFunctionLogGroup
+        SystemLogLevel: INFO
+      Events:
+        CreateLink:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ShortenerHttpApi
+            Method: POST
+            Path: /api/v1/links
+            PayloadFormatVersion: "2.0"
+        GetLink:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ShortenerHttpApi
+            Method: GET
+            Path: /api/v1/links/{code}
+            PayloadFormatVersion: "2.0"
+        RedirectLink:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ShortenerHttpApi
+            Method: GET
+            Path: /link/{code}
+            PayloadFormatVersion: "2.0"
+        HealthCheck:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ShortenerHttpApi
+            Method: GET
+            Path: /healthz
+            PayloadFormatVersion: "2.0"
+
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+        - Key: Application
+          Value: npt-shortenlink
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  FrontendOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Description: !Sub "Private S3 access for ${DomainName}"
+        Name: !Sub "${AWS::StackName}-frontend-oac"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  SecurityHeadersPolicy:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub "${AWS::StackName}-security-headers"
+        SecurityHeadersConfig:
+          ContentTypeOptions:
+            Override: true
+          FrameOptions:
+            FrameOption: SAMEORIGIN
+            Override: true
+          ReferrerPolicy:
+            Override: true
+            ReferrerPolicy: strict-origin-when-cross-origin
+          StrictTransportSecurity:
+            # Start with a short policy during MVP rollout. Increase this only
+            # after HTTPS has been verified across the domain for a full cycle.
+            AccessControlMaxAgeSec: 86400
+            IncludeSubdomains: false
+            Override: true
+            Preload: false
+          XSSProtection:
+            ModeBlock: true
+            Override: true
+            Protection: true
+
+  FrontendDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Aliases:
+          - !Ref DomainName
+        Comment: !Sub "Static frontend and serverless API for ${DomainName}"
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          Compress: true
+          ResponseHeadersPolicyId: !Ref SecurityHeadersPolicy
+          TargetOriginId: frontend-s3
+          ViewerProtocolPolicy: redirect-to-https
+        DefaultRootObject: index.html
+        Enabled: true
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        Origins:
+          - DomainName: !GetAtt FrontendBucket.RegionalDomainName
+            Id: frontend-s3
+            OriginAccessControlId: !GetAtt FrontendOriginAccessControl.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+          - CustomOriginConfig:
+              HTTPSPort: 443
+              OriginKeepaliveTimeout: 5
+              OriginProtocolPolicy: https-only
+              OriginReadTimeout: 30
+              OriginSSLProtocols:
+                - TLSv1.2
+            DomainName: !Sub "${ShortenerHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}"
+            Id: shortener-http-api
+        CacheBehaviors:
+          - AllowedMethods:
+              - DELETE
+              - GET
+              - HEAD
+              - OPTIONS
+              - PATCH
+              - POST
+              - PUT
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            Compress: true
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+            PathPattern: /api/*
+            ResponseHeadersPolicyId: !Ref SecurityHeadersPolicy
+            TargetOriginId: shortener-http-api
+            ViewerProtocolPolicy: redirect-to-https
+          - AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            Compress: true
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+            PathPattern: /link/*
+            ResponseHeadersPolicyId: !Ref SecurityHeadersPolicy
+            TargetOriginId: shortener-http-api
+            ViewerProtocolPolicy: redirect-to-https
+          - AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            Compress: true
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+            PathPattern: /healthz
+            ResponseHeadersPolicyId: !Ref SecurityHeadersPolicy
+            TargetOriginId: shortener-http-api
+            ViewerProtocolPolicy: redirect-to-https
+        PriceClass: !Ref CloudFrontPriceClass
+        ViewerCertificate:
+          AcmCertificateArn: !Ref CertificateArn
+          MinimumProtocolVersion: TLSv1.2_2021
+          SslSupportMethod: sni-only
+      Tags:
+        - Key: Application
+          Value: npt-shortenlink
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontReadOnly
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action:
+              - s3:GetObject
+            Resource: !Sub "${FrontendBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${FrontendDistribution}"
+
+  DomainAliasA:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      AliasTarget:
+        DNSName: !GetAtt FrontendDistribution.DomainName
+        EvaluateTargetHealth: false
+        HostedZoneId: Z2FDTNDATAQYW2
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
+      Type: A
+
+  DomainAliasAAAA:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      AliasTarget:
+        DNSName: !GetAtt FrontendDistribution.DomainName
+        EvaluateTargetHealth: false
+        HostedZoneId: Z2FDTNDATAQYW2
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
+      Type: AAAA
+
+Outputs:
+  SiteUrl:
+    Description: Canonical public URL served by CloudFront.
+    Value: !Sub "https://${DomainName}"
+
+  CloudFrontDistributionId:
+    Description: Distribution ID used for cache invalidations after frontend uploads.
+    Value: !Ref FrontendDistribution
+
+  CloudFrontDomainName:
+    Description: CloudFront-generated domain name.
+    Value: !GetAtt FrontendDistribution.DomainName
+
+  FrontendBucketName:
+    Description: Private S3 bucket that receives the Next.js static export.
+    Value: !Ref FrontendBucket
+
+  HttpApiId:
+    Description: API Gateway HTTP API ID.
+    Value: !Ref ShortenerHttpApi
+
+  HttpApiEndpoint:
+    Description: Direct execute-api endpoint, primarily for diagnostics.
+    Value: !Sub "https://${ShortenerHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}"
+
+  LinksTableName:
+    Description: DynamoDB links table name injected into the Lambda function.
+    Value: !Ref LinksTable
+
+  ShortenerFunctionArn:
+    Description: Go Lambda function ARN.
+    Value: !GetAtt ShortenerFunction.Arn

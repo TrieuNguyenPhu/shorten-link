@@ -3,15 +3,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ShortenerWorkbench } from "./shortener-workbench";
 
-const successfulResponse = () =>
-  new Response(JSON.stringify({ short_url_code: "abc123" }), {
-    status: 200,
+const link = {
+  code: "abc1234",
+  short_url: "https://npt-shortenlink.dev/link/abc1234",
+  target_url: "https://example.com/docs",
+  status: "active",
+  created_at: "2026-07-26T00:00:00Z",
+  expires_at: null,
+};
+
+const successResponse = () =>
+  new Response(JSON.stringify({ data: link }), {
+    status: 201,
     headers: { "Content-Type": "application/json" },
   });
 
-async function finishMinimumLoadingDuration() {
+async function finishRequest() {
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(416);
+    await vi.advanceTimersByTimeAsync(500);
   });
 }
 
@@ -26,9 +35,7 @@ describe("ShortenerWorkbench", () => {
     vi.stubGlobal("fetch", fetchMock);
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
-      value: {
-        writeText: writeTextMock,
-      },
+      value: { writeText: writeTextMock },
     });
   });
 
@@ -37,108 +44,107 @@ describe("ShortenerWorkbench", () => {
     vi.unstubAllGlobals();
   });
 
-  function submitURL(value: string) {
-    fireEvent.change(screen.getByLabelText("URL cần rút gọn"), {
-      target: { value },
+  function submit({
+    url = "https://example.com/docs",
+    alias = "",
+    expiration = "",
+  } = {}) {
+    fireEvent.change(screen.getByLabelText("URL đích"), {
+      target: { value: url },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Rút gọn URL" }));
+    if (alias) {
+      fireEvent.change(screen.getByLabelText(/Alias/), {
+        target: { value: alias },
+      });
+    }
+    if (expiration) {
+      fireEvent.change(screen.getByLabelText(/Thời hạn/), {
+        target: { value: expiration },
+      });
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Tạo short link" }));
   }
 
-  async function renderSuccessfulResult() {
-    fetchMock.mockResolvedValue(successfulResponse());
-    render(<ShortenerWorkbench />);
-    submitURL("https://example.com/tai-lieu");
-    await finishMinimumLoadingDuration();
-  }
-
-  it("blocks an invalid URL without creating a request", () => {
+  it("focuses the first invalid field and does not call the API", () => {
     render(<ShortenerWorkbench />);
 
-    submitURL("ftp://example.com/file");
+    submit({ url: "ftp://example.com/file" });
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(
       screen.getByText("URL phải bắt đầu bằng http:// hoặc https://."),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("URL cần rút gọn")).toHaveFocus();
+    expect(screen.getByLabelText("URL đích")).toHaveFocus();
   });
 
-  it("renders the link from a legacy short_url_code response", async () => {
-    fetchMock.mockResolvedValue(successfulResponse());
+  it("sends optional fields and focuses the successful result", async () => {
+    fetchMock.mockResolvedValue(successResponse());
     render(<ShortenerWorkbench />);
 
-    submitURL("https://example.com/tai-lieu");
-
+    submit({ alias: "abc1234", expiration: "30" });
     expect(
-      screen.getByRole("button", { name: "Đang rút gọn…" }),
+      screen.getByRole("button", { name: "Đang tạo link…" }),
     ).toBeDisabled();
-    await finishMinimumLoadingDuration();
+    await finishRequest();
 
     expect(fetchMock).toHaveBeenCalledOnce();
-    expect(screen.getByRole("link", { name: "/link/abc123" })).toHaveAttribute(
-      "href",
-      "/link/abc123",
+    expect(fetchMock.mock.calls[0][1]?.body).toBe(
+      JSON.stringify({
+        url: "https://example.com/docs",
+        custom_alias: "abc1234",
+        expires_in_days: 30,
+      }),
     );
-    expect(document.querySelector(".result-panel")).toHaveFocus();
+    expect(
+      screen.getByRole("link", {
+        name: "https://npt-shortenlink.dev/link/abc1234",
+      }),
+    ).toBeVisible();
+    expect(document.querySelector(".workbench__result-panel")).toHaveFocus();
   });
 
-  it.each([
-    {
-      name: "HTTP failure",
-      response: () =>
-        fetchMock.mockResolvedValue(
-          new Response("Unavailable", { status: 503 }),
-        ),
-      message: "Python API trả về lỗi HTTP 503. Hãy thử lại.",
-    },
-    {
-      name: "network failure",
-      response: () => fetchMock.mockRejectedValue(new TypeError("offline")),
-      message: "Không kết nối được Python API. Kiểm tra kết nối rồi thử lại.",
-    },
-  ])("renders a message for $name", async ({ response, message }) => {
-    response();
+  it("announces successful and failed clipboard writes", async () => {
+    fetchMock.mockResolvedValue(successResponse());
+    writeTextMock.mockResolvedValueOnce(undefined);
+    render(<ShortenerWorkbench />);
+    submit();
+    await finishRequest();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Sao chép link" }));
+    });
+    expect(writeTextMock).toHaveBeenCalledWith(link.short_url);
+    expect(screen.getByText("Link đã được lưu vào clipboard.")).toBeVisible();
+
+    writeTextMock.mockRejectedValueOnce(new Error("denied"));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Đã sao chép" }));
+    });
+    expect(
+      screen.getByText(/Không thể truy cập clipboard/),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the mapped API error and focuses the result panel", async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: {
+            code: "custom_alias_conflict",
+            message: "custom_alias is already in use",
+          },
+        }),
+        { status: 409 },
+      ),
+    );
     render(<ShortenerWorkbench />);
 
-    submitURL("https://example.com/tai-lieu");
-    await finishMinimumLoadingDuration();
-
-    expect(screen.getByText(message)).toBeInTheDocument();
-    expect(document.querySelector(".result-panel")).toHaveFocus();
-  });
-
-  it("announces a successful clipboard write", async () => {
-    writeTextMock.mockResolvedValue(undefined);
-    await renderSuccessfulResult();
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Sao chép link" }));
-    });
-
-    expect(writeTextMock).toHaveBeenCalledWith(
-      "http://localhost:3001/link/abc123",
-    );
-    expect(screen.getByRole("button", { name: "Đã sao chép" })).toBeVisible();
-    expect(
-      screen.getByText("Short link đã được lưu vào clipboard."),
-    ).toHaveAttribute("aria-live", "polite");
-  });
-
-  it("offers a manual fallback when clipboard access fails", async () => {
-    writeTextMock.mockRejectedValue(new Error("denied"));
-    await renderSuccessfulResult();
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Sao chép link" }));
-    });
+    submit({ alias: "abc1234" });
+    await finishRequest();
 
     expect(
-      screen.getByRole("button", { name: "Thử sao chép lại" }),
-    ).toBeVisible();
-    expect(
-      screen.getByText(
-        "Không thể truy cập clipboard. Hãy chọn short link phía trên để sao chép thủ công.",
-      ),
-    ).toHaveAttribute("aria-live", "polite");
+      screen.getByText("Alias đã được sử dụng. Hãy chọn alias khác."),
+    ).toBeInTheDocument();
+    expect(document.querySelector(".workbench__result-panel")).toHaveFocus();
   });
 });
