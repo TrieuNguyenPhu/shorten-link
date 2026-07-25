@@ -12,6 +12,7 @@ import (
 
 	"github.com/TrieuNguyenPhu/shorten-link/services/shortener-api/internal/adapters/repository/memory"
 	"github.com/TrieuNguyenPhu/shorten-link/services/shortener-api/internal/application/service"
+	"github.com/TrieuNguyenPhu/shorten-link/services/shortener-api/internal/domain"
 )
 
 type handlerClock struct {
@@ -24,6 +25,20 @@ func (c handlerClock) Now() time.Time {
 
 type handlerGenerator struct {
 	code string
+}
+
+type panickingApplication struct{}
+
+func (panickingApplication) Create(context.Context, service.CreateLinkInput) (service.LinkView, error) {
+	panic("sensitive internal detail")
+}
+
+func (panickingApplication) Resolve(context.Context, string) (domain.Link, error) {
+	panic("sensitive internal detail")
+}
+
+func (panickingApplication) GetMetadata(context.Context, string) (service.LinkView, error) {
+	panic("sensitive internal detail")
 }
 
 func (g handlerGenerator) Generate(context.Context) (string, error) {
@@ -184,5 +199,33 @@ func TestSecurityBoundaries(t *testing.T) {
 	response := router.request(http.MethodPost, "/api/v1/links", []byte(oversized), "application/json")
 	if response.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("oversized status = %d, want 413", response.Code)
+	}
+}
+
+func TestPanicRecoveryReturnsSafeJSON(t *testing.T) {
+	handler := NewHandler(panickingApplication{}, "https://npt-shortenlink.dev")
+	router := NewRouter(handler, []string{"http://localhost:3000"})
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/api/v1/links",
+		bytes.NewBufferString(`{"url":"https://example.com"}`),
+	)
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set(requestIDHeader, "panic-request-123")
+	response := httptest.NewRecorder()
+
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500", response.Code)
+	}
+	if response.Header().Get(requestIDHeader) != "panic-request-123" {
+		t.Fatalf("request ID = %q", response.Header().Get(requestIDHeader))
+	}
+	if strings.Contains(response.Body.String(), "sensitive internal detail") {
+		t.Fatalf("response leaked panic detail: %s", response.Body.String())
+	}
+	if !strings.Contains(response.Body.String(), `"code":"internal_error"`) {
+		t.Fatalf("response body = %s", response.Body.String())
 	}
 }
