@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { ShortenerWorkbench } from "@/components/shortener-workbench";
+
 export default function Home() {
   return (
     <div className="site-shell">
@@ -28,40 +30,7 @@ export default function Home() {
           </p>
         </section>
 
-        <section className="task-surface" aria-labelledby="surface-title">
-          <div className="task-surface__copy">
-            <h2 id="surface-title">Bề mặt mới. Hợp đồng cũ còn nguyên.</h2>
-            <p>
-              Bản xem trước này chỉ thiết lập visual shell. Form và kết nối API
-              sẽ được bổ sung trong các thay đổi riêng sau khi qua compatibility
-              gate.
-            </p>
-          </div>
-
-          <ol className="contract-flow" aria-label="Luồng rút gọn URL hiện tại">
-            <li>
-              <span className="contract-flow__index">01</span>
-              <div>
-                <h3>URL đầu vào</h3>
-                <p>Request chỉ mang URL cần rút gọn.</p>
-              </div>
-            </li>
-            <li>
-              <span className="contract-flow__index">02</span>
-              <div>
-                <h3>Python Lambda</h3>
-                <p>API hiện tại tiếp tục chạy trên AWS SAM.</p>
-              </div>
-            </li>
-            <li>
-              <span className="contract-flow__index">03</span>
-              <div>
-                <h3>Mã rút gọn</h3>
-                <p>Response hiện tại trả về short_url_code.</p>
-              </div>
-            </li>
-          </ol>
-        </section>
+        <ShortenerWorkbench />
 
         <section className="compatibility" aria-labelledby="compatibility-title">
           <div className="compatibility__heading">
@@ -79,7 +48,7 @@ export default function Home() {
             </div>
             <div>
               <dt>Trạng thái</dt>
-              <dd>Visual preview, chưa gọi API</dd>
+              <dd>URL-only preview, dùng legacy API</dd>
             </div>
           </dl>
         </section>
