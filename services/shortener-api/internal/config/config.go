@@ -49,16 +49,23 @@ func Load(runningInLambda bool) (Config, error) {
 		address = ":" + port
 	}
 
-	publicBaseURL := strings.TrimRight(strings.TrimSpace(os.Getenv("PUBLIC_BASE_URL")), "/")
-	if publicBaseURL == "" {
-		publicBaseURL = "http://localhost:8080"
+	rawPublicBaseURL := strings.TrimSpace(os.Getenv("PUBLIC_BASE_URL"))
+	if rawPublicBaseURL == "" {
+		if runningInLambda {
+			return Config{}, errors.New("PUBLIC_BASE_URL is required when running in Lambda")
+		}
+		rawPublicBaseURL = "http://localhost:8080"
 	}
-	parsedBaseURL, err := url.Parse(publicBaseURL)
-	if err != nil || parsedBaseURL.Host == "" || (parsedBaseURL.Scheme != "http" && parsedBaseURL.Scheme != "https") {
-		return Config{}, errors.New("PUBLIC_BASE_URL must be an absolute http or https URL")
+	publicBaseURL, err := normalizeOrigin(rawPublicBaseURL)
+	if err != nil {
+		return Config{}, errors.New("PUBLIC_BASE_URL must be an absolute http or https origin")
 	}
 
-	allowedOrigins, err := parseAllowedOrigins(os.Getenv("CORS_ALLOWED_ORIGINS"))
+	rawAllowedOrigins := strings.TrimSpace(os.Getenv("CORS_ALLOWED_ORIGINS"))
+	if rawAllowedOrigins == "" && runningInLambda {
+		return Config{}, errors.New("CORS_ALLOWED_ORIGINS is required when running in Lambda")
+	}
+	allowedOrigins, err := parseAllowedOrigins(rawAllowedOrigins)
 	if err != nil {
 		return Config{}, err
 	}
@@ -80,10 +87,8 @@ func parseAllowedOrigins(raw string) ([]string, error) {
 	seen := make(map[string]struct{})
 	origins := make([]string, 0)
 	for _, entry := range strings.Split(raw, ",") {
-		origin := strings.TrimRight(strings.TrimSpace(entry), "/")
-		parsed, err := url.Parse(origin)
-		if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") ||
-			parsed.User != nil || (parsed.Path != "" && parsed.Path != "/") || parsed.RawQuery != "" || parsed.Fragment != "" {
+		origin, err := normalizeOrigin(entry)
+		if err != nil {
 			return nil, fmt.Errorf("invalid origin %q in CORS_ALLOWED_ORIGINS", entry)
 		}
 		if _, exists := seen[origin]; exists {
@@ -93,4 +98,14 @@ func parseAllowedOrigins(raw string) ([]string, error) {
 		origins = append(origins, origin)
 	}
 	return origins, nil
+}
+
+func normalizeOrigin(raw string) (string, error) {
+	origin := strings.TrimRight(strings.TrimSpace(raw), "/")
+	parsed, err := url.Parse(origin)
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") ||
+		parsed.User != nil || (parsed.Path != "" && parsed.Path != "/") || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return "", errors.New("origin must contain only an http or https scheme and host")
+	}
+	return origin, nil
 }
