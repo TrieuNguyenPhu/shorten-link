@@ -106,3 +106,20 @@ func TestCreateRejectsInvalidPayload(t *testing.T) {
 		})
 	}
 }
+
+func TestResolveRedirect(t *testing.T) {
+	router := newTestRouter()
+	payload := []byte(`{"url":"https://example.com/docs","custom_alias":"my-docs"}`)
+	created := router.request(http.MethodPost, "/api/v1/links", payload, "application/json")
+	if created.Code != http.StatusCreated {
+		t.Fatalf("create status = %d, want 201", created.Code)
+	}
+
+	resolved := router.request(http.MethodGet, "/link/my-docs", nil, "")
+	if resolved.Code != http.StatusFound {
+		t.Fatalf("resolve status = %d, want 302", resolved.Code)
+	}
+	if location := resolved.Header().Get("Location"); location != "https://example.com/docs" {
+		t.Fatalf("Location = %q", location)
+	}
+}

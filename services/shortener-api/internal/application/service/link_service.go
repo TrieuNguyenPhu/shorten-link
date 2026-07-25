@@ -118,6 +118,17 @@ func (s *LinkService) Create(ctx context.Context, input CreateLinkInput) (LinkVi
 	return LinkView{}, domain.ErrCodeGenerationExhausted
 }
 
+func (s *LinkService) Resolve(ctx context.Context, code string) (domain.Link, error) {
+	link, err := s.repository.GetByCode(ctx, code)
+	if err != nil {
+		return domain.Link{}, fmt.Errorf("resolve link: %w", err)
+	}
+	if err := link.EnsureResolvableAt(s.clock.Now()); err != nil {
+		return domain.Link{}, err
+	}
+	return link, nil
+}
+
 func newLink(code, targetURL string, createdAt time.Time, expiresAt *time.Time) domain.Link {
 	return domain.Link{
 		Code:      code,
