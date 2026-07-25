@@ -21,6 +21,7 @@ const maxCreateLinkRequestBytes int64 = 16 << 10
 
 type linkApplication interface {
 	Create(ctx context.Context, input service.CreateLinkInput) (service.LinkView, error)
+	Resolve(ctx context.Context, code string) (domain.Link, error)
 }
 
 type Handler struct {
@@ -150,6 +151,15 @@ func decodeCreateLinkRequest(c *gin.Context, request *createLinkRequest) error {
 		return errors.New("request fields must be present and non-null according to the API contract")
 	}
 	return nil
+}
+
+func (h *Handler) Resolve(c *gin.Context) {
+	link, err := h.links.Resolve(c.Request.Context(), c.Param("code"))
+	if err != nil {
+		writeDomainError(c, err)
+		return
+	}
+	c.Redirect(http.StatusFound, link.TargetURL)
 }
 
 func (h *Handler) linkEnvelope(view service.LinkView) linkEnvelope {

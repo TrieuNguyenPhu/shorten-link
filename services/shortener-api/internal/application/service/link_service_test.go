@@ -191,3 +191,40 @@ func TestCreateReturnsExhaustedAfterCollisions(t *testing.T) {
 		t.Fatalf("Create() error = %v, want exhausted", err)
 	}
 }
+
+func TestResolveMapsLinkState(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, time.July, 22, 8, 30, 0, 0, time.UTC)
+	past := now.Add(-time.Minute)
+	future := now.Add(time.Minute)
+	tests := []struct {
+		name    string
+		link    *domain.Link
+		code    string
+		wantErr error
+	}{
+		{name: "active", code: "active1", link: &domain.Link{Code: "active1", TargetURL: "https://example.com", Enabled: true, CreatedAt: now, ExpiresAt: &future}},
+		{name: "expired", code: "expired", link: &domain.Link{Code: "expired", TargetURL: "https://example.com", Enabled: true, CreatedAt: now, ExpiresAt: &past}, wantErr: domain.ErrLinkExpired},
+		{name: "disabled", code: "disabled", link: &domain.Link{Code: "disabled", TargetURL: "https://example.com", Enabled: false, CreatedAt: now}, wantErr: domain.ErrLinkDisabled},
+		{name: "missing", code: "missing", wantErr: domain.ErrLinkNotFound},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			repository := newTestRepository()
+			if test.link != nil {
+				if err := repository.Create(ctx, *test.link); err != nil {
+					t.Fatalf("seed repository: %v", err)
+				}
+			}
+			service := NewLinkService(repository, &sequenceGenerator{}, fixedClock{now: now})
+			link, err := service.Resolve(ctx, test.code)
+			if !errors.Is(err, test.wantErr) {
+				t.Fatalf("Resolve() error = %v, want %v", err, test.wantErr)
+			}
+			if test.wantErr == nil && link.Code != test.code {
+				t.Fatalf("Resolve() code = %q, want %q", link.Code, test.code)
+			}
+		})
+	}
+}
