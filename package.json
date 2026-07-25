@@ -10,6 +10,7 @@
     "build:web": "pnpm --dir apps/web build",
     "lint:web": "pnpm --dir apps/web lint",
     "test:web": "pnpm --dir apps/web test",
+    "format:check:api": "node scripts/check-go-format.mjs",
     "vet:api": "go vet ./services/shortener-api/...",
     "test:api": "go test ./services/shortener-api/...",
     "test:api:race": "go test -race -count=1 ./services/shortener-api/...",
@@ -18,7 +19,7 @@
     "codegraph:init": "codegraph init .",
     "codegraph:status": "codegraph status .",
     "codegraph:sync": "codegraph sync .",
-    "verify": "pnpm test:web && pnpm lint:web && pnpm build:web && pnpm vet:api && pnpm test:api"
+    "verify": "pnpm test:web && pnpm lint:web && pnpm build:web && pnpm format:check:api && pnpm vet:api && pnpm test:api"
   },
   "engines": {
     "node": ">=22.20.0"
