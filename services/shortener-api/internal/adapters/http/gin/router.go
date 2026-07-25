@@ -2,8 +2,11 @@ package ginhttp
 
 import (
 	"crypto/rand"
+	"io"
+	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,6 +20,8 @@ const (
 func NewRouter(handler *Handler, allowedOrigins []string) *gin.Engine {
 	router := gin.New()
 	router.Use(requestIDMiddleware())
+	router.Use(requestLoggingMiddleware())
+	router.Use(jsonRecoveryMiddleware())
 	router.Use(corsMiddleware(allowedOrigins))
 	_ = router.SetTrustedProxies(nil)
 
@@ -26,6 +31,46 @@ func NewRouter(handler *Handler, allowedOrigins []string) *gin.Engine {
 	router.GET("/api/v1/links/:code", handler.Metadata)
 
 	return router
+}
+
+func jsonRecoveryMiddleware() gin.HandlerFunc {
+	return gin.CustomRecoveryWithWriter(io.Discard, func(c *gin.Context, _ any) {
+		slog.Error("panic recovered",
+			"service", "shortener-api",
+			"request_id", c.GetString(requestIDKey),
+			"route", routeTemplate(c),
+			"method", c.Request.Method,
+		)
+		if c.Writer.Written() {
+			c.Abort()
+			return
+		}
+		writeAPIError(c, http.StatusInternalServerError, "internal_error", "an unexpected error occurred")
+	})
+}
+
+func requestLoggingMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		startedAt := time.Now()
+		c.Next()
+
+		slog.Info("request completed",
+			"service", "shortener-api",
+			"request_id", c.GetString(requestIDKey),
+			"route", routeTemplate(c),
+			"method", c.Request.Method,
+			"status", c.Writer.Status(),
+			"latency_ms", time.Since(startedAt).Milliseconds(),
+			"error_code", c.GetString(errorCodeKey),
+		)
+	}
+}
+
+func routeTemplate(c *gin.Context) string {
+	if route := c.FullPath(); route != "" {
+		return route
+	}
+	return "unmatched"
 }
 
 func requestIDMiddleware() gin.HandlerFunc {
