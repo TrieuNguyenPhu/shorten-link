@@ -114,7 +114,7 @@ Kiểm thử bắt buộc:
 Exit criteria:
 
 - [ ] Bốn route local khớp OpenAPI, bao gồm `Location` của `302`.
-- [ ] Cùng một alias được tạo đồng thời chỉ có một request thành công.
+- [x] Cùng một alias được tạo đồng thời chỉ có một request thành công.
 - [ ] Không package nào trong `domain` hoặc `application` import Gin/AWS SDK.
 - [ ] Log không chứa full target URL, request body hoặc secret.
 - [ ] Tất cả test backend và race detector pass.

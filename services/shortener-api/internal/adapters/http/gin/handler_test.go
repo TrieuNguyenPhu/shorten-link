@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"regexp"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -164,6 +165,46 @@ func TestCreateValidationAndConflict(t *testing.T) {
 	omittedOptionalFields := performRequest(omittedRouter, http.MethodPost, "/api/v1/links", []byte(`{"url":"https://example.com/without-optionals"}`), "")
 	if omittedOptionalFields.Code != http.StatusCreated {
 		t.Fatalf("omitted optional fields status = %d, body = %s", omittedOptionalFields.Code, omittedOptionalFields.Body.String())
+	}
+}
+
+func TestConcurrentCreateWithSameAlias(t *testing.T) {
+	const requestCount = 16
+
+	router, _ := newTestRouter(time.Now())
+	body := []byte(`{"url":"https://example.com","custom_alias":"one-winner"}`)
+	start := make(chan struct{})
+	statuses := make(chan int, requestCount)
+	var requests sync.WaitGroup
+
+	for range requestCount {
+		requests.Add(1)
+		go func() {
+			defer requests.Done()
+			<-start
+			statuses <- performRequest(router, http.MethodPost, "/api/v1/links", body, "").Code
+		}()
+	}
+
+	close(start)
+	requests.Wait()
+	close(statuses)
+
+	successes := 0
+	conflicts := 0
+	for status := range statuses {
+		switch status {
+		case http.StatusCreated:
+			successes++
+		case http.StatusConflict:
+			conflicts++
+		default:
+			t.Errorf("concurrent create returned unexpected status %d", status)
+		}
+	}
+
+	if successes != 1 || conflicts != requestCount-1 {
+		t.Fatalf("concurrent create statuses: 201=%d, 409=%d", successes, conflicts)
 	}
 }
 
