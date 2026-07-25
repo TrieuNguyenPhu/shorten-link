@@ -6,6 +6,7 @@
   "scripts": {
     "dev:preview": "pnpm --dir apps/web dev",
     "lint:preview": "pnpm --dir apps/web lint",
-    "build:preview": "pnpm --dir apps/web build"
+    "build:preview": "pnpm --dir apps/web build",
+    "test:preview": "pnpm --dir apps/web test"
   }
 }
