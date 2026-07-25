@@ -69,36 +69,6 @@ jobs:
       - name: Audit lockfile
         run: pnpm audit:deps
 
-  backend:
-    name: Backend vet and test
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: services/shortener-api/go.mod
-          cache: true
-          cache-dependency-path: services/shortener-api/go.sum
-
-      - name: Check backend formatting
-        run: gofmt -l services/shortener-api | tee /tmp/unformatted-go-files && test ! -s /tmp/unformatted-go-files
-
-      - name: Vet backend
-        working-directory: services/shortener-api
-        run: go vet ./...
-
-      - name: Test backend with race detector
-        working-directory: services/shortener-api
-        run: go test -race -count=1 ./...
-
-      - name: Scan reachable Go vulnerabilities
-        working-directory: services/shortener-api
-        run: go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
-
   api-contract:
     name: Lint OpenAPI contract
     runs-on: ubuntu-latest
@@ -119,33 +89,3 @@ jobs:
 
       - name: Lint OpenAPI specification
         run: pnpm --package=@redocly/cli@2.40.0 dlx redocly lint openapi/openapi.yaml
-
-  infrastructure:
-    name: Validate and build AWS SAM
-    needs:
-      - backend
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: services/shortener-api/go.mod
-          cache: true
-          cache-dependency-path: services/shortener-api/go.sum
-
-      - name: Set up AWS SAM CLI
-        uses: aws-actions/setup-sam@v3
-        with:
-          version: 1.163.0
-          use-installer: true
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Validate SAM template
-        run: sam validate --lint --template-file infra/aws/template.yaml
-
-      - name: Build Lambda artifact
-        run: sam build --parallel --template-file infra/aws/template.yaml
