@@ -139,8 +139,13 @@ Resources:
       KeySchema:
         - AttributeName: code
           KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
       SSESpecification:
         SSEEnabled: true
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
 
   ShortenerFunctionLogGroup:
     Type: AWS::Logs::LogGroup
