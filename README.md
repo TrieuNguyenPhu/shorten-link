@@ -18,14 +18,14 @@ với frontend tĩnh, API serverless và hạ tầng được mô tả bằng AW
 </div>
 
 > [!IMPORTANT]
-> Repository này lưu hai thế hệ được tách bạch. Bản **v1 tháng 06/2026** là
-> baseline khớp với hồ sơ dự án; bản **v2 development preview** là một đợt
-> tái kiến trúc đang phát triển và chưa thay thế v1/CV baseline.
+> `main` hiện chỉ chứa hệ thống **v2 Go/Gin + Next.js**. Bản **v1 tháng
+> 06/2026** đã được loại khỏi cây source hoạt động và chỉ còn là snapshot lịch
+> sử bất biến để đối chiếu hoặc tái lập khi cần.
 
 | Track | Trạng thái | Stack chính | Tham chiếu |
 |---|---|---|---|
-| **v1 — CV baseline** | Snapshot ổn định, có thể tái lập | Python 3.12 Lambda, React/Vite, API Gateway REST, DynamoDB, AWS SAM | [`cv-2026-06-python-react-sam`](https://github.com/TrieuNguyenPhu/shorten-link/tree/cv-2026-06-python-react-sam) |
-| **v2 — current rebuild** | Development preview, chưa deploy | Go/Gin, Next.js, API Gateway HTTP API, DynamoDB, S3, CloudFront, AWS SAM | Source hiện tại và [roadmap](docs/implementation-plan.md) |
+| **v2 — current source** | Đã kiểm chứng local/CI, chưa tuyên bố public production | Go/Gin, Next.js, API Gateway HTTP API, DynamoDB, S3, CloudFront, AWS SAM | `main` và [trạng thái triển khai](docs/implementation-plan.md) |
+| **v1 — archived baseline** | Snapshot chỉ đọc, không còn trong cây source hiện tại | Python 3.12 Lambda, React/Vite, API Gateway REST, DynamoDB, AWS SAM | [`cv-2026-06-python-react-sam`](https://github.com/TrieuNguyenPhu/shorten-link/tree/cv-2026-06-python-react-sam) |
 
 > [!NOTE]
 > `npt-shortenlink.dev` là canonical domain đã đăng ký. Public deployment đang
@@ -283,7 +283,7 @@ thủ công khi không còn cần thiết.
 Xem parameter, cache policy và quy trình upload static export tại
 [`infra/aws/README.md`](infra/aws/README.md).
 
-## Tái lập v1 baseline
+## Tái lập snapshot v1 đã lưu trữ
 
 Không cần thay đổi working tree v2. Tạo một worktree riêng từ versioned baseline tag:
 
@@ -321,11 +321,11 @@ ngầm coi là đã triển khai chỉ vì xuất hiện trong tài liệu kiế
 
 ## Release strategy
 
-1. **Giữ v1 tái lập được:** versioned tag cố định mốc Python/React/SAM đã mô tả trong CV.
-2. **Đưa frontend preview lên trước:** không đổi contract hoặc deployment v1.
-3. **Đưa Go/API/SAM v2 lên theo PR nhỏ:** build side-by-side, không overwrite stack v1.
-4. **Cutover có rollback:** smoke test trước khi đổi CloudFront/domain traffic.
-5. **Chỉ archive legacy sau ổn định:** deletion là PR độc lập, không trộn với migration.
+1. **Một source hoạt động:** mọi thay đổi mới nhắm vào v2 trên `main`; v1 chỉ còn là snapshot lịch sử.
+2. **PR nhỏ và có gate:** contract, web, API và hạ tầng được review độc lập khi có thể; CI phải xanh trước khi merge.
+3. **Staging trước production:** build đúng artifact, chạy smoke test `POST → GET → 302` và xác minh log/rollback trước cutover.
+4. **Cutover có đường lui:** chỉ đổi CloudFront/domain traffic khi staging đạt tiêu chí trong implementation plan.
+5. **Không suy diễn trạng thái:** source/IaC đã có không đồng nghĩa stack public, WAF, alarm hoặc SLA đã vận hành.
 
 ## Tài liệu
 
