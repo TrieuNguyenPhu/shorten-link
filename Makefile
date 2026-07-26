@@ -4,6 +4,7 @@
 
 PNPM ?= pnpm
 GO ?= go
+NODE ?= node
 
 ifeq ($(OS),Windows_NT)
 CODEGRAPH ?= "$(LOCALAPPDATA)\codegraph\current\bin\codegraph.cmd"
@@ -13,11 +14,21 @@ endif
 
 OPENAPI_SPEC ?= openapi/openapi.yaml
 REDOCLY_VERSION ?= 2.40.0
+DEPLOY_SCRIPT ?= scripts/deploy-aws.mjs
+
+AWS_REGION ?= ap-southeast-1
+STACK_NAME ?= npt-shortenlink-prod
+ENVIRONMENT_NAME ?= prod
+DOMAIN_NAME ?= npt-shortenlink.dev
+
+export AWS_PROFILE AWS_REGION STACK_NAME ENVIRONMENT_NAME DOMAIN_NAME
+export CERTIFICATE_ARN HOSTED_ZONE_ID CORS_ALLOWED_ORIGINS
 
 .PHONY: help install dev dev-all dev-backend dev-frontend dev-api dev-web \
 	lint-web build build-web \
 	format-api tidy-api vet-api test test-web test-api test-api-race \
 	verify verify-all security audit-deps openapi-lint \
+	deploy deploy-dry-run \
 	codegraph-init codegraph-status codegraph-sync codegraph-index
 
 help:
@@ -35,6 +46,10 @@ help:
 	@echo   make verify-all           Add dependency audit, vulnerability scan and OpenAPI lint
 	@echo   make test-api-race        Run Go race tests; requires a CGO compiler
 	@echo   make openapi-lint         Lint the OpenAPI contract with pinned Redocly
+	@echo.
+	@echo Deployment
+	@echo   make deploy               Verify, deploy AWS, publish web, and smoke-test
+	@echo   make deploy-dry-run       Print and validate the deployment plan only
 	@echo.
 	@echo CodeGraph
 	@echo   make codegraph-init       Initialize the local repository graph
@@ -104,6 +119,12 @@ vuln-api:
 
 openapi-lint:
 	$(PNPM) --package=@redocly/cli@$(REDOCLY_VERSION) dlx redocly lint $(OPENAPI_SPEC)
+
+deploy:
+	$(NODE) $(DEPLOY_SCRIPT)
+
+deploy-dry-run:
+	$(NODE) $(DEPLOY_SCRIPT) --dry-run
 
 codegraph-init:
 	$(CODEGRAPH) init .
