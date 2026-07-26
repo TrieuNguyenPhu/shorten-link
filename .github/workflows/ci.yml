@@ -80,6 +80,34 @@ jobs:
       - name: Scan backend dependencies
         run: go -C services/shortener-api run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
 
+  infrastructure:
+    name: Validate and build AWS infrastructure
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: backend
+    env:
+      SAM_CLI_TELEMETRY: "0"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.work
+          cache-dependency-path: services/shortener-api/go.sum
+
+      - name: Set up AWS SAM CLI
+        uses: aws-actions/setup-sam@v2
+        with:
+          version: 1.164.0
+
+      - name: Validate SAM template
+        run: sam validate --lint --template-file infra/aws/template.yaml
+
+      - name: Build SAM application
+        run: sam build --template-file infra/aws/template.yaml
+
   dependency-audit:
     name: Audit production dependencies
     runs-on: ubuntu-latest
