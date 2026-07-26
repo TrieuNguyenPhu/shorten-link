@@ -18,20 +18,19 @@ với frontend tĩnh, API serverless và hạ tầng được mô tả bằng AW
 </div>
 
 > [!IMPORTANT]
-> `main` hiện giữ **Next.js + OpenAPI** làm baseline ổn định. Go backend và AWS
-> infrastructure đang được đưa lại vào source bằng các pull request nhỏ, theo
-> thứ tự trong [backend/infra PR plan](docs/backend-infra-pr-plan.md). Bản v1
-> Python/React không được khôi phục và vẫn chỉ tồn tại dưới dạng snapshot lịch sử.
+> `main` là source hoàn chỉnh của v2: Next.js, Go/Gin, OpenAPI và AWS SAM.
+> Bản v1 Python/React không được khôi phục và chỉ tồn tại dưới dạng snapshot
+> lịch sử.
 
 | Track | Trạng thái | Stack chính | Tham chiếu |
 |---|---|---|---|
-| **v2 — incremental rollout** | Next.js/OpenAPI đã kiểm chứng; backend và infrastructure đang chờ review theo từng capability | Next.js, OpenAPI; Go/Gin và AWS SAM là target architecture | `main` và [backend/infra PR plan](docs/backend-infra-pr-plan.md) |
+| **v2 — current** | Source, tests, CI và deployment workflow đã có trên `main`; public deployment vẫn là thao tác có chủ đích của operator | Next.js, Go/Gin, OpenAPI, DynamoDB và AWS SAM | `main`, [kiến trúc](docs/architecture.md), [AWS runbook](infra/aws/README.md) |
 | **v1 — archived baseline** | Snapshot chỉ đọc, không còn trong cây source hiện tại | Python 3.12 Lambda, React/Vite, API Gateway REST, DynamoDB, AWS SAM | [`cv-2026-06-python-react-sam`](https://github.com/TrieuNguyenPhu/shorten-link/tree/cv-2026-06-python-react-sam) |
 
 > [!NOTE]
 > `npt-shortenlink.dev` là canonical domain đã đăng ký. Public deployment đang
-> được dựng lại. Các sơ đồ Go/AWS bên dưới mô tả kiến trúc đích, không khẳng định
-> backend hoặc AWS stack đã có trong baseline hiện tại.
+> phụ thuộc AWS account, hosted zone và certificate của operator. Source/IaC có
+> trong repository không được hiểu là production đang online.
 
 ## Vì sao project này tồn tại?
 
@@ -127,12 +126,12 @@ ghi lại trong README và sơ đồ kiến trúc của release.
 | Lớp | Công nghệ | Phiên bản/pattern |
 |---|---|---|
 | Web | Next.js, React, TypeScript | Next `16.2.11`, React `19.2.8`, App Router, static export |
-| API target | Go, Gin | Được bổ sung tuần tự qua các backend PR |
+| API | Go, Gin | Go `1.26.5`, Gin `1.12.0`, clean architecture |
 | Contract | OpenAPI | OpenAPI `3.0.3`, contract version `1.0.0` |
 | Runtime target | AWS Lambda | `provided.al2023`, `arm64` |
 | Edge target | CloudFront, S3 OAC, Route 53, ACM | Same-origin static + API routing |
 | Data target | DynamoDB | `PAY_PER_REQUEST`, PITR, SSE, TTL |
-| IaC target | AWS SAM/CloudFormation | Được bổ sung tuần tự qua các infrastructure PR |
+| IaC | AWS SAM/CloudFormation | SAM CLI `1.164.0` đã dùng trong CI |
 | Tooling | pnpm, GNU Make, CodeGraph | pnpm `10.33.2`, root developer entrypoint |
 
 ## Repository map
@@ -140,29 +139,49 @@ ghi lại trong README và sơ đồ kiến trúc của release.
 ```text
 shorten-link/
 ├── apps/web/                    # Next.js static frontend
+├── services/shortener-api/      # Go/Gin API, Lambda entrypoint và tests
+├── infra/aws/                   # SAM template và operator runbook
 ├── openapi/                     # Source-of-truth HTTP contract
 ├── docs/                        # Architecture, delivery and Hallmark QA
+├── scripts/deploy-aws.mjs       # Cross-platform guarded deployment workflow
 ├── .github/workflows/           # Quality and security gates
 ├── Makefile                     # Repository-level commands
+├── go.work                      # Go workspace
 └── pnpm-workspace.yaml          # Frontend workspace
 ```
 
-## Chạy baseline local
+## Bắt đầu nhanh trên local
 
 | Công cụ | Phiên bản |
 |---|---:|
 | Node.js | `>=22.20.0` |
 | pnpm | `10.33.2` |
+| Go | `>=1.26.5` |
+| GNU Make | phiên bản hỗ trợ job song song (`-j`) |
 
 ```bash
-pnpm install --frozen-lockfile
+git clone https://github.com/TrieuNguyenPhu/shorten-link.git
+cd shorten-link
+
+make install
 make dev
 ```
 
-- Web: `http://localhost:3000`
+- Frontend: `http://localhost:3000`
+- Backend health: `http://localhost:8080/healthz`
 
-Form UI vẫn dùng contract v2, nhưng live create/resolve chỉ hoạt động sau khi
-chuỗi backend PR được review và merge.
+`make dev` chạy frontend và backend song song; `Ctrl+C` dừng cả hai. Local API
+mặc định dùng memory repository, nên không cần AWS hoặc DynamoDB.
+
+| Nhu cầu | Lệnh |
+|---|---|
+| Chỉ backend Go/Gin | `make dev-backend` |
+| Chỉ frontend Next.js | `make dev-frontend` |
+| Cả frontend và backend | `make dev` hoặc `make dev-all` |
+
+Trong development, frontend mặc định gọi `http://localhost:8080`. Có thể đổi
+bằng `NEXT_PUBLIC_API_BASE_URL`; backend cho phép origin local
+`http://localhost:3000` theo mặc định.
 
 ## HTTP API
 
@@ -205,8 +224,8 @@ Các target hữu ích khác:
 
 | Lệnh | Kiểm tra/thao tác |
 |---|---|
-| `make test` | Frontend tests |
-| `make security` | pnpm production dependency audit |
+| `make test` | Frontend và backend tests |
+| `make security` | pnpm dependency audit và Go vulnerability scan |
 | `make openapi-lint` | Redocly lint với version đã pin |
 | `make codegraph-status` | Trạng thái graph code local |
 
@@ -217,10 +236,51 @@ Các target hữu ích khác:
 
 ## AWS build và deploy
 
-AWS deployment đang ngoài phạm vi của baseline rollback. SAM resources và runbook
-sẽ được thêm lại theo từng capability trong
-[`docs/backend-infra-pr-plan.md`](docs/backend-infra-pr-plan.md). Không chạy
-deploy, DNS cutover hoặc static upload trong chuỗi PR này.
+Sau khi clone, một operator có thể verify, deploy infrastructure, upload
+frontend, invalidate CloudFront và chạy smoke test bằng **một lệnh Make**.
+Repository không thể tự tạo AWS credentials, quyền IAM, hosted zone hoặc ACM
+certificate; các prerequisite bên ngoài này phải tồn tại trước.
+
+Yêu cầu thêm cho deployment:
+
+| Công cụ/tài nguyên | Yêu cầu |
+|---|---|
+| AWS CLI | Đã authenticate bằng credential chain hoặc `AWS_PROFILE` |
+| AWS SAM CLI | `1.164.0` hoặc compatible |
+| Route 53 | Public hosted zone chứa domain deploy |
+| ACM | Certificate `us-east-1` bao phủ domain CloudFront |
+
+Kiểm tra toàn bộ plan mà không thay đổi AWS:
+
+```bash
+make deploy-dry-run CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/replace-me HOSTED_ZONE_ID=ZREPLACE_ME
+```
+
+Deploy thật bằng một lệnh:
+
+```bash
+make deploy CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/replace-me HOSTED_ZONE_ID=ZREPLACE_ME
+```
+
+Giá trị mặc định:
+
+- region: `ap-southeast-1`;
+- stack: `npt-shortenlink-prod`;
+- environment: `prod`;
+- domain: `npt-shortenlink.dev`;
+- CORS origin: `https://<domain>`.
+
+Có thể override ngay trên cùng lệnh bằng `AWS_PROFILE`, `AWS_REGION`,
+`STACK_NAME`, `ENVIRONMENT_NAME`, `DOMAIN_NAME` hoặc
+`CORS_ALLOWED_ORIGINS`. Ví dụ:
+
+```bash
+make deploy AWS_PROFILE=portfolio DOMAIN_NAME=links.example.com CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/replace-me HOSTED_ZONE_ID=ZREPLACE_ME
+```
+
+`make deploy` dừng ngay khi preflight, test, lint, audit, OpenAPI, SAM build,
+CloudFormation, upload, invalidation hoặc smoke test thất bại. Chi tiết resource,
+cache policy và rollback nằm trong [AWS runbook](infra/aws/README.md).
 
 ## Tái lập snapshot v1 đã lưu trữ
 
@@ -246,11 +306,12 @@ Live integration test v1 là opt-in và tự skip khi không có `API_BASE_URL`.
 
 ## Trạng thái và ranh giới hiện tại
 
-| Đã có trong baseline | Đang được review lại |
+| Đã có trên `main` | Không được ngầm suy diễn |
 |---|---|
-| Next.js static frontend và OpenAPI contract | Go/Gin domain, use cases, repositories và HTTP runtime |
-| Frontend tests/lint/build và dependency audit | SAM resources, AWS validation và deployment runbook |
-| Hallmark browser evidence | Public v2 deployment/live SLA |
+| Next.js static frontend, Go/Gin API và OpenAPI contract | Production đang online hoặc domain đã cut over |
+| SAM resources cho Lambda, DynamoDB, S3, CloudFront và Route 53 | AWS account/credential/certificate đã được cấp |
+| CI cho frontend, backend, dependency và SAM build | WAF, authentication, analytics hoặc live SLA |
+| Guarded one-command deployment và rollback runbook | Deployment tự động chạy trong pull request |
 
 API MVP hiện chưa có authentication. WAF, auth, analytics và observability nâng
 cao chỉ được thêm khi có use case và acceptance criteria riêng; chúng không được
@@ -259,7 +320,7 @@ ngầm coi là đã triển khai chỉ vì xuất hiện trong tài liệu kiế
 ## Release strategy
 
 1. **Một source hoạt động:** mọi thay đổi mới nhắm vào v2 trên `main`; v1 chỉ còn là snapshot lịch sử.
-2. **PR nhỏ và có gate:** mỗi backend/infrastructure capability có branch, commit, test và PR riêng; không dùng aggregate PR.
+2. **PR nhỏ và có gate:** mỗi capability có branch, commit, test và PR riêng; không dùng aggregate PR.
 3. **Staging trước production:** build đúng artifact, chạy smoke test `POST → GET → 302` và xác minh log/rollback trước cutover.
 4. **Cutover có đường lui:** chỉ đổi CloudFront/domain traffic khi staging đạt tiêu chí trong implementation plan.
 5. **Không suy diễn trạng thái:** source/IaC đã có không đồng nghĩa stack public, WAF, alarm hoặc SLA đã vận hành.
