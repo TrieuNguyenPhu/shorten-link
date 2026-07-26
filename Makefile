@@ -1,5 +1,4 @@
-# Root developer entrypoint while the backend and infrastructure are rebuilt
-# through independently reviewable pull requests.
+# Root developer and operator entrypoint.
 
 .DEFAULT_GOAL := help
 
@@ -15,7 +14,8 @@ endif
 OPENAPI_SPEC ?= openapi/openapi.yaml
 REDOCLY_VERSION ?= 2.40.0
 
-.PHONY: help install dev dev-api dev-web lint-web build build-web \
+.PHONY: help install dev dev-all dev-backend dev-frontend dev-api dev-web \
+	lint-web build build-web \
 	format-api tidy-api vet-api test test-web test-api test-api-race \
 	verify verify-all security audit-deps openapi-lint \
 	codegraph-init codegraph-status codegraph-sync codegraph-index
@@ -25,9 +25,10 @@ help:
 	@echo.
 	@echo Development
 	@echo   make install              Install pnpm dependencies from the lockfile
-	@echo   make dev                  Run the Go API and Next.js application
-	@echo   make dev-api              Run the Go API on localhost:8080
-	@echo   make dev-web              Run Next.js on localhost:3000
+	@echo   make dev                  Run backend and frontend together
+	@echo   make dev-backend          Run the Go API on localhost:8080
+	@echo   make dev-frontend         Run Next.js on localhost:3000
+	@echo   make dev-all              Alias for make dev
 	@echo.
 	@echo Quality
 	@echo   make verify               Run frontend and backend verification
@@ -44,14 +45,21 @@ help:
 install:
 	$(PNPM) install --frozen-lockfile
 
-dev:
-	+@$(MAKE) --no-print-directory -j2 dev-api dev-web
+dev: dev-all
 
-dev-api:
+dev-all:
+	+@$(MAKE) --no-print-directory -j2 dev-backend dev-frontend
+
+dev-backend:
 	$(PNPM) dev:api
 
-dev-web:
+dev-frontend:
 	$(PNPM) dev:web
+
+# Backward-compatible aliases.
+dev-api: dev-backend
+
+dev-web: dev-frontend
 
 lint-web:
 	$(PNPM) lint:web
