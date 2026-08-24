@@ -276,8 +276,9 @@ export function ShortenerWorkbench() {
       <div className="workbench__form-panel">
         <div className="workbench__heading">
           <div>
-            <h2 id="workbench-title">Tạo một short link</h2>
-            <p>Alias và thời hạn đều không bắt buộc.</p>
+            <p className="panel-kicker">01 · Thiết lập</p>
+            <h2 id="workbench-title">Tạo short link của bạn</h2>
+            <p>Dán URL, sau đó tùy chỉnh nếu bạn muốn.</p>
           </div>
           <span
             className="keyboard-hint"
@@ -302,7 +303,7 @@ export function ShortenerWorkbench() {
               type="url"
               inputMode="url"
               autoComplete="url"
-              placeholder="https://example.com/tai-lieu"
+              placeholder="https://example.com/duong-dan-rat-dai"
               maxLength={maximumURLLength}
               value={url}
               disabled={requestState === "loading"}
@@ -327,7 +328,7 @@ export function ShortenerWorkbench() {
           <div className="field-row">
             <div className="field">
               <label htmlFor="custom-alias">
-                Alias <span>tùy chọn</span>
+                Alias <span className="optional-tag">Tùy chọn</span>
               </label>
               <input
                 ref={aliasInputRef}
@@ -362,7 +363,7 @@ export function ShortenerWorkbench() {
 
             <div className="field">
               <label htmlFor="expires-in-days">
-                Thời hạn <span>tùy chọn</span>
+                Thời hạn <span className="optional-tag">Tùy chọn</span>
               </label>
               <input
                 ref={expirationInputRef}
@@ -411,7 +412,12 @@ export function ShortenerWorkbench() {
                 Đang tạo link…
               </>
             ) : (
-              "Tạo short link"
+              <>
+                Tạo short link
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M4 10h11M11 6l4 4-4 4" />
+                </svg>
+              </>
             )}
           </button>
 
@@ -428,21 +434,39 @@ export function ShortenerWorkbench() {
         aria-live="polite"
         tabIndex={-1}
       >
+        <div className="result-panel__heading">
+          <p className="panel-kicker">02 · Kết quả</p>
+          <span className="result-panel__state" data-state={requestState}>
+            <span aria-hidden="true" />
+            {requestState === "loading"
+              ? "Đang xử lý"
+              : requestState === "success"
+                ? "Sẵn sàng"
+                : requestState === "error"
+                  ? "Cần kiểm tra"
+                  : "Chờ URL"}
+          </span>
+        </div>
         {result ? (
           <div className="result" key={result.code}>
-            <p className="result__status">
-              {requestState === "success"
-                ? "Link đã sẵn sàng"
-                : "Kết quả gần nhất"}
-            </p>
-            <a
-              className="result__url"
-              href={result.short_url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {result.short_url}
-            </a>
+            <div className="result__hero">
+              <p className="result__status">
+                {requestState === "success"
+                  ? "Link đã sẵn sàng"
+                  : "Kết quả gần nhất"}
+              </p>
+              <a
+                className="result__url"
+                href={result.short_url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <span>{result.short_url}</span>
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M11 4h5v5M9 11l7-7M15 11v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h4" />
+                </svg>
+              </a>
+            </div>
             <button
               className="copy-button"
               type="button"
@@ -451,13 +475,22 @@ export function ShortenerWorkbench() {
               disabled={copyState === "copying"}
               aria-busy={copyState === "copying"}
             >
-              {copyState === "copying"
-                ? "Đang sao chép…"
-                : copyState === "copied"
-                ? "Đã sao chép"
-                : copyState === "error"
-                  ? "Sao chép lại"
-                  : "Sao chép link"}
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                {copyState === "copied" ? (
+                  <path d="m4 10 4 4 8-8" />
+                ) : (
+                  <path d="M7 7V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-2m-8-6h7a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z" />
+                )}
+              </svg>
+              <span>
+                {copyState === "copying"
+                  ? "Đang sao chép…"
+                  : copyState === "copied"
+                    ? "Đã sao chép"
+                    : copyState === "error"
+                      ? "Sao chép lại"
+                      : "Sao chép link"}
+              </span>
             </button>
             <p
               className="copy-status"
@@ -489,11 +522,17 @@ export function ShortenerWorkbench() {
           </div>
         ) : (
           <div className="result-empty">
+            <div className="result-empty__visual" aria-hidden="true">
+              <svg viewBox="0 0 64 64">
+                <path d="M26 38 38 26" />
+                <path d="m20 44-4 4a10 10 0 0 1-14-14l10-10a10 10 0 0 1 14 0" />
+                <path d="m44 20 4-4a10 10 0 0 1 14 14L52 40a10 10 0 0 1-14 0" />
+              </svg>
+            </div>
             <p className="result-empty__index">POST /api/v1/links</p>
-            <h3>Kết quả xuất hiện tại đây.</h3>
+            <h3>Short link sẽ xuất hiện ngay tại đây.</h3>
             <p>
-              Short URL, mã, URL đích và thời hạn được trả trực tiếp từ API —
-              không dựng dữ liệu mẫu.
+              Điền URL ở bên trái và nhấn “Tạo short link” để bắt đầu.
             </p>
           </div>
         )}
