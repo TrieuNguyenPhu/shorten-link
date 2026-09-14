@@ -1,6 +1,6 @@
 <div align="center">
 
-# NPT ShortenLink
+# ShortenLink
 
 **A serverless URL shortener built to stay simple at the edge and explicit in the code.**
 
