@@ -1,141 +1,117 @@
-# AWS infrastructure
+# Terraform AWS deployment
 
-This directory contains the AWS SAM/CloudFormation stack for `npt-shortenlink.dev`.
-
-> This runbook documents an operator-controlled deployment. Repository
-> validation and pull requests never execute `sam deploy`, mutate DNS, upload
-> static files, or invalidate a production distribution.
-
-The stack provisions:
-
-- one Go Lambda (`provided.al2023`, `arm64`) built from `services/shortener-api`;
-- an API Gateway HTTP API for link creation, lookup, redirect, and health routes;
-- a DynamoDB on-demand table with point-in-time recovery and TTL on the numeric `ttl` attribute;
-- a private, versioned S3 bucket exposed only through CloudFront Origin Access Control;
-- CloudFront behaviors for `/api/*`, `/link/*`, and `/healthz` plus the static frontend origin;
-- Route 53 IPv4/IPv6 aliases for the custom domain.
+This module provisions the Go Lambda (`provided.al2023`, arm64), HTTP API,
+DynamoDB, CloudWatch logs, IAM execution role, private S3 bucket and CloudFront.
+Name.com remains the DNS provider. CloudFormation and Route 53 are not required.
 
 ## Prerequisites
 
-- AWS CLI + credentials/profile có quyền deploy stack và upload frontend.
-- AWS SAM CLI, Go `1.26.5+` và GNU Make để build Lambda qua Makefile.
-- Node.js `22.20+` và pnpm `10.33+` để build static frontend.
-- An existing public Route 53 hosted zone containing `npt-shortenlink.dev`.
-- An issued ACM certificate in **us-east-1** that covers the domain. CloudFront requires its viewer certificate in that region even when the stack is deployed elsewhere.
-- The backend Makefile target `build-ShortenerFunction`. SAM invokes it from `services/shortener-api` and expects the `bootstrap` artifact in `$(ARTIFACTS_DIR)`.
+- Terraform 1.15.5+, AWS CLI, Go 1.26.9+, Node 22.20+ and pnpm 10.33.2.
+- An issued ACM certificate in **us-east-1** covering the deployment domain.
+- AWS credentials permitted to manage the resources declared in this module.
+- Access to the authoritative DNS provider for the domain.
 
-## Validate and build
+The production project uses **ap-southeast-2 (Sydney)**. AWS Projects in the new
+sign-up experience restrict regional resources to their selected region. Check
+AWS Settings -> Project -> Additional Info before deploying to another project.
+A region listed as enabled in the account does not prove a project permits it.
+See [AWS project regions](https://docs.aws.amazon.com/accounts/latest/reference/project-regions.html).
 
-Run from the repository root:
+Provider versions and Windows/Linux checksums are committed in
+`.terraform.lock.hcl`. CI uses mocked providers; it never applies infrastructure,
+changes DNS or uploads the frontend.
 
-```bash
-sam validate --lint --template-file infra/aws/template.yaml
-sam build --template-file infra/aws/template.yaml
-```
+## Credentials and state
 
-The root Makefile also exposes the mutation-free end-to-end plan:
+Use the existing local AWS credential chain or `AWS_PROFILE`. Never put access
+keys in Terraform variables, tfvars, `NEXT_PUBLIC_*`, frontend files or uploads.
+The Lambda uses its execution role; DynamoDB permissions are limited to GetItem
+and PutItem on its own table. Production frontend calls relative `/api/*` URLs.
 
-```bash
-make deploy-dry-run CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/replace-me HOSTED_ZONE_ID=ZREPLACE_ME
-```
+Terraform state, saved plans, `.terraform/`, `.build/` and real tfvars are ignored
+by Git. State is local plaintext: back it up securely and never place it in the
+frontend bucket. Keep the existing state when deploying updates. Multiple
+operators must configure a shared backend with locking before concurrent changes.
 
-## Recommended deployment
+Only `apps/web/out` is published. Old content-hashed assets are retained so
+browsers with cached HTML can continue loading the previous release.
 
-From a fresh clone, the supported operator workflow is one command:
+## Plan and deploy
 
-```bash
-make deploy CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/replace-me HOSTED_ZONE_ID=ZREPLACE_ME
-```
-
-It performs these stages in order and stops on the first failure:
-
-1. validate tool versions, required parameters, and AWS identity;
-2. install the frozen pnpm lockfile and run frontend/backend verification;
-3. run dependency, vulnerability, OpenAPI, and SAM validation;
-4. build and deploy the CloudFormation stack;
-5. read bucket/distribution/site values from stack outputs;
-6. publish immutable assets before mutable HTML;
-7. invalidate CloudFront and wait for completion;
-8. smoke-test the frontend and `/healthz`.
-
-The following Make variables have defaults and may be overridden on the same
-command:
-
-| Variable | Default |
-|---|---|
-| `AWS_REGION` | `ap-southeast-1` |
-| `STACK_NAME` | `npt-shortenlink-prod` |
-| `ENVIRONMENT_NAME` | `prod` |
-| `DOMAIN_NAME` | `npt-shortenlink.dev` |
-| `CORS_ALLOWED_ORIGINS` | `https://<DOMAIN_NAME>` |
-| `AWS_PROFILE` | Uses the standard AWS credential chain |
-
-`CERTIFICATE_ARN` and `HOSTED_ZONE_ID` intentionally have no defaults. This
-prevents a clone from mutating an unintended account or DNS zone.
-
-## Manual SAM deployment
-
-Replace both placeholder values before running:
+Run from the repository root, supplying the issued certificate's public ARN:
 
 ```bash
-sam deploy \
-  --stack-name npt-shortenlink-prod \
-  --region ap-southeast-1 \
-  --resolve-s3 \
-  --capabilities CAPABILITY_IAM \
-  --parameter-overrides \
-    EnvironmentName=prod \
-    DomainName=npt-shortenlink.dev \
-    CertificateArn=arn:aws:acm:us-east-1:123456789012:certificate/replace-me \
-    HostedZoneId=ZREPLACE_ME \
-    CorsAllowedOrigins=https://npt-shortenlink.dev
+make deploy-dry-run CERTIFICATE_ARN=<issued-acm-certificate-arn>
+make deploy-plan CERTIFICATE_ARN=<issued-acm-certificate-arn>
+make deploy CERTIFICATE_ARN=<issued-acm-certificate-arn>
 ```
 
-The manual command only deploys CloudFormation. It does not publish the
-frontend, wait for a CloudFront invalidation, or run public smoke tests; prefer
-`make deploy` for a complete release.
+- `deploy-dry-run` prints the workflow without builds or cloud mutations.
+- `deploy-plan` verifies/builds and saves `infra/aws/production.tfplan` without
+  applying resources or publishing the frontend.
+- `deploy` verifies account/certificate, installs the frozen lockfile with scripts
+  disabled, runs application/security/contract checks, builds Lambda, validates
+  and tests Terraform, plans, checks explicit AWS permission denials, applies the
+  saved plan, publishes frontend and invalidates CloudFront. It smoke-tests
+  frontend, health and create -> metadata -> redirect on the distribution hostname.
 
-CloudFormation retains the DynamoDB table, frontend bucket, and log groups when the stack is deleted or those resources are replaced. This protects link data and logs, but they must be cleaned up explicitly when they are no longer needed.
+Defaults: `AWS_REGION=ap-southeast-2`, `STACK_NAME=npt-shortenlink-prod`,
+`DOMAIN_NAME=npt-shortenlink.dev`. Override these or set `AWS_PROFILE` as needed.
+`STACK_NAME` is a resource-name prefix retained for command compatibility; it
+is not a CloudFormation stack. CORS is exactly `https://<DOMAIN_NAME>`.
+The former `HOSTED_ZONE_ID`, `ENVIRONMENT_NAME` and `CORS_ALLOWED_ORIGINS`
+deployment overrides are no longer consumed.
 
-## Publish the static frontend
+The script stops before apply when IAM user permission simulation reports an
+explicit denial. Regional actions use the deployment region; global IAM and
+CloudFront actions use us-east-1. Simulation cannot evaluate assumed-role sessions
+or guarantee every resource-level permission; AWS enforces authorization during
+apply. Failed applies preserve Terraform state for repair and retry.
 
-Production uses relative `/api/*` requests through the same CloudFront domain, so no public API base URL is required at build time. Run `pnpm build:web` to produce the static export in `apps/web/out`, then read `FrontendBucketName` and `CloudFrontDistributionId` from the stack outputs. Upload content-hashed Next.js assets first with a one-year immutable policy, then upload HTML and other mutable files with immediate revalidation:
+If resources already exist outside this state, import them before applying.
+Do not manage the same resources with both SAM and Terraform.
 
-`make deploy` performs this sequence automatically. The commands below are the
-manual recovery/reference procedure:
+## Name.com DNS and HTTPS
+
+After apply, read the target from deployment output or:
 
 ```bash
-aws s3 sync apps/web/out/_next/static "s3://$FRONTEND_BUCKET/_next/static" \
-  --cache-control "public,max-age=31536000,immutable"
-
-aws s3 sync apps/web/out "s3://$FRONTEND_BUCKET" \
-  --delete \
-  --exclude "_next/static/*" \
-  --cache-control "public,max-age=0,must-revalidate"
-
-aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths "/*"
+terraform -chdir=infra/aws output -json dns_record
 ```
 
-Do not delete old content-hashed assets during the upload: a browser or edge may still hold HTML from the previous release that references them. A lifecycle policy can remove old object versions after the chosen rollback window.
+At Name.com, add **ANAME**, leave **Host empty** for the apex, set **Answer** to
+the exported CloudFront hostname and use TTL 300. Preserve unrelated DNS records
+and the ACM validation CNAME so certificate renewal continues. Do not pin
+CloudFront IP addresses, change nameservers or use URL forwarding.
+See [Name.com ANAME records](https://www.name.com/support/articles/115010493967-adding-an-aname-alias-record).
 
-The default CloudFront behavior uses AWS's managed `CachingOptimized` policy. Its minimum TTL is one second, so that lower bound can override `no-cache`, `no-store`, or `max-age=0` from S3; the release invalidation above is therefore still required for immediately visible HTML changes. The bucket has no public access, and CloudFront signs origin requests through Origin Access Control.
+After propagation, verify the same create/metadata/302 flow on the canonical
+domain and confirm HTTP redirects to HTTPS. Smoke links point to example.com
+and expire after one day.
 
-## Rollback
+## Validation and rollback
 
-CloudFormation stack operations must use a reviewed change set. If a stack
-update fails, inspect the CloudFormation events and allow the service to finish
-its automatic rollback before starting another operation. Do not delete the
-stack as a rollback mechanism: the table, bucket, and log groups are retained
-and require explicit lifecycle decisions.
+```bash
+node --test scripts/deploy-aws.test.mjs
+terraform -chdir=infra/aws init -backend=false -input=false -lockfile=readonly
+terraform -chdir=infra/aws fmt -check -recursive
+terraform -chdir=infra/aws validate
+terraform -chdir=infra/aws test
+```
 
-For a frontend rollback:
+Tests mock both providers and create no AWS resources. CI builds the executable
+Linux ARM64 artifact before validation. Table, bucket and logs have
+`prevent_destroy`; DynamoDB PITR and S3 versioning are enabled.
 
-1. identify the last known-good S3 object versions;
-2. restore those versions without deleting content-hashed assets still
-   referenced by cached HTML;
-3. invalidate `/*` on the same distribution;
-4. run the `POST → metadata → 302` smoke flow before declaring recovery.
+For application rollback, rebuild/reapply the previous artifact with the same
+state, restore prior S3 object versions and invalidate CloudFront. Do not use
+`terraform destroy` or delete state as a rollback mechanism. Avoid renaming
+persistent resources, which would require replacement.
 
-For an API rollback, redeploy the last known-good SAM artifact and parameter
-set, then verify `/healthz`, structured logs, DynamoDB reads/writes, and the
-public redirect path. DNS is not changed during an application rollback.
+## Security audit scope
+
+Production pnpm audit reports no known vulnerabilities. Go symbol/package
+scanning reports no reachable findings after the dependency updates.
+GO-2026-5932 remains at module level for unused `x/crypto/openpgp`, with no fix;
+reassess on 2026-11-12 or before adding OpenPGP functionality. Go race tests need
+cgo and a C compiler and run in Linux CI.

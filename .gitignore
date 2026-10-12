@@ -15,9 +15,19 @@ dist/
 *.out
 coverage-api.out
 
-# AWS SAM
+# Ignore artifacts left by older SAM checkouts
 .aws-sam/
 samconfig.toml
+
+# Terraform local state, plans, providers and Lambda artifacts
+**/.terraform/
+**/.build/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+crash.log
 
 # CodeGraph local indexes
 /.codegraph/

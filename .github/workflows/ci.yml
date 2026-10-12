@@ -86,7 +86,9 @@ jobs:
     timeout-minutes: 15
     needs: backend
     env:
-      SAM_CLI_TELEMETRY: "0"
+      GOOS: linux
+      GOARCH: arm64
+      CGO_ENABLED: "0"
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -97,16 +99,25 @@ jobs:
           go-version: 1.26.9
           cache-dependency-path: services/shortener-api/go.sum
 
-      - name: Set up AWS SAM CLI
-        uses: aws-actions/setup-sam@v2
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
         with:
-          version: 1.164.0
+          terraform_version: 1.15.5
 
-      - name: Validate SAM template
-        run: sam validate --lint --template-file infra/aws/template.yaml
+      - name: Build Lambda artifact
+        run: |
+          mkdir -p infra/aws/.build
+          go build -trimpath -ldflags='-s -w' -o infra/aws/.build/bootstrap ./services/shortener-api/cmd/api
 
-      - name: Build SAM application
-        run: sam build --template-file infra/aws/template.yaml
+      - name: Validate Terraform
+        run: |
+          terraform -chdir=infra/aws init -backend=false -input=false -lockfile=readonly
+          terraform -chdir=infra/aws fmt -check -recursive
+          terraform -chdir=infra/aws validate
+          terraform -chdir=infra/aws test
+
+      - name: Test deployment guards
+        run: node --test scripts/deploy-aws.test.mjs
 
   dependency-audit:
     name: Audit production dependencies
