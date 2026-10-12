@@ -5,11 +5,11 @@
 **A serverless URL shortener built to stay simple at the edge and explicit in the code.**
 
 Rút gọn URL, chọn alias, đặt thời hạn và resolve link qua một domain duy nhất —
-với frontend tĩnh, API serverless và hạ tầng được mô tả bằng AWS SAM/CloudFormation.
+với frontend tĩnh, API serverless và hạ tầng được mô tả bằng Terraform.
 
 [![CI](https://github.com/TrieuNguyenPhu/shorten-link/actions/workflows/ci.yml/badge.svg)](https://github.com/TrieuNguyenPhu/shorten-link/actions/workflows/ci.yml)
 
-`Domain reserved: npt-shortenlink.dev` ·
+[Website: npt-shortenlink.dev](https://npt-shortenlink.dev/) ·
 [Kiến trúc](docs/architecture.md) ·
 [OpenAPI](openapi/openapi.yaml) ·
 [Hallmark QA](docs/hallmark-qa.md) ·
@@ -18,19 +18,19 @@ với frontend tĩnh, API serverless và hạ tầng được mô tả bằng AW
 </div>
 
 > [!IMPORTANT]
-> `main` là source hoàn chỉnh của v2: Next.js, Go/Gin, OpenAPI và AWS SAM.
+> Source v2 gồm Next.js, Go/Gin, OpenAPI và Terraform.
 > Bản v1 Python/React không được khôi phục và chỉ tồn tại dưới dạng snapshot
 > lịch sử.
 
 | Track | Trạng thái | Stack chính | Tham chiếu |
 |---|---|---|---|
-| **v2 — current** | Source, tests, CI và deployment workflow đã có trên `main`; public deployment vẫn là thao tác có chủ đích của operator | Next.js, Go/Gin, OpenAPI, DynamoDB và AWS SAM | `main`, [kiến trúc](docs/architecture.md), [AWS runbook](infra/aws/README.md) |
+| **v2 — current** | Đã triển khai trên AWS tại Sydney; DNS Name.com, Free Plan | Next.js, Go/Gin, OpenAPI, DynamoDB và Terraform | [kiến trúc](docs/architecture.md), [AWS runbook](infra/aws/README.md) |
 | **v1 — archived baseline** | Snapshot chỉ đọc, không còn trong cây source hiện tại | Python 3.12 Lambda, React/Vite, API Gateway REST, DynamoDB, AWS SAM | [`cv-2026-06-python-react-sam`](https://github.com/TrieuNguyenPhu/shorten-link/tree/cv-2026-06-python-react-sam) |
 
 > [!NOTE]
-> `npt-shortenlink.dev` là canonical domain đã đăng ký. Public deployment đang
-> phụ thuộc AWS account, hosted zone và certificate của operator. Source/IaC có
-> trong repository không được hiểu là production đang online.
+> `npt-shortenlink.dev` đang hoạt động trên AWS tại `ap-southeast-2` (Sydney).
+> DNS được giữ tại Name.com; HTTPS dùng ACM. Trạng thái và kiểm tra ngày
+> 2026-10-12 được ghi trong [AWS runbook](infra/aws/README.md).
 
 ## Vì sao project này tồn tại?
 
@@ -43,7 +43,7 @@ V2 tập trung vào bốn mục tiêu:
 - **Redirect đúng trước, analytics sau:** đường nóng chỉ đi qua CloudFront, HTTP API, Lambda và DynamoDB.
 - **Domain độc lập framework:** rule tạo/resolve link có thể test mà không khởi động Gin hoặc AWS.
 - **Một contract HTTP:** frontend, local server và Lambda cùng tuân theo [`openapi/openapi.yaml`](openapi/openapi.yaml).
-- **Hạ tầng tái lập được:** API, storage, static hosting, CDN và DNS đều nằm trong SAM/CloudFormation.
+- **Hạ tầng tái lập được:** API, storage, static hosting và CDN nằm trong Terraform; DNS được giữ tại Name.com.
 
 ## Khả năng chính
 
@@ -56,18 +56,18 @@ V2 tập trung vào bốn mục tiêu:
 | Collision-safe create | Random code xác suất lớn | Conditional write + retry hữu hạn |
 | Static frontend | React/Vite | Next.js static export |
 | Backend runtime | 2 Python Lambda | 1 Go Lambda chạy local hoặc Lambda |
-| Infrastructure as code | SAM cho backend | SAM cho API, Lambda, DynamoDB, S3, CloudFront và Route 53 |
+| Infrastructure as code | SAM cho backend | Terraform cho API, Lambda, DynamoDB, S3 và CloudFront; Name.com DNS |
 | UI release gate | Manual review | Hallmark + browser evidence bắt buộc |
 
 ## Kiến trúc v2
 
-Sơ đồ dưới đây mô tả **resource và wiring đã có trong source SAM v2**, không phải
+Sơ đồ dưới đây mô tả **resource và wiring đã có trong source Terraform v2**, không phải
 tuyên bố rằng rebuild đã được deploy production. ACM certificate là prerequisite
 được truyền vào stack qua parameter, không phải resource do template tạo.
 
 ```mermaid
 flowchart LR
-    User["Người dùng"] -->|HTTPS| DNS["Route 53"]
+    User["Người dùng"] -->|HTTPS| DNS["Name.com DNS"]
     DNS --> Edge["CloudFront"]
     ACM["External ACM certificate\nus-east-1"] -. TLS parameter .-> Edge
 
@@ -85,7 +85,7 @@ flowchart LR
 | **API Gateway HTTP API** | Nhận request v2 và chuyển payload sang Lambda |
 | **Go Lambda + Gin** | Validation, use case orchestration, error mapping và redirect |
 | **DynamoDB** | Lưu link theo partition key `code`, conditional create, PITR và TTL |
-| **Route 53 + ACM** | Stack tạo alias A/AAAA; certificate TLS có sẵn được truyền qua parameter |
+| **Name.com + ACM** | ANAME trỏ đến CloudFront; ACM certificate có sẵn được truyền vào Terraform |
 
 CloudFront production dùng relative request nên browser không cần biết execute-api
 URL. Local frontend mới dùng `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080`.
@@ -129,9 +129,9 @@ ghi lại trong README và sơ đồ kiến trúc của release.
 | API | Go, Gin | Go `1.26.9`, Gin `1.12.0`, clean architecture |
 | Contract | OpenAPI | OpenAPI `3.0.3`, contract version `1.0.0` |
 | Runtime target | AWS Lambda | `provided.al2023`, `arm64` |
-| Edge target | CloudFront, S3 OAC, Route 53, ACM | Same-origin static + API routing |
+| Edge target | CloudFront, S3 OAC, Name.com DNS, ACM | Same-origin static + API routing |
 | Data target | DynamoDB | `PAY_PER_REQUEST`, PITR, SSE, TTL |
-| IaC | AWS SAM/CloudFormation | SAM CLI `1.164.0` đã dùng trong CI |
+| IaC | Terraform | Terraform `1.15.5`, pinned AWS/archive providers |
 | Tooling | pnpm, GNU Make, CodeGraph | pnpm `10.33.2`, root developer entrypoint |
 
 ## Repository map
@@ -140,7 +140,7 @@ ghi lại trong README và sơ đồ kiến trúc của release.
 shorten-link/
 ├── apps/web/                    # Next.js static frontend
 ├── services/shortener-api/      # Go/Gin API, Lambda entrypoint và tests
-├── infra/aws/                   # SAM template và operator runbook
+├── infra/aws/                   # Terraform module, tests và operator runbook
 ├── openapi/                     # Source-of-truth HTTP contract
 ├── docs/                        # Architecture, delivery and Hallmark QA
 ├── scripts/deploy-aws.mjs       # Cross-platform guarded deployment workflow
@@ -234,53 +234,29 @@ Các target hữu ích khác:
 > viewport matrix và ảnh bằng chứng nằm tại
 > [`docs/hallmark-report.md`](docs/hallmark-report.md).
 
-## AWS build và deploy
+## AWS build and deploy
 
-Sau khi clone, một operator có thể verify, deploy infrastructure, upload
-frontend, invalidate CloudFront và chạy smoke test bằng **một lệnh Make**.
-Repository không thể tự tạo AWS credentials, quyền IAM, hosted zone hoặc ACM
-certificate; các prerequisite bên ngoài này phải tồn tại trước.
-
-Yêu cầu thêm cho deployment:
-
-| Công cụ/tài nguyên | Yêu cầu |
-|---|---|
-| AWS CLI | Đã authenticate bằng credential chain hoặc `AWS_PROFILE` |
-| AWS SAM CLI | `1.164.0` hoặc compatible |
-| Route 53 | Public hosted zone chứa domain deploy |
-| ACM | Certificate `us-east-1` bao phủ domain CloudFront |
-
-Kiểm tra toàn bộ plan mà không thay đổi AWS:
+Deployment uses Terraform; DNS stays at Name.com. It needs AWS permissions
+for Lambda, API Gateway, DynamoDB, S3, IAM and CloudFront, plus an issued ACM
+certificate in us-east-1. Terraform does not override AWS Organizations SCPs.
 
 ```bash
-make deploy-dry-run CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/replace-me HOSTED_ZONE_ID=ZREPLACE_ME
+make deploy-dry-run CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/replace-me
+make deploy-plan CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/replace-me
+make deploy CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/replace-me
 ```
 
-Deploy thật bằng một lệnh:
+`deploy-plan` verifies/builds and saves a Terraform plan without applying it.
+`deploy` applies the saved plan after checking explicit AWS denials, publishes
+frontend, invalidates CloudFront and smoke-tests create/metadata/redirect.
+It prints the CloudFront hostname for an apex ANAME record at Name.com.
+No `HOSTED_ZONE_ID` or Route 53 zone is required.
 
-```bash
-make deploy CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/replace-me HOSTED_ZONE_ID=ZREPLACE_ME
-```
-
-Giá trị mặc định:
-
-- region: `ap-southeast-1`;
-- stack: `npt-shortenlink-prod`;
-- environment: `prod`;
-- domain: `npt-shortenlink.dev`;
-- CORS origin: `https://<domain>`.
-
-Có thể override ngay trên cùng lệnh bằng `AWS_PROFILE`, `AWS_REGION`,
-`STACK_NAME`, `ENVIRONMENT_NAME`, `DOMAIN_NAME` hoặc
-`CORS_ALLOWED_ORIGINS`. Ví dụ:
-
-```bash
-make deploy AWS_PROFILE=portfolio DOMAIN_NAME=links.example.com CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/replace-me HOSTED_ZONE_ID=ZREPLACE_ME
-```
-
-`make deploy` dừng ngay khi preflight, test, lint, audit, OpenAPI, SAM build,
-CloudFormation, upload, invalidation hoặc smoke test thất bại. Chi tiết resource,
-cache policy và rollback nằm trong [AWS runbook](infra/aws/README.md).
+Defaults: `AWS_REGION=ap-southeast-2`, `STACK_NAME=npt-shortenlink-prod`,
+`DOMAIN_NAME=npt-shortenlink.dev`. Override these or use `AWS_PROFILE` as needed.
+AWS keys are never passed as Terraform variables or frontend configuration;
+state, plans and build files are gitignored. See the [AWS runbook](infra/aws/README.md)
+for current permissions, certificate, DNS instructions and rollback.
 
 ## Tái lập snapshot v1 đã lưu trữ
 
@@ -309,8 +285,8 @@ Live integration test v1 là opt-in và tự skip khi không có `API_BASE_URL`.
 | Đã có trên `main` | Không được ngầm suy diễn |
 |---|---|
 | Next.js static frontend, Go/Gin API và OpenAPI contract | Production đang online hoặc domain đã cut over |
-| SAM resources cho Lambda, DynamoDB, S3, CloudFront và Route 53 | AWS account/credential/certificate đã được cấp |
-| CI cho frontend, backend, dependency và SAM build | WAF, authentication, analytics hoặc live SLA |
+| Terraform resources cho Lambda, DynamoDB, S3 và CloudFront; Name.com DNS | AWS account/credential/certificate đã được cấp |
+| CI cho frontend, backend, dependency, Terraform và Lambda build | WAF, authentication, analytics hoặc live SLA |
 | Guarded one-command deployment và rollback runbook | Deployment tự động chạy trong pull request |
 
 API MVP hiện chưa có authentication. WAF, auth, analytics và observability nâng

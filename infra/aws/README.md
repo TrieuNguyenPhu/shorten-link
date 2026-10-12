@@ -115,3 +115,6 @@ scanning reports no reachable findings after the dependency updates.
 GO-2026-5932 remains at module level for unused `x/crypto/openpgp`, with no fix;
 reassess on 2026-11-12 or before adding OpenPGP functionality. Go race tests need
 cgo and a C compiler and run in Linux CI.
+
+See [production verification](../../docs/deployment-verification.md) for the live
+release checks, their scope and remaining limitations.
