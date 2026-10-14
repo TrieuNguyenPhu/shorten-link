@@ -1,8 +1,6 @@
 module github.com/TrieuNguyenPhu/shorten-link/services/shortener-api
 
-go 1.26.5
-
-toolchain go1.26.6
+go 1.26.9
 
 require (
 	github.com/aws/aws-lambda-go v1.54.0
@@ -53,9 +51,9 @@ require (
 	github.com/ugorji/go/codec v1.3.1 // indirect
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	golang.org/x/arch v0.22.0 // indirect
-	golang.org/x/crypto v0.51.0 // indirect
-	golang.org/x/net v0.55.0 // indirect
-	golang.org/x/sys v0.45.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
+	golang.org/x/crypto v0.57.0 // indirect
+	golang.org/x/net v0.60.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 )

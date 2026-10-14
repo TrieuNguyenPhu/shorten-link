@@ -125,8 +125,8 @@ ghi lại trong README và sơ đồ kiến trúc của release.
 
 | Lớp | Công nghệ | Phiên bản/pattern |
 |---|---|---|
-| Web | Next.js, React, TypeScript | Next `16.2.11`, React `19.2.8`, App Router, static export |
-| API | Go, Gin | Go `1.26.5`, Gin `1.12.0`, clean architecture |
+| Web | Next.js, React, TypeScript | Next `16.3.8`, React `19.2.8`, App Router, static export |
+| API | Go, Gin | Go `1.26.9`, Gin `1.12.0`, clean architecture |
 | Contract | OpenAPI | OpenAPI `3.0.3`, contract version `1.0.0` |
 | Runtime target | AWS Lambda | `provided.al2023`, `arm64` |
 | Edge target | CloudFront, S3 OAC, Route 53, ACM | Same-origin static + API routing |
@@ -156,7 +156,7 @@ shorten-link/
 |---|---:|
 | Node.js | `>=22.20.0` |
 | pnpm | `10.33.2` |
-| Go | `>=1.26.5` |
+| Go | `>=1.26.9` |
 | GNU Make | phiên bản hỗ trợ job song song (`-j`) |
 
 ```bash
