@@ -16,19 +16,18 @@ OPENAPI_SPEC ?= openapi/openapi.yaml
 REDOCLY_VERSION ?= 2.40.0
 DEPLOY_SCRIPT ?= scripts/deploy-aws.mjs
 
-AWS_REGION ?= ap-southeast-1
+AWS_REGION ?= ap-southeast-2
 STACK_NAME ?= npt-shortenlink-prod
-ENVIRONMENT_NAME ?= prod
 DOMAIN_NAME ?= npt-shortenlink.dev
 
-export AWS_PROFILE AWS_REGION STACK_NAME ENVIRONMENT_NAME DOMAIN_NAME
-export CERTIFICATE_ARN HOSTED_ZONE_ID CORS_ALLOWED_ORIGINS
+export AWS_PROFILE AWS_REGION STACK_NAME DOMAIN_NAME
+export CERTIFICATE_ARN
 
 .PHONY: help install dev dev-all dev-backend dev-frontend dev-api dev-web \
 	lint-web build build-web \
 	format-api tidy-api vet-api test test-web test-api test-api-race \
 	verify verify-all security audit-deps openapi-lint \
-	deploy deploy-dry-run \
+	deploy deploy-plan deploy-dry-run \
 	codegraph-init codegraph-status codegraph-sync codegraph-index
 
 help:
@@ -125,6 +124,9 @@ deploy:
 
 deploy-dry-run:
 	$(NODE) $(DEPLOY_SCRIPT) --dry-run
+
+deploy-plan:
+	$(NODE) $(DEPLOY_SCRIPT) --plan-only
 
 codegraph-init:
 	$(CODEGRAPH) init .

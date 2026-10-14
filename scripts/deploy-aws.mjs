@@ -1,12 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { existsSync, mkdirSync } from "node:fs";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 process.chdir(repositoryRoot);
 
 const dryRun = process.argv.includes("--dry-run");
-const unknownArguments = process.argv.slice(2).filter((argument) => argument !== "--dry-run");
+const planOnly = process.argv.includes("--plan-only");
+const unknownArguments = process.argv.slice(2).filter((argument) => !["--dry-run", "--plan-only"].includes(argument));
 if (unknownArguments.length > 0) {
   throw new Error(`unknown deployment arguments: ${unknownArguments.join(", ")}`);
 }
@@ -18,17 +19,11 @@ function readEnvironment(name, fallback = "") {
 
 const configuration = {
   awsProfile: readEnvironment("AWS_PROFILE"),
-  awsRegion: readEnvironment("AWS_REGION", "ap-southeast-1"),
+  awsRegion: readEnvironment("AWS_REGION", "ap-southeast-2"),
   stackName: readEnvironment("STACK_NAME", "npt-shortenlink-prod"),
-  environmentName: readEnvironment("ENVIRONMENT_NAME", "prod"),
   domainName: readEnvironment("DOMAIN_NAME", "npt-shortenlink.dev"),
   certificateArn: readEnvironment("CERTIFICATE_ARN"),
-  hostedZoneId: readEnvironment("HOSTED_ZONE_ID"),
 };
-configuration.corsAllowedOrigins = readEnvironment(
-  "CORS_ALLOWED_ORIGINS",
-  `https://${configuration.domainName}`,
-);
 
 function assertMatches(name, value, expression, hint) {
   if (!expression.test(value)) {
@@ -37,13 +32,11 @@ function assertMatches(name, value, expression, hint) {
 }
 
 function validateConfiguration() {
-  const missing = ["certificateArn", "hostedZoneId"].filter(
+  const missing = ["certificateArn"].filter(
     (key) => configuration[key] === "",
   );
   if (missing.length > 0) {
-    const environmentNames = missing.map((key) =>
-      key === "certificateArn" ? "CERTIFICATE_ARN" : "HOSTED_ZONE_ID",
-    );
+    const environmentNames = ["CERTIFICATE_ARN"];
     throw new Error(
       `missing required deployment values: ${environmentNames.join(", ")}`,
     );
@@ -53,7 +46,7 @@ function validateConfiguration() {
     "AWS_REGION",
     configuration.awsRegion,
     /^[a-z]{2}(?:-gov)?-[a-z]+-\d$/,
-    "Use an AWS region such as ap-southeast-1.",
+    "Use the project's selected region, such as ap-southeast-2.",
   );
   if (configuration.awsProfile !== "") {
     assertMatches(
@@ -66,14 +59,8 @@ function validateConfiguration() {
   assertMatches(
     "STACK_NAME",
     configuration.stackName,
-    /^[A-Za-z][A-Za-z0-9-]{0,127}$/,
-    "CloudFormation stack names must start with a letter.",
-  );
-  assertMatches(
-    "ENVIRONMENT_NAME",
-    configuration.environmentName,
-    /^[a-z][a-z0-9-]{1,15}$/,
-    "Use 2-16 lower-case letters, numbers, or hyphens.",
+    /^[a-z][a-z0-9-]{1,39}$/,
+    "Use 2-40 lowercase letters, numbers, or hyphens.",
   );
   assertMatches(
     "DOMAIN_NAME",
@@ -87,33 +74,8 @@ function validateConfiguration() {
     /^arn:aws:acm:us-east-1:\d{12}:certificate\/[0-9a-fA-F-]+$/,
     "CloudFront requires an ACM certificate ARN from us-east-1.",
   );
-  assertMatches(
-    "HOSTED_ZONE_ID",
-    configuration.hostedZoneId,
-    /^Z[A-Z0-9]+$/,
-    "Use the Route 53 public hosted-zone ID.",
-  );
 
-  for (const origin of configuration.corsAllowedOrigins.split(",")) {
-    let parsed;
-    try {
-      parsed = new URL(origin.trim());
-    } catch {
-      throw new Error(`CORS_ALLOWED_ORIGINS contains an invalid URL: ${origin}`);
-    }
-    if (
-      !["http:", "https:"].includes(parsed.protocol) ||
-      parsed.username !== "" ||
-      parsed.password !== "" ||
-      parsed.pathname !== "/" ||
-      parsed.search !== "" ||
-      parsed.hash !== ""
-    ) {
-      throw new Error(
-        `CORS_ALLOWED_ORIGINS must contain origins only: ${origin}`,
-      );
-    }
-  }
+
 }
 
 const windowsCommandCache = new Map();
@@ -130,7 +92,7 @@ function platformCommand(command) {
       aws: "aws.exe",
       go: "go.exe",
       pnpm: "pnpm.cmd",
-      sam: "sam.cmd",
+      terraform: "terraform.exe",
     }[command] ?? command;
   const lookup = spawnSync("where.exe", [commandName], {
     encoding: "utf8",
@@ -155,7 +117,7 @@ function windowsShellCommand(command, args) {
 }
 
 function execute(command, args, options = {}) {
-  const { capture = false, executeDuringDryRun = false } = options;
+  const { capture = false, executeDuringDryRun = false, env = {} } = options;
   console.log(`\n> ${displayCommand(command, args)}`);
 
   if (dryRun && !executeDuringDryRun) {
@@ -171,7 +133,7 @@ function execute(command, args, options = {}) {
     {
     cwd: repositoryRoot,
     encoding: capture ? "utf8" : undefined,
-    env: process.env,
+    env: { ...process.env, ...env },
     shell: useWindowsShell,
     stdio: capture ? ["ignore", "pipe", "inherit"] : "inherit",
     },
@@ -191,43 +153,71 @@ function awsArguments(...arguments_) {
     : arguments_;
 }
 
-function samProfileArguments() {
-  return configuration.awsProfile
-    ? ["--profile", configuration.awsProfile]
-    : [];
-}
-
 function verifyToolchain() {
   execute("go", ["version"], { executeDuringDryRun: true });
   execute("pnpm", ["--version"], { executeDuringDryRun: true });
-  execute("sam", ["--version"], { executeDuringDryRun: true });
+  execute("terraform", ["version"], { executeDuringDryRun: true });
   execute("aws", ["--version"], { executeDuringDryRun: true });
 }
 
-function stackOutput(outputKey) {
-  if (dryRun) {
-    return `DRY_RUN_${outputKey}`;
+function terraformOutput(name) {
+  if (dryRun) return `DRY_RUN_${name}`;
+  return execute("terraform", ["-chdir=infra/aws", "output", "-raw", name], { capture: true });
+}
+
+export function assertDeploymentPermissions(evaluations) {
+  if (!Array.isArray(evaluations) || evaluations.length === 0) {
+    throw new Error("AWS permission evaluation is empty");
   }
-  const output = execute(
-    "aws",
-    awsArguments(
-      "cloudformation",
-      "describe-stacks",
-      "--stack-name",
-      configuration.stackName,
-      "--region",
-      configuration.awsRegion,
-      "--query",
-      `Stacks[0].Outputs[?OutputKey==\`${outputKey}\`].OutputValue | [0]`,
-      "--output",
-      "text",
-    ),
-    { capture: true },
-  );
-  if (output === "" || output === "None") {
-    throw new Error(`CloudFormation output ${outputKey} is missing`);
+  if (evaluations.some((entry) => !entry.EvalActionName || !["allowed", "implicitDeny", "explicitDeny"].includes(entry.EvalDecision))) {
+    throw new Error("AWS permission evaluation is malformed");
   }
-  return output;
+  const denied = evaluations.filter((entry) => entry.EvalDecision === "explicitDeny" || entry.OrganizationsDecisionDetail?.AllowedByOrganizations === false);
+  if (denied.length > 0) {
+    throw new Error(`Deployment denied for ${denied.map((entry) => entry.EvalActionName).join(", ")}; check AWS Organizations SCP and IAM policies before applying`);
+  }
+}
+
+function verifyDeploymentPermissions(identity) {
+  // IAM simulation cannot evaluate assumed-role sessions; AWS still enforces permissions during apply.
+  if (!identity.Arn.includes(":user/")) return;
+  const checks = [
+    [configuration.awsRegion, ["lambda:CreateFunction", "dynamodb:CreateTable", "apigateway:POST", "s3:CreateBucket"]],
+    ["us-east-1", ["cloudfront:CreateDistribution", "iam:CreateRole", "iam:PassRole"]],
+  ];
+  for (const [region, actions] of checks) {
+    const result = execute("aws", awsArguments(
+      "iam", "simulate-principal-policy", "--policy-source-arn", identity.Arn,
+      "--action-names", ...actions,
+      "--context-entries", `ContextKeyName=aws:RequestedRegion,ContextKeyValues=${region},ContextKeyType=string`, "--output", "json",
+    ), { capture: true });
+    assertDeploymentPermissions(JSON.parse(result).EvaluationResults);
+  }
+}
+
+export async function verifyLinkFlow(baseUrl) {
+  const target = "https://example.com/";
+  const created = await fetch(`${baseUrl}/api/v1/links`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url: target, expires_in_days: 1 }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (created.status !== 201) throw new Error("Link creation smoke test failed");
+  const code = (await created.json()).data?.code;
+  if (typeof code !== "string" || !/^[a-z0-9-]{4,32}$/.test(code)) {
+    throw new Error("Link creation returned an invalid code");
+  }
+  const metadata = await fetch(`${baseUrl}/api/v1/links/${code}`, { signal: AbortSignal.timeout(10_000) });
+  const data = (await metadata.json()).data;
+  if (metadata.status !== 200 || data?.code !== code || data?.status !== "active") {
+    throw new Error("Link metadata smoke test failed");
+  }
+  const redirect = await fetch(`${baseUrl}/link/${code}`, { redirect: "manual", signal: AbortSignal.timeout(10_000) });
+  if (redirect.status !== 302 || redirect.headers.get("Location") !== target) {
+    throw new Error("Link redirect smoke test failed");
+  }
+  console.log("Smoke test passed: create -> metadata -> redirect");
 }
 
 async function smokeTest(url, label, validateResponse) {
@@ -265,72 +255,44 @@ async function main() {
 
   verifyToolchain();
 
+  let identity;
   if (!dryRun) {
-    const account = execute(
-      "aws",
-      awsArguments(
-        "sts",
-        "get-caller-identity",
-        "--query",
-        "Account",
-        "--output",
-        "text",
-      ),
-      { capture: true },
-    );
-    console.log(`Authenticated to AWS account ${account}`);
+    identity = JSON.parse(execute("aws", awsArguments("sts", "get-caller-identity", "--output", "json"), { capture: true }));
+    const certificate = JSON.parse(execute("aws", awsArguments("acm", "describe-certificate", "--certificate-arn", configuration.certificateArn, "--region", "us-east-1", "--output", "json"), { capture: true })).Certificate;
+    if (certificate.Status !== "ISSUED" || !certificate.SubjectAlternativeNames.includes(configuration.domainName)) {
+      throw new Error("The ACM certificate must be issued and cover DOMAIN_NAME");
+    }
+    console.log(`Authenticated to AWS account ${identity.Account}`);
   }
 
-  execute("pnpm", ["install", "--frozen-lockfile"]);
+  execute("pnpm", ["install", "--frozen-lockfile", "--ignore-scripts"]);
   execute("pnpm", ["verify"]);
   execute("pnpm", ["audit:deps"]);
   execute("pnpm", ["vuln:api"]);
-  execute("pnpm", [
-    "--package=@redocly/cli@2.40.0",
-    "dlx",
-    "redocly",
-    "lint",
-    "openapi/openapi.yaml",
-  ]);
-  execute("sam", [
-    "validate",
-    "--lint",
-    "--template-file",
-    "infra/aws/template.yaml",
-  ]);
-  execute("sam", [
-    "build",
-    "--template-file",
-    "infra/aws/template.yaml",
-  ]);
+  execute("pnpm", ["--package=@redocly/cli@2.40.0", "dlx", "redocly", "lint", "openapi/openapi.yaml"]);
+  if (!dryRun) mkdirSync("infra/aws/.build", { recursive: true });
+  execute("go", ["build", "-trimpath", "-ldflags=-s -w", "-o", "infra/aws/.build/bootstrap", "./services/shortener-api/cmd/api"], { env: { GOOS: "linux", GOARCH: "arm64", CGO_ENABLED: "0" } });
+  process.env.TF_VAR_aws_region = configuration.awsRegion;
+  process.env.TF_VAR_deployment_name = configuration.stackName;
+  process.env.TF_VAR_domain_name = configuration.domainName;
+  process.env.TF_VAR_certificate_arn = configuration.certificateArn;
+  execute("terraform", ["-chdir=infra/aws", "init", "-input=false"]);
+  execute("terraform", ["-chdir=infra/aws", "fmt", "-check", "-recursive"]);
+  execute("terraform", ["-chdir=infra/aws", "validate"]);
+  execute("terraform", ["-chdir=infra/aws", "test"]);
+  execute("terraform", ["-chdir=infra/aws", "plan", "-input=false", "-out=production.tfplan"]);
+  if (planOnly) {
+    console.log("Terraform plan saved; no resources were applied or frontend files uploaded.");
+    return;
+  }
+  if (!dryRun) verifyDeploymentPermissions(identity);
+  execute("terraform", ["-chdir=infra/aws", "apply", "-input=false", "production.tfplan"]);
 
-  execute("sam", [
-    "deploy",
-    "--template-file",
-    ".aws-sam/build/template.yaml",
-    "--stack-name",
-    configuration.stackName,
-    "--region",
-    configuration.awsRegion,
-    "--resolve-s3",
-    "--capabilities",
-    "CAPABILITY_IAM",
-    "--no-confirm-changeset",
-    "--no-fail-on-empty-changeset",
-    "--parameter-overrides",
-    `EnvironmentName=${configuration.environmentName}`,
-    `DomainName=${configuration.domainName}`,
-    `CertificateArn=${configuration.certificateArn}`,
-    `HostedZoneId=${configuration.hostedZoneId}`,
-    `CorsAllowedOrigins=${configuration.corsAllowedOrigins}`,
-    ...samProfileArguments(),
-  ]);
-
-  const frontendBucket = stackOutput("FrontendBucketName");
-  const distributionId = stackOutput("CloudFrontDistributionId");
-  const siteUrl = dryRun
-    ? `https://${configuration.domainName}`
-    : stackOutput("SiteUrl");
+  const frontendBucket = terraformOutput("frontend_bucket_name");
+  const distributionId = terraformOutput("cloudfront_distribution_id");
+  const siteUrl = `https://${configuration.domainName}`;
+  const cloudfrontDomain = terraformOutput("cloudfront_domain_name");
+  console.log(`Name.com DNS: ANAME, Host empty (apex), Answer ${cloudfrontDomain}, TTL 300`);
 
   if (!dryRun && !existsSync("apps/web/out/_next/static")) {
     throw new Error("Next.js static assets are missing from apps/web/out");
@@ -410,21 +372,25 @@ async function main() {
   ]);
 
   if (!dryRun) {
-    await smokeTest(siteUrl, "frontend", (response) =>
+    const verificationUrl = `https://${cloudfrontDomain}`;
+    await smokeTest(verificationUrl, "frontend", (response) =>
       Promise.resolve(response.status === 200),
     );
-    await smokeTest(`${siteUrl}/healthz`, "API health", async (response) => {
+    await smokeTest(`${verificationUrl}/healthz`, "API health", async (response) => {
       if (response.status !== 200) {
         return false;
       }
       const payload = await response.json().catch(() => null);
       return payload?.status === "ok";
     });
+    await verifyLinkFlow(verificationUrl);
   }
 
   console.log(
-    `\n${dryRun ? "Deployment plan is valid" : `Deployment completed: ${siteUrl}`}`,
+    `\n${dryRun ? "Deployment plan is valid" : `AWS deployment completed; set Name.com DNS to enable ${siteUrl}`}`,
   );
 }
 
-await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await main();
+}

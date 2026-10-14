@@ -111,7 +111,7 @@ export default function Home() {
         <Link className="footer-brand" href="/">
           NPT ShortenLink
         </Link>
-        <p>Go + Next.js · AWS SAM</p>
+        <p>Go + Next.js · AWS</p>
         <a href="#shorten-form">Trở lại tạo link</a>
       </footer>
     </div>
