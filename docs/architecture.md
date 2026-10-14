@@ -32,7 +32,7 @@ flowchart LR
 
 Bộ ảnh tham khảo ban đầu gợi ý chuỗi dịch vụ đầy đủ, nhưng MVP chỉ giữ đường ngắn `CloudFront → HTTP API → Lambda → DynamoDB`. EventBridge, SQS, Step Functions, Cognito và WebSocket chỉ được thêm khi có use case và tiêu chí thoát riêng.
 
-Sơ đồ trên là kiến trúc đích. SAM hiện tại đã có CloudFront, S3, HTTP API, Lambda, DynamoDB, log group và active tracing cho Lambda; WAF, dashboard, alarm và trace end-to-end qua HTTP API/AWS SDK thuộc Phase 4, chưa được tuyên bố là đã triển khai.
+Sơ đồ trên là kiến trúc đích. Terraform hiện tại đã có CloudFront, S3, HTTP API, Lambda, DynamoDB, log group và active tracing cho Lambda; WAF, dashboard, alarm và trace end-to-end qua HTTP API/AWS SDK thuộc Phase 4, chưa được tuyên bố là đã triển khai.
 
 ## 3. Domain và route
 
@@ -41,7 +41,7 @@ Sơ đồ trên là kiến trúc đích. SAM hiện tại đã có CloudFront, S
 - `npt-shortenlink.dev` là canonical public origin.
 - `www.npt-shortenlink.dev` chuyển hướng vĩnh viễn về apex hoặc phục vụ cùng distribution; chọn một cách và kiểm thử canonical URL trước khi launch.
 - Route 53 quản lý hosted zone nếu nameserver được chuyển sang AWS; nếu giữ DNS provider hiện tại thì tạo record tương đương theo output IaC.
-- ACM certificate cho CloudFront phải ở `us-east-1`. Stack SAM hiện nhận `CertificateArn` và `HostedZoneId` của tài nguyên đã có qua parameter rồi tạo alias record; edge-bootstrap stack quản lý certificate/DNS validation đầy đủ là việc sau MVP và phải được ghi lại, không thao tác thủ công ẩn.
+- CloudFront uses an issued ACM certificate in `us-east-1`, supplied as `certificate_arn` to Terraform. DNS stays at Name.com with an apex ANAME pointing to the exported CloudFront hostname. No Route 53 zone is created. Certificate prerequisites, validation records and rollback are described in `infra/aws/README.md`.
 - Chỉ bật HSTS dài hạn và `includeSubDomains` sau khi mọi subdomain đang dùng đều có TLS đúng.
 
 ### 3.2 CloudFront behaviors
@@ -225,7 +225,7 @@ Không chạy goroutine “fire-and-forget” sau khi Lambda trả response; run
 
 ### 7.3 IaC và môi trường
 
-- AWS SAM hiện khai báo API, Lambda, table, log groups, IAM, edge resources và output; alarm vẫn thuộc Phase 4 và phải được thêm bằng IaC trước production.
+- Terraform hiện khai báo API, Lambda, table, log groups, IAM, edge resources và output; alarm vẫn thuộc Phase 4 và phải được thêm bằng IaC trước production.
 - `dev`, `staging`, `production` có stack/table/log riêng; không dùng chung dữ liệu.
 - Parameter Store/Secrets Manager chỉ cho secret thật. Config không nhạy cảm là template parameter/environment variable có validate lúc boot.
 - DynamoDB production bật point-in-time recovery; retention log/budget được khai báo rõ để tránh tài nguyên vô thời hạn ngoài ý muốn.
@@ -299,7 +299,7 @@ Không dùng raw path chứa code làm metric dimension; map về route template
 - DynamoDB: system/user errors, throttled requests, consumed capacity khi cần điều tra.
 - Domain counter: created, alias conflict, not found, expired/disabled redirect, code-generation exhausted.
 - Analytics sau MVP: event publish failure, queue age, DLQ depth, partial batch failure.
-- X-Ray: SAM hiện bật active tracing cho Lambda; trace end-to-end qua HTTP API/AWS SDK cần instrumentation hoặc kiến trúc bổ sung ở Phase 4, với sample rate theo môi trường/chi phí.
+- X-Ray: Terraform hiện bật active tracing cho Lambda; trace end-to-end qua HTTP API/AWS SDK cần instrumentation hoặc kiến trúc bổ sung ở Phase 4, với sample rate theo môi trường/chi phí.
 
 ### 10.3 SLI, SLO và alarm
 
