@@ -1,40 +1,22 @@
-# JavaScript / Next.js
 node_modules/
-.pnpm-store/
 .next/
 out/
-coverage/
-playwright-report/
 test-results/
-*.tsbuildinfo
-
-# Go
-bin/
-dist/
-*.test
-*.out
-coverage-api.out
-
-# AWS SAM
-.aws-sam/
-samconfig.toml
-
-# CodeGraph local indexes
-/.codegraph/
-/.codegraph-*/
-
-# Environment and secrets
+playwright-report/
 .env
 .env.*
 !.env.example
-*.pem
-
-# Editors and operating systems
+*.exe
+*.test
+coverage.out
+*.tsbuildinfo
+local/data/
 .DS_Store
-Thumbs.db
-.idea/
-.vscode/
-
-# Logs
-*.log
-pnpm-debug.log*
+dist/
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfbackend
+crash.log

@@ -3,149 +3,91 @@ name: CI
 on:
   pull_request:
   push:
-    branches:
-      - main
-
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    branches: [main, master]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  frontend:
-    name: Frontend lint and build
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      NEXT_TELEMETRY_DISABLED: "1"
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          run_install: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22.20.0
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install frontend dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Test frontend
-        run: pnpm test:web
-
-      - name: Lint frontend
-        run: pnpm lint:web
-
-      - name: Build frontend
-        run: pnpm build:web
-
-  backend:
-    name: Backend format, test, and security
-    runs-on: ubuntu-latest
+  verify:
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: 1.26.9
-          cache-dependency-path: services/shortener-api/go.sum
-
-      - name: Check Go formatting
-        shell: bash
-        run: |
-          unformatted="$(gofmt -l services/shortener-api)"
-          if [[ -n "$unformatted" ]]; then
-            printf 'The following Go files need gofmt:\n%s\n' "$unformatted"
-            exit 1
-          fi
-
-      - name: Vet backend
-        run: go vet ./services/shortener-api/...
-
-      - name: Test backend with race detector
-        run: go test -race -count=1 ./services/shortener-api/...
-
-      - name: Scan backend dependencies
-        run: go -C services/shortener-api run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
-
-  infrastructure:
-    name: Validate and build AWS infrastructure
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: backend
     env:
-      SAM_CLI_TELEMETRY: "0"
+      AWS_EC2_METADATA_DISABLED: "true"
+      TF_IN_AUTOMATION: "true"
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          go-version: 1.26.9
-          cache-dependency-path: services/shortener-api/go.sum
-
-      - name: Set up AWS SAM CLI
-        uses: aws-actions/setup-sam@v2
+          persist-credentials: false
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          version: 1.164.0
-
-      - name: Validate SAM template
-        run: sam validate --lint --template-file infra/aws/template.yaml
-
-      - name: Build SAM application
-        run: sam build --template-file infra/aws/template.yaml
-
-  dependency-audit:
-    name: Audit production dependencies
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v6
+          node-version: "24"
+          cache: pnpm
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
-          run_install: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
+          go-version: "1.26.5"
+          cache-dependency-path: services/lambda/go.sum
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
-          node-version: 22.20.0
-
-      - name: Audit lockfile
-        run: pnpm audit:deps
-
-  api-contract:
-    name: Lint OpenAPI contract
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v6
+          terraform_version: "1.15.5"
+          terraform_wrapper: false
+      - run: pnpm install --frozen-lockfile
+      - name: Static checks
+        run: |
+          test -z "$(gofmt -l services/lambda)"
+          go -C services/lambda vet ./...
+          pnpm lint
+          pnpm typecheck
+          pnpm format:check
+          pnpm audit --prod --audit-level high
+      - name: DynamoDB Local
+        run: |
+          docker compose -f local/compose.yaml up -d
+          go -C services/lambda run ./cmd/initdb
+      - name: Go unit, contract and DynamoDB integration tests
+        run: go -C services/lambda test -race ./... -count=1
+        env:
+          DYNAMODB_INTEGRATION: "1"
+      - name: Node tests and Lambda packaging checks
+        run: |
+          node --test local/serve-static.test.mjs local/build-lambdas.test.mjs infra/terraform/dev/static-rewrite.test.mjs
+          pnpm build:lambdas
+      - name: Terraform offline checks
+        run: make terraform-check
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Strict Mode regression
+        run: pnpm test:dev
+      - name: Static build
+        run: pnpm build
+      - name: Browser integration with the real local API
+        run: |
+          go -C services/lambda build -o "$RUNNER_TEMP/shortly-api" ./cmd/api
+          "$RUNNER_TEMP/shortly-api" >"$RUNNER_TEMP/api.log" 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid"' EXIT
+          curl --fail --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:8080/health
+          pnpm test:e2e
+      - name: Save Lambda artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          run_install: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
+          name: lambda-arm64
+          path: dist/lambdas/
+          retention-days: 7
+      - name: Save failure evidence
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          node-version: 22.20.0
-
-      - name: Lint OpenAPI specification
-        run: pnpm --package=@redocly/cli@2.40.0 dlx redocly lint openapi/openapi.yaml
+          name: failure-evidence
+          path: |
+            test-results/
+            ${{ runner.temp }}/api.log
+          retention-days: 7
+      - name: Stop local database
+        if: always()
+        run: docker compose -f local/compose.yaml down

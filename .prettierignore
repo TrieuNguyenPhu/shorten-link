@@ -1,0 +1,9 @@
+pnpm-lock.yaml
+**/.next
+**/out
+**/node_modules
+test-results
+playwright-report
+services/
+dist/
+**/.terraform/

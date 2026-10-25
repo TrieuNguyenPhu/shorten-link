@@ -1,347 +1,217 @@
-<div align="center">
+# Shortly — local URL shortener
 
-# ShortenLink
+Phase 01 of a URL Shortener & Analytics Platform: create short links, follow redirects, and manage links locally. The Next.js UI exports to static files; the Go API stores links in DynamoDB Local. Business logic is independent of HTTP, DynamoDB, and Lambda event types.
 
-**A serverless URL shortener built to stay simple at the edge and explicit in the code.**
+**Local, single-user development only. There is no authentication or ownership enforcement. Implement both before exposing management APIs publicly.** Local API and database configuration reject non-loopback endpoints. No AWS infrastructure or credentials are needed.
 
-Rút gọn URL, chọn alias, đặt thời hạn và resolve link qua một domain duy nhất —
-với frontend tĩnh, API serverless và hạ tầng được mô tả bằng AWS SAM/CloudFormation.
+## Start locally
 
-[![CI](https://github.com/TrieuNguyenPhu/shorten-link/actions/workflows/ci.yml/badge.svg)](https://github.com/TrieuNguyenPhu/shorten-link/actions/workflows/ci.yml)
+Prerequisites: Go **1.26+**, Node.js **24 LTS**, pnpm **10.33.2**, Docker with a running Linux container engine. GNU Make is optional. Run commands from the repository root.
 
-`Domain reserved: npt-shortenlink.dev` ·
-[Kiến trúc](docs/architecture.md) ·
-[OpenAPI](openapi/openapi.yaml) ·
-[Hallmark QA](docs/hallmark-qa.md) ·
-[Kế hoạch triển khai](docs/implementation-plan.md)
-
-</div>
-
-> [!IMPORTANT]
-> `main` là source hoàn chỉnh của v2: Next.js, Go/Gin, OpenAPI và AWS SAM.
-> Bản v1 Python/React không được khôi phục và chỉ tồn tại dưới dạng snapshot
-> lịch sử.
-
-| Track | Trạng thái | Stack chính | Tham chiếu |
-|---|---|---|---|
-| **v2 — current** | Source, tests, CI và deployment workflow đã có trên `main`; public deployment vẫn là thao tác có chủ đích của operator | Next.js, Go/Gin, OpenAPI, DynamoDB và AWS SAM | `main`, [kiến trúc](docs/architecture.md), [AWS runbook](infra/aws/README.md) |
-| **v1 — archived baseline** | Snapshot chỉ đọc, không còn trong cây source hiện tại | Python 3.12 Lambda, React/Vite, API Gateway REST, DynamoDB, AWS SAM | [`cv-2026-06-python-react-sam`](https://github.com/TrieuNguyenPhu/shorten-link/tree/cv-2026-06-python-react-sam) |
-
-> [!NOTE]
-> `npt-shortenlink.dev` là canonical domain đã đăng ký. Public deployment đang
-> phụ thuộc AWS account, hosted zone và certificate của operator. Source/IaC có
-> trong repository không được hiểu là production đang online.
-
-## Vì sao project này tồn tại?
-
-URL shortener nhìn nhỏ, nhưng là một bài toán đủ tốt để thể hiện những quyết định
-khó thấy trong CRUD thông thường: collision, redirect caching, TTL bất đồng bộ,
-validation ở trust boundary, cấu trúc Lambda, CDN routing và khả năng rollback.
-
-V2 tập trung vào bốn mục tiêu:
-
-- **Redirect đúng trước, analytics sau:** đường nóng chỉ đi qua CloudFront, HTTP API, Lambda và DynamoDB.
-- **Domain độc lập framework:** rule tạo/resolve link có thể test mà không khởi động Gin hoặc AWS.
-- **Một contract HTTP:** frontend, local server và Lambda cùng tuân theo [`openapi/openapi.yaml`](openapi/openapi.yaml).
-- **Hạ tầng tái lập được:** API, storage, static hosting, CDN và DNS đều nằm trong SAM/CloudFormation.
-
-## Khả năng chính
-
-| Khả năng | v1 baseline | v2 source hiện tại |
-|---|:---:|:---:|
-| Tạo short URL và redirect | Có | Có |
-| Custom alias | — | Có, `4–32` ký tự thường/số/gạch ngang |
-| Expiration | — | Có, `1–365` ngày + DynamoDB TTL |
-| Metadata/status API | — | Có: `active`, `expired`, `disabled` |
-| Collision-safe create | Random code xác suất lớn | Conditional write + retry hữu hạn |
-| Static frontend | React/Vite | Next.js static export |
-| Backend runtime | 2 Python Lambda | 1 Go Lambda chạy local hoặc Lambda |
-| Infrastructure as code | SAM cho backend | SAM cho API, Lambda, DynamoDB, S3, CloudFront và Route 53 |
-| UI release gate | Manual review | Hallmark + browser evidence bắt buộc |
-
-## Kiến trúc v2
-
-Sơ đồ dưới đây mô tả **resource và wiring đã có trong source SAM v2**, không phải
-tuyên bố rằng rebuild đã được deploy production. ACM certificate là prerequisite
-được truyền vào stack qua parameter, không phải resource do template tạo.
-
-```mermaid
-flowchart LR
-    User["Người dùng"] -->|HTTPS| DNS["Route 53"]
-    DNS --> Edge["CloudFront"]
-    ACM["External ACM certificate\nus-east-1"] -. TLS parameter .-> Edge
-
-    Edge -->|"/*"| Web["S3 private\nNext.js static export"]
-    Edge -->|"/api/* · /link/* · /healthz"| API["API Gateway HTTP API"]
-    API --> Lambda["Go Lambda · Gin\nprovided.al2023 · arm64"]
-    Lambda --> Table["DynamoDB on-demand\nPITR · TTL"]
-    Lambda --> Observe["CloudWatch Logs\nLambda X-Ray tracing"]
+```sh
+pnpm install --frozen-lockfile
+go -C services/lambda mod download
+docker compose -f local/compose.yaml up -d
+go -C services/lambda run ./cmd/initdb
 ```
 
-| Thành phần | Trách nhiệm |
-|---|---|
-| **CloudFront** | Phân phối static assets và route `/api/*`, `/link/*`, `/healthz` cùng origin |
-| **S3 + OAC** | Lưu Next.js static export trong bucket private, chỉ CloudFront được đọc |
-| **API Gateway HTTP API** | Nhận request v2 và chuyển payload sang Lambda |
-| **Go Lambda + Gin** | Validation, use case orchestration, error mapping và redirect |
-| **DynamoDB** | Lưu link theo partition key `code`, conditional create, PITR và TTL |
-| **Route 53 + ACM** | Stack tạo alias A/AAAA; certificate TLS có sẵn được truyền qua parameter |
+The initializer waits up to 60 seconds for DynamoDB, creates the table/index if missing, and validates the existing schema without replacing the table. It is safe to rerun.
 
-CloudFront production dùng relative request nên browser không cần biết execute-api
-URL. Local frontend mới dùng `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080`.
+Start the API in one terminal:
 
-<details>
-<summary><strong>Dependency rule của Go clean architecture</strong></summary>
-
-```mermaid
-flowchart TB
-    Bootstrap["cmd/api · composition root"] --> HTTP["Inbound adapter · Gin/Lambda"]
-    Bootstrap --> Adapters["Outbound adapters\nDynamoDB · memory · clock · generator"]
-    HTTP --> App["Application services + ports"]
-    Adapters --> App
-    App --> Domain["Domain entities · status · errors · invariants"]
+```sh
+go -C services/lambda run ./cmd/api
 ```
 
-- `internal/domain` không biết JSON, HTTP, Gin hoặc AWS SDK.
-- `internal/application` định nghĩa use case và outbound ports.
-- `internal/adapters` triển khai HTTP, persistence, clock và code generation.
-- `cmd/api` chọn memory repository khi chạy local và DynamoDB khi chạy Lambda.
+Start the frontend in another:
 
-</details>
-
-<details>
-<summary><strong>v1 architecture được mô tả trong CV</strong></summary>
-
-V1 dùng React/Vite trên S3/CloudFront, API Gateway REST, hai Python Lambda và
-DynamoDB on-demand. SAM v1 định nghĩa phần backend; topology S3/CloudFront được
-ghi lại trong README và sơ đồ kiến trúc của release.
-
-- [README v1](https://github.com/TrieuNguyenPhu/shorten-link/blob/cv-2026-06-python-react-sam/README.md)
-- [Architecture.png v1](https://github.com/TrieuNguyenPhu/shorten-link/blob/cv-2026-06-python-react-sam/Architecture.png)
-
-</details>
-
-## Tech stack
-
-| Lớp | Công nghệ | Phiên bản/pattern |
-|---|---|---|
-| Web | Next.js, React, TypeScript | Next `16.3.8`, React `19.2.8`, App Router, static export |
-| API | Go, Gin | Go `1.26.9`, Gin `1.12.0`, clean architecture |
-| Contract | OpenAPI | OpenAPI `3.0.3`, contract version `1.0.0` |
-| Runtime target | AWS Lambda | `provided.al2023`, `arm64` |
-| Edge target | CloudFront, S3 OAC, Route 53, ACM | Same-origin static + API routing |
-| Data target | DynamoDB | `PAY_PER_REQUEST`, PITR, SSE, TTL |
-| IaC | AWS SAM/CloudFormation | SAM CLI `1.164.0` đã dùng trong CI |
-| Tooling | pnpm, GNU Make, CodeGraph | pnpm `10.33.2`, root developer entrypoint |
-
-## Repository map
-
-```text
-shorten-link/
-├── apps/web/                    # Next.js static frontend
-├── services/shortener-api/      # Go/Gin API, Lambda entrypoint và tests
-├── infra/aws/                   # SAM template và operator runbook
-├── openapi/                     # Source-of-truth HTTP contract
-├── docs/                        # Architecture, delivery and Hallmark QA
-├── scripts/deploy-aws.mjs       # Cross-platform guarded deployment workflow
-├── .github/workflows/           # Quality and security gates
-├── Makefile                     # Repository-level commands
-├── go.work                      # Go workspace
-└── pnpm-workspace.yaml          # Frontend workspace
+```sh
+pnpm dev
 ```
 
-## Bắt đầu nhanh trên local
+Open **http://localhost:3000**. The API is **http://127.0.0.1:8080**, with liveness at `/health`. The form accepts a destination, an optional custom alias, and an optional expiration. The library at `/dashboard/` lists links, copies their short URLs, and enables/disables redirects.
 
-| Công cụ | Phiên bản |
-|---|---:|
-| Node.js | `>=22.20.0` |
-| pnpm | `10.33.2` |
-| Go | `>=1.26.9` |
-| GNU Make | phiên bản hỗ trợ job song song (`-j`) |
+Use `localhost:3000` for the frontend: CORS permits that exact origin by default. Both Go commands run directly on the host; only DynamoDB runs in Docker. On Windows, start Docker Desktop first. All commands above work in PowerShell as written.
 
-```bash
-git clone https://github.com/TrieuNguyenPhu/shorten-link.git
-cd shorten-link
+## Static export
 
-make install
-make dev
+```sh
+pnpm build
+node local/serve-static.mjs
 ```
 
-- Frontend: `http://localhost:3000`
-- Backend health: `http://localhost:8080/healthz`
+This previews `apps/web/out/` at port 3000 without a Next.js server. Stop `pnpm dev` first. Client components fetch the Go API in the browser. There are no API Routes, Server Actions, runtime SSR, runtime image optimization, or dynamically generated server pages. The local preview helper serves only build output and is not a production web server.
 
-`make dev` chạy frontend và backend song song; `Ctrl+C` dừng cả hai. Local API
-mặc định dùng memory repository, nên không cần AWS hoặc DynamoDB.
+## Development commands
 
-| Nhu cầu | Lệnh |
-|---|---|
-| Chỉ backend Go/Gin | `make dev-backend` |
-| Chỉ frontend Next.js | `make dev-frontend` |
-| Cả frontend và backend | `make dev` hoặc `make dev-all` |
+| Make target                   | Purpose                                                      |
+| ----------------------------- | ------------------------------------------------------------ |
+| `make install`                | Install locked frontend dependencies and download Go modules |
+| `make db-up` / `make db-down` | Start/stop DynamoDB; retain the named data volume            |
+| `make db-init`                | Wait for DynamoDB and initialize/validate the table          |
+| `make api` / `make web`       | Start Go API / Next.js development server                    |
+| `make preview`                | Serve an existing static export                              |
+| `make fmt`                    | Apply gofmt and Prettier                                     |
+| `make test`                   | Go unit tests and static preview server tests                |
+| `make test-integration`       | Go tests including real DynamoDB Local integration           |
+| `make lint`                   | Go vet, ESLint, TypeScript checks                            |
+| `make build`                  | Build Go packages and frontend static export                 |
+| `make check`                  | Unit tests, lint, typecheck, builds, format check            |
+| `make test-e2e`               | Browser tests against the real API and exported frontend     |
 
-Trong development, frontend mặc định gọi `http://localhost:8080`. Có thể đổi
-bằng `NEXT_PUBLIC_API_BASE_URL`; backend cho phép origin local
-`http://localhost:3000` theo mặc định.
+Equivalent commands without Make:
 
-## HTTP API
+```sh
+go -C services/lambda test ./...
+go -C services/lambda vet ./...
+go -C services/lambda build ./...
+node --test local/serve-static.test.mjs
+pnpm lint
+pnpm typecheck
+pnpm build
+pnpm format:check
+```
 
-| Method | Route | Success | Mục đích |
-|---|---|---:|---|
-| `POST` | `/api/v1/links` | `201` | Tạo random code hoặc custom alias |
-| `GET` | `/api/v1/links/{code}` | `200` | Đọc metadata và trạng thái hiện tại |
-| `GET` | `/link/{code}` | `302` | Redirect link đang active |
-| `GET` | `/healthz` | `200` | Liveness của process/router |
+Database integration requires DynamoDB running. The test creates a uniquely named temporary table and deletes only that test table. The regular test command skips this integration test unless enabled:
 
-Success response dùng envelope `data`; lỗi ứng dụng dùng envelope `error`:
+```powershell
+# PowerShell
+$env:DYNAMODB_INTEGRATION = '1'
+go -C services/lambda test ./... -count=1
+Remove-Item Env:DYNAMODB_INTEGRATION
+```
+
+```sh
+# POSIX shell
+DYNAMODB_INTEGRATION=1 go -C services/lambda test ./... -count=1
+```
+
+For browser tests, keep DynamoDB and the Go API running with defaults. Stop any server using frontend port 3000. Playwright starts its own static preview and checks desktop and mobile layouts:
+
+```sh
+pnpm exec playwright install chromium
+pnpm build
+pnpm test:e2e
+```
+
+These tests create identifiable `e2e-...` links and short-lived generated links in the configured local API table. They do not delete existing development links. Screenshots and failure traces go into ignored `test-results/`.
+
+## API
+
+All management requests use JSON. Codes and aliases are case-sensitive. Generated codes have eight URL-safe characters (48 cryptographically random bits). Custom aliases must match `[A-Za-z0-9_-]{3,32}`. Atomic conditional writes prevent overwrite; generated collisions retry five times.
+
+| Method | Endpoint                | Behavior                                                             |
+| ------ | ----------------------- | -------------------------------------------------------------------- |
+| GET    | `/health`               | 200 liveness response; does not test database readiness              |
+| POST   | `/api/links`            | Create; 201 with link JSON and relative `Location` header            |
+| GET    | `/api/links`            | Newest-first page of up to 25 links                                  |
+| GET    | `/api/links?cursor=...` | Next page using returned `nextCursor`                                |
+| GET    | `/api/links/{code}`     | Link metadata, including disabled/expired links                      |
+| PATCH  | `/api/links/{code}`     | Update `enabled` using `{ "enabled": false }` or `true`              |
+| GET    | `/r/{code}`             | 302 with destination in `Location`; no server-side destination fetch |
+
+GET endpoints also accept HEAD. OPTIONS supports browser preflight. Requests from an unapproved Origin return 403. Unsupported methods return 405 JSON with `Allow`; unknown routes return 404 JSON.
+
+Create body:
 
 ```json
 {
-  "data": {
-    "code": "example-docs",
-    "short_url": "http://localhost:8080/link/example-docs",
-    "target_url": "https://example.com/docs",
-    "status": "active",
-    "created_at": "2026-07-23T00:00:00Z",
-    "expires_at": "2026-08-22T00:00:00Z"
-  }
+  "url": "https://example.com/articles?from=shortly#intro",
+  "alias": "my-article",
+  "expiresAt": "2099-12-31T00:00:00Z"
 }
 ```
 
-Contract đầy đủ, schema lỗi và examples nằm tại
-[`openapi/openapi.yaml`](openapi/openapi.yaml).
+`alias` and `expiresAt` are optional. Expiry must be a future RFC 3339 timestamp with an explicit timezone. The browser converts its local date/time input to UTC. URLs must be absolute HTTP(S), at most 2048 bytes, and contain no credentials, whitespace, or control characters. JSON bodies are limited to 16 KiB, require `Content-Type: application/json`, and reject unknown fields and trailing values.
 
-## Kiểm chứng
+Successful create/get/update response:
 
-```bash
-# Frontend tests/lint/build
-make verify
-
-# Thêm dependency audit và OpenAPI lint
-make verify-all
+```json
+{
+  "code": "my-article",
+  "url": "https://example.com/articles?from=shortly#intro",
+  "enabled": true,
+  "createdAt": "2026-10-25T00:00:00Z",
+  "expiresAt": "2099-12-31T00:00:00Z"
+}
 ```
 
-Các target hữu ích khác:
+List response: `{ "links": [...], "nextCursor": "..." }`. `nextCursor` is omitted at the end; an empty list is `[]`. Treat cursors as opaque. Metadata is returned separately from the short URL; clients construct `${API_BASE_URL}/r/${code}`.
 
-| Lệnh | Kiểm tra/thao tác |
-|---|---|
-| `make test` | Frontend và backend tests |
-| `make security` | pnpm dependency audit và Go vulnerability scan |
-| `make openapi-lint` | Redocly lint với version đã pin |
-| `make codegraph-status` | Trạng thái graph code local |
+Errors have a consistent shape:
 
-> [!NOTE]
-> Hallmark là release gate, không phải một npm script. Báo cáo browser gần nhất,
-> viewport matrix và ảnh bằng chứng nằm tại
-> [`docs/hallmark-report.md`](docs/hallmark-report.md).
-
-## AWS build và deploy
-
-Sau khi clone, một operator có thể verify, deploy infrastructure, upload
-frontend, invalidate CloudFront và chạy smoke test bằng **một lệnh Make**.
-Repository không thể tự tạo AWS credentials, quyền IAM, hosted zone hoặc ACM
-certificate; các prerequisite bên ngoài này phải tồn tại trước.
-
-Yêu cầu thêm cho deployment:
-
-| Công cụ/tài nguyên | Yêu cầu |
-|---|---|
-| AWS CLI | Đã authenticate bằng credential chain hoặc `AWS_PROFILE` |
-| AWS SAM CLI | `1.164.0` hoặc compatible |
-| Route 53 | Public hosted zone chứa domain deploy |
-| ACM | Certificate `us-east-1` bao phủ domain CloudFront |
-
-Kiểm tra toàn bộ plan mà không thay đổi AWS:
-
-```bash
-make deploy-dry-run CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/replace-me HOSTED_ZONE_ID=ZREPLACE_ME
+```json
+{ "error": { "code": "not_found", "message": "link not found" } }
 ```
 
-Deploy thật bằng một lệnh:
+| Status | Error code / condition                                                   |
+| ------ | ------------------------------------------------------------------------ |
+| 400    | `invalid_input` or `invalid_json`; includes malformed code/cursor        |
+| 403    | `forbidden_origin`                                                       |
+| 404    | `not_found`                                                              |
+| 405    | `method_not_allowed`                                                     |
+| 409    | `conflict`; custom alias already used                                    |
+| 410    | `gone`; disabled or expired redirect                                     |
+| 413    | `body_too_large`                                                         |
+| 415    | `unsupported_media_type`                                                 |
+| 500    | `internal_error`; unexpected persistence failure, details logged locally |
+| 503    | `unavailable`; random-code collision retries exhausted                   |
 
-```bash
-make deploy CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/replace-me HOSTED_ZONE_ID=ZREPLACE_ME
+Redirects and API responses send `Cache-Control: no-store`. Expiry is checked on every redirect, including the exact expiry boundary. Disabled/expired metadata stays available for management. Re-enabling an expired link does not extend its expiration.
+
+## Environment
+
+Defaults run without creating any environment files. Examples: [`apps/web/.env.example`](apps/web/.env.example), [`services/lambda/.env.example`](services/lambda/.env.example).
+
+| Variable                   | Default                 | Notes                                               |
+| -------------------------- | ----------------------- | --------------------------------------------------- |
+| `API_ADDRESS`              | `127.0.0.1:8080`        | Go local API; loopback hosts only                   |
+| `WEB_ORIGIN`               | `http://localhost:3000` | Exact frontend CORS origin; loopback only           |
+| `DYNAMODB_ENDPOINT`        | `http://127.0.0.1:8000` | Loopback HTTP(S) origin only                        |
+| `DYNAMODB_TABLE`           | `shortlinks-local`      | Shared by initdb and API; valid DynamoDB table name |
+| `NEXT_PUBLIC_API_BASE_URL` | `http://127.0.0.1:8080` | Public, embedded at frontend build time             |
+| `DYNAMODB_INTEGRATION`     | unset                   | Set to `1` to run database integration tests        |
+
+For the frontend, copy the example to `apps/web/.env.local` to override its API base URL, then restart/rebuild. Go intentionally does **not** load dotenv files: export values in the shell launching each Go command. For example, `$env:DYNAMODB_TABLE = 'shortlinks-custom'` in PowerShell or `export DYNAMODB_TABLE=shortlinks-custom` on POSIX. Use the same overrides for initialization and the API.
+
+The **local entrypoints** configure AWS SDK v2 directly with region `us-east-1` and fixed dummy `local` credentials. They never load AWS profiles, environment credentials, or instance metadata. Do not add real credentials for local development. The separate deployed Lambda bootstrap uses execution-role credentials; see [AWS development](docs/aws-development.md).
+
+## Repository
+
+```text
+apps/web/                         Next.js static frontend and shadcn/ui controls
+services/lambda/
+  cmd/api/                       Local Go HTTP entrypoint
+  cmd/initdb/                    Idempotent local table initializer
+  cmd/{create-link,manage-links,resolve-link}/ Native Lambda entrypoints
+  internal/domain/               Link entity and application error categories
+  internal/application/          Create, retrieve, resolve, list, enable/disable
+  internal/ports/                Persistence contract
+  internal/adapters/httpapi/     HTTP routes, JSON, status codes, CORS
+  internal/adapters/dynamostore/ DynamoDB storage, pagination, table setup
+  internal/localconfig/          Local-only configuration and SDK client
+  internal/awsconfig/            Lambda execution-role configuration
+  internal/adapters/lambdaapi/    Native API Gateway v2 transport
+local/                           Docker Compose and static export preview
+tests/e2e/                       Real API/browser integration tests
+tests/dev/                       Strict Mode response-race regression
+infra/terraform/{bootstrap,dev}/ Offline-validated AWS definitions
+.github/workflows/ci.yml         Credential-free CI; no deployment
+docs/                            Architecture, phase plan and verification notes
+Makefile                         Common host development commands
+pnpm-lock.yaml                   Reproducible frontend/tooling dependencies
 ```
 
-Giá trị mặc định:
+See [architecture and request flows](docs/architecture.md), [Phase 01 verification](docs/verification.md), [Phase 02A verification](docs/phase-02-verification.md) and [Phase 02B deployment evidence](docs/phase-02b-verification.md). The [project roadmap based on the 21-part series](tasks/plan.md), [implementation checklist](tasks/todo.md), and [series review](docs/series-review.md) describe the remaining phases. The AWS backend is deployed in Sydney; CloudFront is blocked by AWS account verification, so the public frontend is not live yet.
 
-- region: `ap-southeast-1`;
-- stack: `npt-shortenlink-prod`;
-- environment: `prod`;
-- domain: `npt-shortenlink.dev`;
-- CORS origin: `https://<domain>`.
+## Limitations and next steps
 
-Có thể override ngay trên cùng lệnh bằng `AWS_PROFILE`, `AWS_REGION`,
-`STACK_NAME`, `ENVIRONMENT_NAME`, `DOMAIN_NAME` hoặc
-`CORS_ALLOWED_ORIGINS`. Ví dụ:
+- Authentication, ownership checks, URL editing/deletion, analytics, WebSockets, moderation, production operations and deployment are deferred to their phases. Links are validated for syntax, not safety or reputation. Private/localhost destinations are permitted; the server never visits them.
+- List reads use an eventually consistent index. Newly created or updated records can briefly lag; refresh to reconcile. Redirect lookups use strongly consistent reads. The list count describes loaded records, not a total or click count.
+- Data persists in the Compose named volume across `down`/`up`. Removing that volume deletes local links. No reset/delete-data command is supplied.
+- The local collection index uses a single partition, suitable for this MVP. Partitioning, user ownership indexes, throttling, abuse protection, and production sizing must be addressed before a public rollout.
+- ESLint 9 is retained for compatibility with Next.js's current React/accessibility/import plugins; pnpm reports its deprecation. Upgrade when those plugins support ESLint 10 together.
 
-```bash
-make deploy AWS_PROFILE=portfolio DOMAIN_NAME=links.example.com CERTIFICATE_ARN=arn:aws:acm:us-east-1:123456789012:certificate/replace-me HOSTED_ZONE_ID=ZREPLACE_ME
-```
+Phase 02 offline commands: `make build-lambdas test-packaging terraform-check` and `pnpm test:dev`. See [AWS development](docs/aws-development.md) for requirements and port conflicts. The intended domain is **npt-shortenlink.dev**; old AWS resources were removed and are not reused automatically.
 
-`make deploy` dừng ngay khi preflight, test, lint, audit, OpenAPI, SAM build,
-CloudFormation, upload, invalidation hoặc smoke test thất bại. Chi tiết resource,
-cache policy và rollback nằm trong [AWS runbook](infra/aws/README.md).
-
-## Tái lập snapshot v1 đã lưu trữ
-
-Không cần thay đổi working tree v2. Tạo một worktree riêng từ versioned baseline tag:
-
-```bash
-git worktree add ../shorten-link-v1 cv-2026-06-python-react-sam
-cd ../shorten-link-v1
-
-python -m pip install -r backend/requirements.txt -r backend/tests/requirements.txt
-python -m pytest backend/tests
-
-npm --prefix frontend ci
-npm --prefix frontend run lint
-npm --prefix frontend run build
-
-cd backend
-sam validate --lint
-sam build
-```
-
-Live integration test v1 là opt-in và tự skip khi không có `API_BASE_URL`.
-
-## Trạng thái và ranh giới hiện tại
-
-| Đã có trên `main` | Không được ngầm suy diễn |
-|---|---|
-| Next.js static frontend, Go/Gin API và OpenAPI contract | Production đang online hoặc domain đã cut over |
-| SAM resources cho Lambda, DynamoDB, S3, CloudFront và Route 53 | AWS account/credential/certificate đã được cấp |
-| CI cho frontend, backend, dependency và SAM build | WAF, authentication, analytics hoặc live SLA |
-| Guarded one-command deployment và rollback runbook | Deployment tự động chạy trong pull request |
-
-API MVP hiện chưa có authentication. WAF, auth, analytics và observability nâng
-cao chỉ được thêm khi có use case và acceptance criteria riêng; chúng không được
-ngầm coi là đã triển khai chỉ vì xuất hiện trong tài liệu kiến trúc đích.
-
-## Release strategy
-
-1. **Một source hoạt động:** mọi thay đổi mới nhắm vào v2 trên `main`; v1 chỉ còn là snapshot lịch sử.
-2. **PR nhỏ và có gate:** mỗi capability có branch, commit, test và PR riêng; không dùng aggregate PR.
-3. **Staging trước production:** build đúng artifact, chạy smoke test `POST → GET → 302` và xác minh log/rollback trước cutover.
-4. **Cutover có đường lui:** chỉ đổi CloudFront/domain traffic khi staging đạt tiêu chí trong implementation plan.
-5. **Không suy diễn trạng thái:** source/IaC đã có không đồng nghĩa stack public, WAF, alarm hoặc SLA đã vận hành.
-
-## Tài liệu
-
-- [System architecture](docs/architecture.md)
-- [Implementation plan](docs/implementation-plan.md)
-- [Backend/infra incremental PR plan](docs/backend-infra-pr-plan.md)
-- [OpenAPI contract](openapi/openapi.yaml)
-- [Hallmark QA process](docs/hallmark-qa.md)
-- [Current Hallmark report](docs/hallmark-report.md)
-- [Frontend guide](apps/web/README.md)
-
-## Tham khảo
-
-- [`nghiadaulau/serverless-url-shortener-aws`](https://github.com/nghiadaulau/serverless-url-shortener-aws) — pattern serverless/AWS ban đầu.
-- [`Nutlope/hallmark`](https://github.com/Nutlope/hallmark) — kỷ luật thiết kế và quy trình chống giao diện rập khuôn.
-- [`colbymchenry/codegraph`](https://github.com/colbymchenry/codegraph) — graph code local phục vụ navigation và impact analysis.
-
-## License
-
-Repository được công khai để phục vụ portfolio và technical review. Chưa có
-open-source license hoặc quyền tái phân phối được cấp.
+**Phase 02B is partially deployed** in account `654822777701`, Sydney (`ap-southeast-2`), with a 4 USD monthly tracking budget. [API health](https://ujgb995hc5.execute-api.ap-southeast-2.amazonaws.com/health) is live and 20/20 backend smoke checks passed. [GitHub Linux CI passed](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/40160153532), including race/integration, packaging, Terraform and 10+1 browser tests. The frontend export is in private S3; CloudFront and its bucket policy await [AWS account verification](docs/aws-support-cloudfront.md). ACM is issued and the custom-domain configuration is ready; Name.com root ANAME must target the actual distribution once available. See [safe dev pause/resume](docs/aws-dev-pause-resume.md). The budget tracks account-wide costs in AWS Console; it is not a hard spending cap and has no notification recipient. Cloud management requires AWS IAM signatures until Phase 03 adds Cognito; local UI management continues to work.
