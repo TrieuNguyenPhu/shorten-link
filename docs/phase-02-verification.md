@@ -1,5 +1,7 @@
 # Phase 02A verification — 2026-10-25
 
+This report records the original offline checkpoint. The subsequent [AWS/CI follow-up](phase-02b-verification.md) includes a passing GitHub Linux run, live backend evidence and current hosting blockers.
+
 Scope: the owner authorized correcting the local MVP and continuing Phase 02. The old AWS resources have been removed. Work remains local/offline; `npt-shortenlink.dev` is the intended domain, not evidence of a live deployment. No old state or GitHub deployment was imported.
 
 ## Corrections and regression evidence

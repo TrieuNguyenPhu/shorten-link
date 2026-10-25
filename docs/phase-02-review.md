@@ -1,5 +1,7 @@
 # Phase 02 review — 2026-10-25
 
+**Follow-up:** findings 4 (clean-runner CI) and 5 (pause/resume guide) below are now resolved; ACM is issued and custom-domain inputs are configured. Bootstrap state has a verified encrypted/versioned off-machine backup. See [current deployment evidence](phase-02b-verification.md) for the passing GitHub run and remaining AWS account-verification blocker. The original review below is retained as the checkpoint that prompted those fixes.
+
 **Verdict: backend and local implementation pass review; full Phase 02 is not complete.** The remaining work is cloud hosting/domain delivery, final end-to-end acceptance, clean-runner CI evidence and a safe dev pause/resume guide. No new blocking backend code defect was found at the agreed low-traffic dev scope.
 
 This review inspects the current working tree, not a commit diff: the local repository has no initial commit or configured remote. Product code and AWS resources were not changed. A read-only Terraform plan was saved to ignored `infra/terraform/dev/phase-02-review.tfplan` and was not applied.

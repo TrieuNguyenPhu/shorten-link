@@ -51,4 +51,14 @@ These are temporary operational overrides outside Terraform. Do not apply an unr
 
 ## Evidence and limits
 
+### Bootstrap state backup
+
+The canonical bootstrap state remains local at `infra/terraform/bootstrap/terraform.tfstate`; do not lose or commit it. A verified encrypted/versioned backup is stored in the private state bucket:
+
+- Bucket: `shortly-dev-tfstate-654822777701-ap-southeast-2`
+- Key: `shortly/bootstrap/backups/bootstrap-20261025T040007Z.tfstate`
+- SHA-256: `685e0a5ee7be8a0dc0fccc9f6ab34d9840b8a6eec17a76d0e10df978780834d0`
+
+For recovery, download the recorded S3 version to an ignored scratch file, compare its SHA-256 with `dist/evidence/bootstrap-backup.json` and the value above, then review the recovered resource IDs/serial before restoring the canonical local state. Do not overwrite an existing newer state or copy bootstrap state onto the dev application's state key. This backup is in the same AWS account/bucket, so it does not protect against losing that account or deleting the bucket; versioning/public-block/encryption remain enabled. Refresh the backup after a deliberate future bootstrap change.
+
 Read-only preflight verified the identity and unreserved baseline for all three deployed functions. The pause/resume commands follow AWS documentation; an actual outage drill has not been executed. The 4 USD monthly budget tracks spend and has no notification recipient; it does not stop charges. Local development can continue separately with DynamoDB Local and the host API.

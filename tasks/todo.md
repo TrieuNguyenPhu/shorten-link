@@ -1,6 +1,6 @@
 # Checklist triển khai theo phase
 
-Đọc cùng [plan.md](plan.md) và [đối chiếu series](../docs/series-review.md). **Phase 02A hoàn tất offline; backend Phase 02B đã deploy tại Sydney và vượt 20/20 smoke checks**. CloudFront đang chờ AWS xác minh account nên Phase 02 chưa hoàn tất; xem [bằng chứng AWS](../docs/phase-02b-verification.md). CI đã được định nghĩa/kiểm tra tĩnh, chưa chạy trên GitHub runner. Các phase sau chưa thực hiện.
+Đọc cùng [plan.md](plan.md) và [đối chiếu series](../docs/series-review.md). **Phase 02A hoàn tất; backend Phase 02B đã deploy tại Sydney và vượt 20/20 smoke checks**. [CI trên GitHub Linux đã đạt](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/40160153532), gồm race/integration, đóng gói Lambda, Terraform và browser 10+1 tests. ACM đã được cấp, cấu hình domain/certificate và hướng dẫn pause/resume đã xong. CloudFront vẫn bị AWS chặn xác minh account nên Phase 02 chưa hoàn tất; xem [bằng chứng AWS](../docs/phase-02b-verification.md). Các phase sau chưa thực hiện.
 
 Mỗi task gồm tối đa vài file chính, kèm test/config liên quan; nếu diff vượt một phiên review thì chia nhỏ trước khi code. Lệnh Go bên dưới chạy từ `services/lambda`; lệnh pnpm/Terraform chạy từ root. Không chạy các kiểm tra cloud trước khi được yêu cầu dùng AWS.
 
