@@ -1,139 +1,76 @@
-# Root developer and operator entrypoint.
-
 .DEFAULT_GOAL := help
-
-PNPM ?= pnpm
-GO ?= go
-NODE ?= node
-
-ifeq ($(OS),Windows_NT)
-CODEGRAPH ?= "$(LOCALAPPDATA)\codegraph\current\bin\codegraph.cmd"
-else
-CODEGRAPH ?= codegraph
-endif
-
-OPENAPI_SPEC ?= openapi/openapi.yaml
-REDOCLY_VERSION ?= 2.40.0
-DEPLOY_SCRIPT ?= scripts/deploy-aws.mjs
-
-AWS_REGION ?= ap-southeast-1
-STACK_NAME ?= npt-shortenlink-prod
-ENVIRONMENT_NAME ?= prod
-DOMAIN_NAME ?= npt-shortenlink.dev
-
-export AWS_PROFILE AWS_REGION STACK_NAME ENVIRONMENT_NAME DOMAIN_NAME
-export CERTIFICATE_ARN HOSTED_ZONE_ID CORS_ALLOWED_ORIGINS
-
-.PHONY: help install dev dev-all dev-backend dev-frontend dev-api dev-web \
-	lint-web build build-web \
-	format-api tidy-api vet-api test test-web test-api test-api-race \
-	verify verify-all security audit-deps openapi-lint \
-	deploy deploy-dry-run \
-	codegraph-init codegraph-status codegraph-sync codegraph-index
+.PHONY: help install db-up db-down db-init api web preview fmt lint test test-integration test-e2e test-dev build build-lambdas test-packaging terraform-check check
 
 help:
-	@echo NPT ShortenLink commands
-	@echo.
-	@echo Development
-	@echo   make install              Install pnpm dependencies from the lockfile
-	@echo   make dev                  Run backend and frontend together
-	@echo   make dev-backend          Run the Go API on localhost:8080
-	@echo   make dev-frontend         Run Next.js on localhost:3000
-	@echo   make dev-all              Alias for make dev
-	@echo.
-	@echo Quality
-	@echo   make verify               Run frontend and backend verification
-	@echo   make verify-all           Add dependency audit, vulnerability scan and OpenAPI lint
-	@echo   make test-api-race        Run Go race tests; requires a CGO compiler
-	@echo   make openapi-lint         Lint the OpenAPI contract with pinned Redocly
-	@echo.
-	@echo Deployment
-	@echo   make deploy               Verify, deploy AWS, publish web, and smoke-test
-	@echo   make deploy-dry-run       Print and validate the deployment plan only
-	@echo.
-	@echo CodeGraph
-	@echo   make codegraph-init       Initialize the local repository graph
-	@echo   make codegraph-status     Show graph health and pending changes
-	@echo   make codegraph-sync       Incrementally synchronize the graph
-	@echo   make codegraph-index      Rebuild the graph from scratch
+	@echo "install db-up db-init api web preview fmt lint test test-integration test-e2e test-dev build build-lambdas test-packaging terraform-check check"
 
 install:
-	$(PNPM) install --frozen-lockfile
+	pnpm install --frozen-lockfile
+	go -C services/lambda mod download
 
-dev: dev-all
+db-up:
+	docker compose -f local/compose.yaml up -d
 
-dev-all:
-	+@$(MAKE) --no-print-directory -j2 dev-backend dev-frontend
+db-down:
+	docker compose -f local/compose.yaml down
 
-dev-backend:
-	$(PNPM) dev:api
+db-init:
+	go -C services/lambda run ./cmd/initdb
 
-dev-frontend:
-	$(PNPM) dev:web
+api:
+	go -C services/lambda run ./cmd/api
 
-# Backward-compatible aliases.
-dev-api: dev-backend
+web:
+	pnpm dev
 
-dev-web: dev-frontend
+preview:
+	node local/serve-static.mjs
 
-lint-web:
-	$(PNPM) lint:web
+fmt:
+	go -C services/lambda fmt ./...
+	pnpm format
 
-build: build-web
+lint:
+	go -C services/lambda vet ./...
+	pnpm lint
+	pnpm typecheck
 
-build-web:
-	$(PNPM) build:web
+test:
+	go -C services/lambda test ./...
+	node --test local/serve-static.test.mjs infra/terraform/dev/static-rewrite.test.mjs
 
-format-api:
-	$(GO) fmt ./services/shortener-api/...
+test-integration:
+ifeq ($(OS),Windows_NT)
+	cmd /C "set DYNAMODB_INTEGRATION=1&& go -C services/lambda test ./... -count=1"
+else
+	DYNAMODB_INTEGRATION=1 go -C services/lambda test ./... -count=1
+endif
 
-tidy-api:
-	$(GO) -C services/shortener-api mod tidy
+test-e2e:
+	pnpm test:e2e
 
-vet-api:
-	$(PNPM) vet:api
+test-dev:
+	pnpm test:dev
 
-test: test-web test-api
+build-lambdas:
+	node local/build-lambdas.mjs
 
-test-web:
-	$(PNPM) test:web
+test-packaging:
+	node --test local/build-lambdas.test.mjs
 
-test-api:
-	$(PNPM) test:api
+terraform-check:
+	terraform -chdir=infra/terraform/bootstrap fmt -check
+	terraform -chdir=infra/terraform/bootstrap init -backend=false -input=false
+	terraform -chdir=infra/terraform/bootstrap validate
+	terraform -chdir=infra/terraform/bootstrap test
+	terraform -chdir=infra/terraform/dev fmt -check
+	terraform -chdir=infra/terraform/dev init -backend=false -input=false
+	terraform -chdir=infra/terraform/dev validate
+	terraform -chdir=infra/terraform/dev test
 
-test-api-race:
-	$(PNPM) test:api:race
+build:
+	go -C services/lambda build ./...
+	pnpm build
 
-verify:
-	$(PNPM) verify
-
-verify-all: verify security openapi-lint
-
-security: audit-deps vuln-api
-
-audit-deps:
-	$(PNPM) audit:deps
-
-vuln-api:
-	$(PNPM) vuln:api
-
-openapi-lint:
-	$(PNPM) --package=@redocly/cli@$(REDOCLY_VERSION) dlx redocly lint $(OPENAPI_SPEC)
-
-deploy:
-	$(NODE) $(DEPLOY_SCRIPT)
-
-deploy-dry-run:
-	$(NODE) $(DEPLOY_SCRIPT) --dry-run
-
-codegraph-init:
-	$(CODEGRAPH) init .
-
-codegraph-status:
-	$(CODEGRAPH) status .
-
-codegraph-sync:
-	$(CODEGRAPH) sync .
-
-codegraph-index:
-	$(CODEGRAPH) index .
+check: test lint build
+	pnpm format:check
