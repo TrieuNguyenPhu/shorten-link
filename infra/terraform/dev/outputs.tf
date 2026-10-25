@@ -6,3 +6,5 @@ output "api_url" {
 output "web_bucket" { value = aws_s3_bucket.web.id }
 output "distribution_id" { value = aws_cloudfront_distribution.web.id }
 output "links_table" { value = aws_dynamodb_table.links.name }
+output "aws_account_id" { value = split(":", aws_dynamodb_table.links.arn)[4] }
+output "aws_region" { value = var.region }

@@ -1,6 +1,6 @@
 # AWS Support draft — CloudFront account verification
 
-**Not sent.** Open [AWS Support Center](https://console.aws.amazon.com/support/home#/) using the account owner and choose account/billing support. No paid support-plan upgrade or new AWS account is needed for preparing this request.
+**The owner has submitted an AWS Support case.** The Case ID has not been provided in this chat; no case was submitted by the assistant. Track the existing case in [AWS Support Center](https://console.aws.amazon.com/support/home#/) and provide any requested verification there. The prepared text below is retained for reference; do not open duplicate cases for the same restriction.
 
 **Subject:** Verify account 654822777701 for CloudFront distribution creation
 

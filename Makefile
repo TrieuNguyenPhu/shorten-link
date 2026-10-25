@@ -38,6 +38,7 @@ lint:
 test:
 	go -C services/lambda test ./...
 	node --test local/serve-static.test.mjs infra/terraform/dev/static-rewrite.test.mjs
+	pnpm test:deploy
 
 test-integration:
 ifeq ($(OS),Windows_NT)

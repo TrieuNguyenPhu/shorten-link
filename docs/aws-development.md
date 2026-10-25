@@ -49,6 +49,8 @@ The browser client does not sign AWS requests. **Cloud management from the UI wi
 
 These are the fresh-stack steps, already executed through backend deployment for the current account. Preserve existing state/resources and follow the resumption steps above for the current partial stack. Sydney supersedes the original Singapore proposal.
 
+For this existing stack, follow [CloudFront adoption and repeat deployment](aws-redeploy.md): one-time state import after console creation, reviewed Terraform updates, then `pnpm deploy:web` for frontend releases. The deploy helper refuses incomplete hosting outputs or mismatched ownership; it does not apply Terraform or alter the selected pricing plan.
+
 1. Confirm the AWS account, region (current default `ap-southeast-2`), budget and deployment identity. Inventory any retained resources/state before reusing names. An old GitHub workflow or state file is not proof a resource still exists. Do not run the old deployment workflow blindly.
 2. Choose a new globally unique state bucket. Review and apply the separate `infra/terraform/bootstrap` root using local state. Back up its state securely; bootstrap stays outside the application's lifecycle. The bucket has versioning, AES256 encryption, public blocking and a TLS-only policy; `prevent_destroy` protects it.
 3. Copy `dev/backend.hcl.example` to an ignored `dev/backend.tfbackend`, set the new bucket, and initialize dev with `-backend-config=backend.tfbackend`. It uses S3 native `use_lockfile`; no DynamoDB lock table. Grant deployment identity Get/List/Put access only to the application's state key/prefix, plus Get/Put/Delete on the matching `.tflock` object. Retain bootstrap state separately; do not overwrite it with the app state.

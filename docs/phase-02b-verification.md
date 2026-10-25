@@ -62,7 +62,7 @@ AWS Budget is a tracking threshold, not a hard spending cap; it includes prior/o
 
 ## Remaining external steps
 
-1. Account owner completes AWS verification via Support. A [reviewable support request](aws-support-cloudfront.md) is prepared locally and **has not been sent**.
+1. The account owner has submitted an AWS Support verification case. Await AWS's response in that existing case; no Case ID was provided here. The assistant has not sent a case. [Prepared request details](aws-support-cloudfront.md) are retained for reference.
 2. ACM is now **ISSUED**, DNS validation **SUCCESS**. The ignored dev configuration now specifies `npt-shortenlink.dev` and its issued us-east-1 certificate. CloudFront cannot attach it until account verification is resolved; the root ANAME must target the actual resulting distribution hostname.
 3. Resume the reviewed Terraform plan, finish S3/OAC policy, rebuild/upload with the live site origin, run full smoke with `-site` and verify home/deep links/assets in a browser.
 

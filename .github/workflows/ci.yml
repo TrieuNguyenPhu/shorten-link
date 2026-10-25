@@ -57,6 +57,7 @@ jobs:
       - name: Node tests and Lambda packaging checks
         run: |
           node --test local/serve-static.test.mjs local/build-lambdas.test.mjs infra/terraform/dev/static-rewrite.test.mjs
+          pnpm test:deploy
           pnpm build:lambdas
       - name: Terraform offline checks
         run: make terraform-check
