@@ -74,7 +74,21 @@ func TestCreateValidation(t *testing.T) {
 }
 
 func TestRejectBrowserInvalidDestination(t *testing.T) {
-	for _, destination := range []string{"https://example.com:99999/", "https://exa<mple.com/", "https://exa>mple.com/", "https://exa^mple.com/", "https://exa|mple.com/", "https://256.256.256.256/", "https://256.256.256.256./"} {
+	for _, destination := range []string{
+		"https://example.com:99999/",
+		"https://exa<mple.com/",
+		"https://exa>mple.com/",
+		"https://exa^mple.com/",
+		"https://exa|mple.com/",
+		"https://256.256.256.256/",
+		"https://256.256.256.256./",
+		"https://4294967296/",
+		"https://example.123/",
+		"https://example.123./",
+		"https://0x7f000001/",
+		"https://example..com/",
+		"https://.example.com/",
+	} {
 		svc, repo := setup()
 		_, err := svc.Create(context.Background(), CreateInput{URL: destination})
 		if !errors.Is(err, domain.ErrInvalid) || len(repo.links) != 0 {

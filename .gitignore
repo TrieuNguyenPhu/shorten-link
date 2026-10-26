@@ -20,3 +20,6 @@ dist/
 *.tfvars
 *.tfbackend
 crash.log
+.codegraph/
+docs/
+tasks/
