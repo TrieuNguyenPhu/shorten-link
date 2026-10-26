@@ -10,6 +10,15 @@ variable "monthly_budget_usd" {
     error_message = "Monthly budget must be positive."
   }
 }
+variable "budget_notification_emails" {
+  type        = list(string)
+  default     = []
+  description = "Optional email addresses to notify at 80% actual and 100% forecasted monthly spend."
+  validation {
+    condition     = alltrue([for email in var.budget_notification_emails : can(regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", email))])
+    error_message = "Each budget notification entry must be a valid email address."
+  }
+}
 variable "project" {
   type    = string
   default = "shortly"

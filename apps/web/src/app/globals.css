@@ -127,6 +127,37 @@ fieldset {
   margin-left: auto;
   color: #6b756e;
 }
+.auth-panel {
+  margin: 0 0 22px;
+}
+.auth-actions {
+  display: grid;
+  gap: 8px;
+}
+.auth-button {
+  width: 100%;
+  justify-content: center;
+  font-size: 11px;
+}
+.auth-alert {
+  margin: 16px 6% 0;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #f2d9cc;
+  background: #fff4ef;
+  color: #943b28;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+.auth-alert-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
 .nav-caption {
   font-size: 9px;
   font-weight: 700;
@@ -649,13 +680,19 @@ label .required-dot {
 }
 .link-row {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 16px;
   padding: 25px 22px;
   border-bottom: 1px solid #e7ebe3;
 }
 .link-row:last-child {
   border-bottom: 0;
+}
+.link-row-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
 }
 .link-row-icon {
   display: grid;
@@ -712,6 +749,14 @@ label .required-dot {
   background: #fcf3e7;
   border-color: #f3e3cb;
 }
+.version-badge {
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  color: #6b756e;
+  background: #f4f6f2;
+  border: 1px solid #e4e8df;
+}
 .destination {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -730,6 +775,7 @@ label .required-dot {
 }
 .row-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 7px;
   align-items: center;
 }
@@ -738,6 +784,96 @@ label .required-dot {
 }
 .row-actions button svg {
   width: 13px;
+}
+.conflict-banner {
+  margin: 15px;
+  padding: 12px 14px;
+  border-radius: 7px;
+  border: 1px solid #f3e3cb;
+  background: #fcf3e7;
+  color: #965b22;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+.conflict-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.edit-link-panel {
+  width: 100%;
+  background: #f9faf6;
+  border: 1px solid #e2e8df;
+  border-radius: 9px;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+.edit-field {
+  min-width: 0;
+}
+.edit-field input {
+  background: #ffffff;
+  font-size: 12px;
+  height: 40px;
+}
+.edit-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  margin-bottom: 0;
+  font-size: 10px;
+  font-weight: 500;
+  color: #4d6051;
+}
+.edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.delete-confirm-panel {
+  width: 100%;
+  background: #fff4ef;
+  border: 1px solid #f2d9cc;
+  border-radius: 9px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: #943b28;
+}
+.delete-confirm-panel p {
+  margin: 0;
+  line-height: 1.5;
+}
+.delete-confirm-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.empty-auth-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.callback-error-box {
+  margin-top: 12px;
+}
+.callback-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 .loading-state {
   padding: 30px;
@@ -833,7 +969,7 @@ label .required-dot {
   .hero h1 {
     font-size: 49px;
   }
-  .link-row {
+  .link-row-main {
     flex-wrap: wrap;
   }
   .row-actions {
@@ -867,6 +1003,17 @@ label .required-dot {
   .sidebar-note,
   .local-badge {
     display: none;
+  }
+  .auth-panel {
+    margin: 0;
+  }
+  .auth-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+  .auth-alert {
+    margin: 14px 22px 0;
+    flex-direction: column;
+    align-items: flex-start;
   }
   nav {
     display: flex;
@@ -1003,6 +1150,10 @@ label .required-dot {
     padding: 20px 15px;
     gap: 12px;
   }
+  .link-row-main {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
   .link-row-icon {
     width: 32px;
     height: 32px;
@@ -1026,7 +1177,9 @@ label .required-dot {
     align-items: flex-start;
     flex-direction: column;
   }
-  .error-banner {
+  .error-banner,
+  .conflict-banner,
+  .delete-confirm-panel {
     align-items: flex-start;
     flex-direction: column;
   }

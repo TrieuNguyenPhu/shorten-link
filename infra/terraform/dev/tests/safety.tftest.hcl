@@ -15,6 +15,27 @@ mock_provider "aws" {
       api_endpoint  = "https://offline-test.execute-api.ap-southeast-1.amazonaws.com"
     }
   }
+  mock_resource "aws_cognito_user_pool" {
+    defaults = {
+      id  = "ap-southeast-2_TestPool"
+      arn = "arn:aws:cognito-idp:ap-southeast-2:123456789012:userpool/ap-southeast-2_TestPool"
+    }
+  }
+  mock_resource "aws_cognito_resource_server" {
+    defaults = {
+      scope_identifiers = ["shortly-api/links.read", "shortly-api/links.write"]
+    }
+  }
+  mock_resource "aws_cognito_user_pool_client" {
+    defaults = {
+      id = "test-cognito-web-client-id"
+    }
+  }
+  mock_resource "aws_apigatewayv2_authorizer" {
+    defaults = {
+      id = "jwt-authorizer-id"
+    }
+  }
 }
 
 override_resource {
@@ -42,11 +63,36 @@ run "offline_safety" {
   }
 
   assert {
-    condition = length(aws_apigatewayv2_route.route) == 10 && alltrue([
+    condition = length(aws_apigatewayv2_route.route) == 11 && alltrue([
       for route in aws_apigatewayv2_route.route :
-      contains(["GET /r/{code}", "HEAD /r/{code}", "GET /health", "HEAD /health"], route.route_key) ? route.authorization_type == "NONE" : route.authorization_type == "AWS_IAM"
+      contains(["GET /r/{code}", "HEAD /r/{code}", "GET /health", "HEAD /health"], route.route_key) ? (
+        route.authorization_type == "NONE" && route.authorizer_id == null
+        ) : (
+        route.authorization_type == "JWT" &&
+        route.authorizer_id == aws_apigatewayv2_authorizer.jwt.id &&
+        route.authorization_scopes == toset(
+          contains(["GET /api/links", "HEAD /api/links", "GET /api/links/{code}", "HEAD /api/links/{code}"], route.route_key) ? ["shortly-api/links.read"] : ["shortly-api/links.write"]
+        )
+      )
     ])
-    error_message = "Every management route must require IAM; redirect and health stay public."
+    error_message = "Every management route must require Cognito JWT with explicit read/write access-token scopes; redirect and health stay public."
+  }
+  assert {
+    condition = (
+      !aws_cognito_user_pool_client.web.generate_secret &&
+      aws_cognito_user_pool_client.web.allowed_oauth_flows_user_pool_client &&
+      aws_cognito_user_pool_client.web.allowed_oauth_flows == toset(["code"]) &&
+      aws_cognito_user_pool_client.web.callback_urls == toset(["https://npt-shortenlink.dev/auth/callback/"]) &&
+      aws_cognito_user_pool_client.web.logout_urls == toset(["https://npt-shortenlink.dev/"]) &&
+      aws_cognito_user_pool_client.web.access_token_validity == 60 &&
+      aws_cognito_user_pool_client.web.id_token_validity == 60 &&
+      aws_cognito_user_pool_client.web.refresh_token_validity == 30 &&
+      aws_apigatewayv2_authorizer.jwt.authorizer_type == "JWT" &&
+      aws_apigatewayv2_authorizer.jwt.identity_sources == toset(["$request.header.Authorization"]) &&
+      aws_apigatewayv2_authorizer.jwt.jwt_configuration[0].audience == toset([aws_cognito_user_pool_client.web.id]) &&
+      aws_apigatewayv2_authorizer.jwt.jwt_configuration[0].issuer == "https://cognito-idp.ap-southeast-2.amazonaws.com/ap-southeast-2_TestPool"
+    )
+    error_message = "Cognito client must enforce PKCE code flow, explicit HTTPS callback/logout URLs, agreed token validities, and matching HTTP API JWT authorizer."
   }
   assert {
     condition     = alltrue([for f in aws_lambda_function.function : f.runtime == "provided.al2023" && length(f.architectures) == 1 && contains(f.architectures, "arm64") && f.publish && f.environment[0].variables.DYNAMODB_TABLE == aws_dynamodb_table.links.name])
@@ -65,7 +111,7 @@ run "offline_safety" {
     error_message = "Redirect cannot write data, and create cannot read/list/delete data."
   }
   assert {
-    condition     = aws_dynamodb_table.links.deletion_protection_enabled && aws_dynamodb_table.links.hash_key == "PK" && aws_dynamodb_table.links.range_key == "SK" && one(aws_dynamodb_table.links.global_secondary_index).projection_type == "ALL"
+    condition     = aws_dynamodb_table.links.deletion_protection_enabled && one(aws_dynamodb_table.links.point_in_time_recovery).enabled && aws_dynamodb_table.links.hash_key == "PK" && aws_dynamodb_table.links.range_key == "SK" && one(aws_dynamodb_table.links.global_secondary_index).projection_type == "ALL"
     error_message = "Preserve the single-table contract and protect data from deletion."
   }
   assert {

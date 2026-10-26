@@ -12,6 +12,11 @@ function fixture(overrides = {}, failAt = "", distributionOverrides = {}) {
     distribution_id: "E123456789TEST",
     aws_account_id: "123456789012",
     aws_region: "ap-southeast-2",
+    cognito_client_id: "cognitoclient123",
+    cognito_domain_url:
+      "https://shortly-dev.auth.ap-southeast-2.amazoncognito.com",
+    cognito_issuer:
+      "https://cognito-idp.ap-southeast-2.amazonaws.com/ap-southeast-2_test123",
     ...overrides,
   };
   const execute = (command, args, options) => {
@@ -63,6 +68,18 @@ test("deploy verifies ownership, builds with the site origin, uploads assets bef
     build.options.env.NEXT_PUBLIC_API_BASE_URL,
     "https://short.example",
   );
+  assert.equal(
+    build.options.env.NEXT_PUBLIC_COGNITO_CLIENT_ID,
+    "cognitoclient123",
+  );
+  assert.equal(
+    build.options.env.NEXT_PUBLIC_COGNITO_DOMAIN,
+    "https://shortly-dev.auth.ap-southeast-2.amazoncognito.com",
+  );
+  assert.equal(
+    build.options.env.NEXT_PUBLIC_COGNITO_ISSUER,
+    "https://cognito-idp.ap-southeast-2.amazonaws.com/ap-southeast-2_test123",
+  );
   const ownerCheck = calls.findIndex((call) =>
     call.args.includes("head-bucket"),
   );
@@ -95,6 +112,9 @@ test("missing hosting outputs, wrong identity, invalid URLs and mismatched origi
     { web_bucket: "s3://invalid-bucket" },
     { distribution_id: "--invalid-id" },
     { aws_region: "invalid-region" },
+    { cognito_client_id: "" },
+    { cognito_domain_url: "http://shortly-dev.auth.example" },
+    { cognito_issuer: "http://cognito-idp.example/pool" },
   ]) {
     const { execute, calls } = fixture(overrides);
     assert.throws(() => deployWeb(execute));
