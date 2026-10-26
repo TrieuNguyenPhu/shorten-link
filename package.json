@@ -1,0 +1,22 @@
+{
+  "name": "shortly-workspace",
+  "private": true,
+  "packageManager": "pnpm@10.33.2",
+  "scripts": {
+    "dev": "pnpm --filter @shortly/web dev",
+    "build": "pnpm --filter @shortly/web build",
+    "lint": "pnpm --filter @shortly/web lint",
+    "typecheck": "pnpm --filter @shortly/web typecheck",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test:e2e": "playwright test",
+    "test:dev": "playwright test --config playwright.dev.config.ts",
+    "build:lambdas": "node local/build-lambdas.mjs",
+    "deploy:web": "node local/deploy-web.mjs",
+    "test:deploy": "node --test local/deploy-web.test.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "prettier": "3.9.10"
+  }
+}
