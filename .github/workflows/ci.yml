@@ -23,6 +23,9 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version: "1.26.10"
@@ -40,6 +43,16 @@ jobs:
         run: go -C services/lambda test -race ./... -count=1
         env:
           DYNAMODB_INTEGRATION: "1"
+      - name: Lambda packaging checks
+        run: |
+          node --test local/build-lambdas.test.mjs
+          node local/build-lambdas.mjs
+      - name: Save Lambda artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: lambda-arm64
+          path: dist/lambdas/
+          retention-days: 7
       - name: Stop local database
         if: always()
         run: docker compose -f local/compose.yaml down
