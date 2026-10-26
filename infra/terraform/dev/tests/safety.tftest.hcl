@@ -71,4 +71,8 @@ run "offline_safety" {
     condition     = alltrue([for behavior in aws_cloudfront_distribution.web.ordered_cache_behavior : behavior.cache_policy_id == aws_cloudfront_cache_policy.api.id && behavior.origin_request_policy_id == "b689b0a8-53d0-40ab-baf2-68738e2966ac" && length(behavior.function_association) == 0]) && aws_cloudfront_cache_policy.api.min_ttl == 0 && aws_cloudfront_cache_policy.api.default_ttl == 0 && aws_cloudfront_cache_policy.api.max_ttl == 0
     error_message = "Never cache or rewrite API and redirect requests; forward viewer fields except Host."
   }
+  assert {
+    condition     = toset([for response in aws_cloudfront_distribution.web.custom_error_response : response.error_code if response.error_caching_min_ttl == 0 && (response.response_page_path == null || response.response_page_path == "")]) == toset([400, 403, 404, 405, 414, 500, 501, 502, 503, 504])
+    error_message = "Disable CloudFront error caching too; never replace API errors with an HTML page."
+  }
 }

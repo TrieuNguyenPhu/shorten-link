@@ -166,8 +166,10 @@ func (p *probe) run(ctx context.Context, api, site, bucket string) error {
 	if err := p.status(ctx, "create expiring link", "POST", api+"/api/links", string(body), true, 201); err != nil {
 		return err
 	}
-	if err := p.redirect(ctx, "before expiry", api+"/r/"+expiring, 302); err != nil {
-		return err
+	for _, base := range redirectTargets(api, site) {
+		if err := p.redirect(ctx, "before expiry", base+"/r/"+expiring, 302); err != nil {
+			return err
+		}
 	}
 	select {
 	case <-ctx.Done():

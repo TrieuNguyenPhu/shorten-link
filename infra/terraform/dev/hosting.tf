@@ -120,6 +120,14 @@ resource "aws_cloudfront_distribution" "web" {
       compress                 = false
     }
   }
+  # Error caching is separate from cache policies and can ignore origin no-store.
+  dynamic "custom_error_response" {
+    for_each = [400, 403, 404, 405, 414, 500, 501, 502, 503, 504]
+    content {
+      error_code            = custom_error_response.value
+      error_caching_min_ttl = 0
+    }
+  }
   restrictions {
     geo_restriction { restriction_type = "none" }
   }

@@ -55,3 +55,26 @@ func TestSmokeTargetsExcludeUnavailableCloudFront(t *testing.T) {
 		t.Fatalf("full-stack targets=%v", targets)
 	}
 }
+
+func TestRedirectProbeRejectsCacheableOrWrongDestinations(t *testing.T) {
+	for _, tc := range []struct {
+		cache, location string
+		wantError       bool
+	}{
+		{"no-store", "https://example.com/phase-02-smoke?q=1#verified", false},
+		{"max-age=60", "https://example.com/phase-02-smoke?q=1#verified", true},
+		{"no-store", "https://example.com/wrong", true},
+	} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Cache-Control", tc.cache)
+			w.Header().Set("Location", tc.location)
+			w.WriteHeader(http.StatusFound)
+		}))
+		p := newProbe(aws.Credentials{}, "ap-southeast-2")
+		err := p.redirect(context.Background(), "before expiry", server.URL, http.StatusFound)
+		server.Close()
+		if (err != nil) != tc.wantError {
+			t.Fatalf("cache=%q location=%q: error=%v", tc.cache, tc.location, err)
+		}
+	}
+}
