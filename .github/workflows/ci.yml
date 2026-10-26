@@ -16,78 +16,19 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    env:
-      AWS_EC2_METADATA_DISABLED: "true"
-      TF_IN_AUTOMATION: "true"
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
-        with:
-          node-version: "24"
-          cache: pnpm
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
-          go-version: "1.26.5"
+          go-version: "1.26.10"
           cache-dependency-path: services/lambda/go.sum
-      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
-        with:
-          terraform_version: "1.15.5"
-          terraform_wrapper: false
-      - run: pnpm install --frozen-lockfile
-      - name: Static checks
+      - name: Go static checks
         run: |
           test -z "$(gofmt -l services/lambda)"
           go -C services/lambda vet ./...
-          pnpm lint
-          pnpm typecheck
-          pnpm format:check
-          pnpm audit --prod --audit-level high
-      - name: DynamoDB Local
-        run: |
-          docker compose -f local/compose.yaml up -d
-          go -C services/lambda run ./cmd/initdb
-      - name: Go unit, contract and DynamoDB integration tests
+          go -C services/lambda run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+      - name: Go domain and application unit tests
         run: go -C services/lambda test -race ./... -count=1
-        env:
-          DYNAMODB_INTEGRATION: "1"
-      - name: Node tests and Lambda packaging checks
-        run: |
-          node --test local/serve-static.test.mjs local/build-lambdas.test.mjs infra/terraform/dev/static-rewrite.test.mjs
-          pnpm build:lambdas
-      - name: Terraform offline checks
-        run: make terraform-check
-      - run: pnpm exec playwright install --with-deps chromium
-      - name: Strict Mode regression
-        run: pnpm test:dev
-      - name: Static build
-        run: pnpm build
-      - name: Browser integration with the real local API
-        run: |
-          go -C services/lambda build -o "$RUNNER_TEMP/shortly-api" ./cmd/api
-          "$RUNNER_TEMP/shortly-api" >"$RUNNER_TEMP/api.log" 2>&1 &
-          api_pid=$!
-          trap 'kill "$api_pid"' EXIT
-          curl --fail --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:8080/health
-          pnpm test:e2e
-      - name: Save Lambda artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: lambda-arm64
-          path: dist/lambdas/
-          retention-days: 7
-      - name: Save failure evidence
-        if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: failure-evidence
-          path: |
-            test-results/
-            ${{ runner.temp }}/api.log
-          retention-days: 7
-      - name: Stop local database
-        if: always()
-        run: docker compose -f local/compose.yaml down

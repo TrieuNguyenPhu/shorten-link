@@ -9,6 +9,7 @@ import (
 	"net/netip"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -58,10 +59,24 @@ func validateURL(destination string) error {
 	if strings.ContainsAny(u.Hostname(), "<>^|%") {
 		return fmt.Errorf("%w: destination hostname is invalid", domain.ErrInvalid)
 	}
-	host := strings.TrimSuffix(u.Hostname(), ".")
-	if strings.Count(host, ".") == 3 && strings.Trim(host, "0123456789.") == "" {
-		if _, err := netip.ParseAddr(host); err != nil {
-			return fmt.Errorf("%w: destination IPv4 address is invalid", domain.ErrInvalid)
+	if strings.Contains(u.Hostname(), ":") {
+		if addr, err := netip.ParseAddr(u.Hostname()); err != nil || !addr.Is6() {
+			return fmt.Errorf("%w: destination IPv6 address is invalid", domain.ErrInvalid)
+		}
+	} else {
+		host := strings.TrimSuffix(u.Hostname(), ".")
+		labels := strings.Split(host, ".")
+		if slices.Contains(labels, "") {
+			return fmt.Errorf("%w: destination hostname is invalid", domain.ErrInvalid)
+		}
+		last := labels[len(labels)-1]
+		if isNumericLabel(last) {
+			if len(labels) != 4 {
+				return fmt.Errorf("%w: destination IPv4 address is invalid", domain.ErrInvalid)
+			}
+			if addr, err := netip.ParseAddr(host); err != nil || !addr.Is4() {
+				return fmt.Errorf("%w: destination IPv4 address is invalid", domain.ErrInvalid)
+			}
 		}
 	}
 	if port := u.Port(); port != "" {
@@ -70,6 +85,16 @@ func validateURL(destination string) error {
 		}
 	}
 	return nil
+}
+
+func isNumericLabel(label string) bool {
+	if strings.Trim(label, "0123456789") == "" {
+		return true
+	}
+	if strings.HasPrefix(label, "0x") || strings.HasPrefix(label, "0X") {
+		return strings.Trim(label[2:], "0123456789abcdefABCDEF") == ""
+	}
+	return false
 }
 
 func (s *Service) Create(ctx context.Context, input CreateInput) (domain.Link, error) {
