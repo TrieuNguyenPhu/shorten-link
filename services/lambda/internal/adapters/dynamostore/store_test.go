@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -163,4 +164,53 @@ func TestStoreUnitOperationsAndOwnership(t *testing.T) {
 			t.Fatalf("expected ErrInvalid for ownerless cursor, got %v", err)
 		}
 	})
+}
+
+func TestWriteConditionsProtectOwnerAndVersion(t *testing.T) {
+	for _, operation := range []string{"update", "delete", "delete without version"} {
+		t.Run(operation, func(t *testing.T) {
+			version := int64(7)
+			if operation == "delete without version" {
+				version = 0
+			}
+			store := newTestStore(func(r *http.Request) (*http.Response, error) {
+				var input struct {
+					ConditionExpression                 string
+					ExpressionAttributeNames            map[string]string
+					ExpressionAttributeValues           map[string]map[string]any
+					Key                                 map[string]map[string]string
+					ReturnValuesOnConditionCheckFailure string
+				}
+				if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+					t.Fatal(err)
+				}
+				want := "attribute_exists(PK) AND attribute_not_exists(#deleted) AND #ownerId = :actor"
+				if version > 0 {
+					want += " AND #version = :version"
+					if input.ExpressionAttributeValues[":version"]["N"] != "7" || input.ExpressionAttributeNames["#version"] != "version" {
+						t.Fatal("write must compare the caller's expected version")
+					}
+				}
+				if input.ConditionExpression != want {
+					t.Fatalf("unsafe write condition: %s", input.ConditionExpression)
+				}
+				if input.ExpressionAttributeNames["#ownerId"] != "ownerId" || input.ExpressionAttributeNames["#deleted"] != "deleted" || input.ExpressionAttributeValues[":actor"]["S"] != "owner-a" {
+					t.Fatal("write must bind owner and tombstone checks to stored attributes and authenticated actor")
+				}
+				if !reflect.DeepEqual(input.Key, map[string]map[string]string{"PK": {"S": "LINK#owned-link"}, "SK": {"S": "METADATA"}}) || input.ReturnValuesOnConditionCheckFailure != "ALL_OLD" {
+					t.Fatal("write must target the requested link and return existing data on condition failure")
+				}
+				return ddbResponse(200, `{"Attributes":{}}`), nil
+			})
+			var err error
+			if operation == "update" {
+				_, err = store.Update(context.Background(), "owner-a", "owned-link", domain.LinkPatch{Version: version, Enabled: boolPtr(false), UpdatedAt: time.Now()})
+			} else {
+				err = store.Delete(context.Background(), "owner-a", "owned-link", version, time.Now())
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
 }
