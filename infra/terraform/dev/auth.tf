@@ -54,9 +54,9 @@ resource "aws_cognito_user_pool_client" "web" {
   allowed_oauth_flows                  = ["code"]
   allowed_oauth_scopes                 = sort(concat(["openid", "email"], tolist(aws_cognito_resource_server.api.scope_identifiers)))
   supported_identity_providers         = ["COGNITO"]
-  callback_urls                        = ["${var.web_origin}/auth/callback/"]
-  logout_urls                          = ["${var.web_origin}/"]
-  default_redirect_uri                 = "${var.web_origin}/auth/callback/"
+  callback_urls                        = ["${local.site_url}/auth/callback/"]
+  logout_urls                          = ["${local.site_url}/"]
+  default_redirect_uri                 = "${local.site_url}/auth/callback/"
   explicit_auth_flows                  = ["ALLOW_REFRESH_TOKEN_AUTH", "ALLOW_USER_SRP_AUTH"]
   enable_token_revocation              = true
   prevent_user_existence_errors        = "ENABLED"

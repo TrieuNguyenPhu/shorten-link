@@ -1,5 +1,7 @@
 region      = "ap-southeast-2"
 environment = "dev"
+# Only needed for browser requests made directly to API Gateway.
+# Cognito callback/logout URLs automatically follow the deployed site_url.
 web_origin  = "https://npt-shortenlink.dev"
 monthly_budget_usd = 4
 # budget_notification_emails = ["you@example.com"]
