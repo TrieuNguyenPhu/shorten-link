@@ -21,7 +21,7 @@
 
 | Phase | Task | Nội dung công việc | Nhánh (Branch) | Trạng thái | Pull Request |
 | --- | --- | --- | --- | --- | --- |
-| **Phase 0** | **Task 0.1** | Dọn sạch AWS & local, cài đặt 13 bộ skills, `AGENTS.md`, Reference Audit, Architecture & Master Plan | `chore/phase-00-reset-and-architecture-plan` | ✅ **Completed** | Đang tạo PR ở bước này |
+| **Phase 0** | **Task 0.1** | Dọn sạch AWS & local, cài đặt 13 bộ skills, `AGENTS.md`, Reference Audit, Architecture & Master Plan | `chore/phase-00-reset-and-architecture-plan` | ✅ **Completed** | [PR #65](https://github.com/TrieuNguyenPhu/shorten-link/pull/65) |
 | **Phase 1** | **Task 1.1** | Monorepo skeleton, `Makefile`, Go module, Domain Models, Base62 Generator & URL Validator + Unit Tests | `feat/phase-01-task-01-monorepo-and-domain` | ⏳ Pending | — |
 | **Phase 1** | **Task 1.2** | Observability Middleware (`slog` JSON, CloudWatch EMF, X-Ray) & Script đóng gói Lambda `arm64` ZIP | `feat/phase-01-task-02-observability-and-packaging` | ⏳ Pending | — |
 | **Phase 2** | **Task 2.1** | DynamoDB Single-Table Repository, Link Service & 4 Go HTTP Lambdas (`create`, `resolve`, `list`, `delete`) + Tests | `feat/phase-02-task-01-core-crud-lambdas` | ⏳ Pending | — |

@@ -22,3 +22,4 @@
   - `progress.md`
   - `PROJECT_STATUS.md`
   - `README.md`
+- **Pull Request:** [PR #65](https://github.com/TrieuNguyenPhu/shorten-link/pull/65)
