@@ -37,6 +37,7 @@ export function deployWeb(execute = command) {
     aws_account_id: account,
     aws_region: region,
     cognito_client_id: cognitoClientId,
+    cognito_user_pool_id: cognitoUserPoolId,
     cognito_domain_url: cognitoDomainUrl,
     cognito_issuer: cognitoIssuer,
   } = values;
@@ -49,6 +50,7 @@ export function deployWeb(execute = command) {
       account,
       region,
       cognitoClientId,
+      cognitoUserPoolId,
       cognitoDomainUrl,
       cognitoIssuer,
     ].some((value) => typeof value !== "string" || !value)
@@ -139,6 +141,34 @@ export function deployWeb(execute = command) {
   ) {
     throw new Error(
       "CloudFront is not deployed with the Terraform account, site and S3/API origins.",
+    );
+  }
+  const { UserPoolClient: client } = JSON.parse(
+    execute(
+      "aws",
+      [
+        "cognito-idp",
+        "describe-user-pool-client",
+        "--user-pool-id",
+        cognitoUserPoolId,
+        "--client-id",
+        cognitoClientId,
+        "--region",
+        region,
+        "--output",
+        "json",
+      ],
+      { capture: true },
+    ),
+  );
+  if (
+    client?.UserPoolId !== cognitoUserPoolId ||
+    client.ClientId !== cognitoClientId ||
+    !client.CallbackURLs?.includes(`${site}/auth/callback/`) ||
+    !client.LogoutURLs?.includes(`${site}/`)
+  ) {
+    throw new Error(
+      "Cognito callback/logout URLs do not match the deployment site. Apply the matching Terraform configuration first.",
     );
   }
   const pnpmCLI = process.env.npm_execpath;

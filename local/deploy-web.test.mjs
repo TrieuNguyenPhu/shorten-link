@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { deployWeb } from "./deploy-web.mjs";
 
-function fixture(overrides = {}, failAt = "", distributionOverrides = {}) {
+function fixture(
+  overrides = {},
+  failAt = "",
+  distributionOverrides = {},
+  clientOverrides = {},
+) {
   process.env.npm_execpath ||= "pnpm.cjs";
   const calls = [];
   const values = {
@@ -13,6 +18,7 @@ function fixture(overrides = {}, failAt = "", distributionOverrides = {}) {
     aws_account_id: "123456789012",
     aws_region: "ap-southeast-2",
     cognito_client_id: "cognitoclient123",
+    cognito_user_pool_id: "ap-southeast-2_test123",
     cognito_domain_url:
       "https://shortly-dev.auth.ap-southeast-2.amazoncognito.com",
     cognito_issuer:
@@ -32,6 +38,17 @@ function fixture(overrides = {}, failAt = "", distributionOverrides = {}) {
     }
     if (args.includes("get-caller-identity"))
       return JSON.stringify({ Account: "123456789012" });
+    if (args.includes("describe-user-pool-client")) {
+      return JSON.stringify({
+        UserPoolClient: {
+          UserPoolId: "ap-southeast-2_test123",
+          ClientId: "cognitoclient123",
+          CallbackURLs: ["https://short.example/auth/callback/"],
+          LogoutURLs: ["https://short.example/"],
+          ...clientOverrides,
+        },
+      });
+    }
     if (args.includes("get-distribution")) {
       return JSON.stringify({
         Distribution: {
@@ -113,6 +130,7 @@ test("missing hosting outputs, wrong identity, invalid URLs and mismatched origi
     { distribution_id: "--invalid-id" },
     { aws_region: "invalid-region" },
     { cognito_client_id: "" },
+    { cognito_user_pool_id: "" },
     { cognito_domain_url: "http://shortly-dev.auth.example" },
     { cognito_issuer: "http://cognito-idp.example/pool" },
   ]) {
@@ -146,12 +164,33 @@ test("a disabled or still-deploying distribution stops before build or writes", 
 });
 
 test("a bucket permission failure stops before build and a build failure never uploads", () => {
-  for (const failAt of ["head-bucket", "build"]) {
+  for (const failAt of ["head-bucket", "describe-user-pool-client", "build"]) {
     const { execute, calls } = fixture({}, failAt);
     assert.throws(() => deployWeb(execute), /simulated command failure/);
     assert.ok(
       calls.every(
         (call) =>
+          !call.args.includes("sync") &&
+          !call.args.includes("create-invalidation"),
+      ),
+    );
+  }
+});
+
+test("Cognito callback/logout mismatches stop before build or uploads", () => {
+  for (const client of [
+    { CallbackURLs: ["https://another.example/auth/callback/"] },
+    { LogoutURLs: ["https://another.example/"] },
+    { CallbackURLs: undefined },
+    { UserPoolId: "ap-southeast-2_other" },
+    { ClientId: "another-client" },
+  ]) {
+    const { execute, calls } = fixture({}, "", {}, client);
+    assert.throws(() => deployWeb(execute), /Cognito callback\/logout URLs/);
+    assert.ok(
+      calls.every(
+        (call) =>
+          call.command !== process.execPath &&
           !call.args.includes("sync") &&
           !call.args.includes("create-invalidation"),
       ),

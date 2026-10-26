@@ -1,5 +1,8 @@
 mock_provider "aws" {
   override_during = plan
+  mock_resource "aws_cloudfront_distribution" {
+    defaults = { domain_name = "offline-web.cloudfront.net" }
+  }
   mock_resource "aws_dynamodb_table" {
     defaults = { arn = "arn:aws:dynamodb:ap-southeast-1:123456789012:table/shortly-dev-links" }
   }
@@ -82,8 +85,9 @@ run "offline_safety" {
       !aws_cognito_user_pool_client.web.generate_secret &&
       aws_cognito_user_pool_client.web.allowed_oauth_flows_user_pool_client &&
       aws_cognito_user_pool_client.web.allowed_oauth_flows == toset(["code"]) &&
-      aws_cognito_user_pool_client.web.callback_urls == toset(["https://npt-shortenlink.dev/auth/callback/"]) &&
-      aws_cognito_user_pool_client.web.logout_urls == toset(["https://npt-shortenlink.dev/"]) &&
+      aws_cognito_user_pool_client.web.callback_urls == toset(["https://offline-web.cloudfront.net/auth/callback/"]) &&
+      aws_cognito_user_pool_client.web.logout_urls == toset(["https://offline-web.cloudfront.net/"]) &&
+      aws_cognito_user_pool_client.web.default_redirect_uri == "${output.site_url}/auth/callback/" &&
       aws_cognito_user_pool_client.web.access_token_validity == 60 &&
       aws_cognito_user_pool_client.web.id_token_validity == 60 &&
       aws_cognito_user_pool_client.web.refresh_token_validity == 30 &&
@@ -129,5 +133,22 @@ run "offline_safety" {
   assert {
     condition     = one(aws_cloudfront_distribution.web.default_cache_behavior).response_headers_policy_id == aws_cloudfront_response_headers_policy.static.id && one(aws_cloudfront_response_headers_policy.static.security_headers_config).frame_options[0].frame_option == "DENY" && one(aws_cloudfront_response_headers_policy.static.security_headers_config).content_security_policy[0].content_security_policy == "frame-ancestors 'none'" && one(aws_cloudfront_response_headers_policy.static.security_headers_config).content_type_options[0].override && one(aws_cloudfront_response_headers_policy.static.security_headers_config).strict_transport_security[0].access_control_max_age_sec >= 31536000
     error_message = "Static hosting must send anti-framing, nosniff and HSTS security headers."
+  }
+}
+
+run "custom_domain_auth_urls" {
+  command = plan
+  variables {
+    site_domain = "short.example"
+    acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/offline-test"
+  }
+  assert {
+    condition = (
+      output.site_url == "https://short.example" &&
+      aws_cognito_user_pool_client.web.callback_urls == toset(["https://short.example/auth/callback/"]) &&
+      aws_cognito_user_pool_client.web.logout_urls == toset(["https://short.example/"]) &&
+      aws_cognito_user_pool_client.web.default_redirect_uri == "https://short.example/auth/callback/"
+    )
+    error_message = "Cognito must follow the actual site domain, independently of the direct API CORS origin."
   }
 }
