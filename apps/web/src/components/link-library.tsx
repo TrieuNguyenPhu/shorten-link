@@ -53,6 +53,10 @@ function toDatetimeLocalValue(iso?: string): string {
 
 export function LinkLibrary() {
   const { session } = useAuth();
+  return <SessionLinkLibrary key={session?.sub ?? ""} />;
+}
+
+function SessionLinkLibrary() {
   const [links, setLinks] = useState<ShortLink[]>([]);
   const [cursor, setCursor] = useState<string>();
   const [loading, setLoading] = useState(true);
@@ -114,7 +118,7 @@ export function LinkLibrary() {
       latestLoad.current = null;
       clearInterval(timer);
     };
-  }, [load, session?.sub]);
+  }, [load]);
 
   function handleMutationError(err: unknown, fallback: string) {
     if (err instanceof ApiError && err.code === "version_conflict") {
@@ -165,7 +169,10 @@ export function LinkLibrary() {
     setError("");
     setConflict("");
     setNotice("");
+    const expirationChanged =
+      editExpires !== toDatetimeLocalValue(link.expiresAt);
     if (
+      expirationChanged &&
       editExpires &&
       (!Number.isFinite(new Date(editExpires).getTime()) ||
         new Date(editExpires).getTime() <= Date.now())
@@ -178,7 +185,13 @@ export function LinkLibrary() {
       const updated = await api.update(link.code, {
         version: link.version ?? 1,
         url: editURL.trim(),
-        expiresAt: editExpires ? new Date(editExpires).toISOString() : null,
+        ...(expirationChanged
+          ? {
+              expiresAt: editExpires
+                ? new Date(editExpires).toISOString()
+                : null,
+            }
+          : {}),
       });
       setLinks((previous) =>
         previous.map((item) => (item.code === updated.code ? updated : item)),
