@@ -16,7 +16,9 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
+    env:
+      AWS_EC2_METADATA_DISABLED: "true"
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -30,5 +32,14 @@ jobs:
           test -z "$(gofmt -l services/lambda)"
           go -C services/lambda vet ./...
           go -C services/lambda run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
-      - name: Go domain and application unit tests
+      - name: DynamoDB Local
+        run: |
+          docker compose -f local/compose.yaml up -d
+          go -C services/lambda run ./cmd/initdb
+      - name: Go unit, contract and DynamoDB integration tests
         run: go -C services/lambda test -race ./... -count=1
+        env:
+          DYNAMODB_INTEGRATION: "1"
+      - name: Stop local database
+        if: always()
+        run: docker compose -f local/compose.yaml down
