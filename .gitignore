@@ -13,7 +13,8 @@ backend/dist/
 dist/
 *.exe
 *.zip
-bootstrap
+backend/**/bootstrap
+cmd/**/bootstrap
 coverage.out
 
 # Terraform
