@@ -19,6 +19,7 @@ jobs:
     timeout-minutes: 15
     env:
       AWS_EC2_METADATA_DISABLED: "true"
+      TF_IN_AUTOMATION: "true"
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -30,6 +31,10 @@ jobs:
         with:
           go-version: "1.26.10"
           cache-dependency-path: services/lambda/go.sum
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_version: "1.15.5"
+          terraform_wrapper: false
       - name: Go static checks
         run: |
           test -z "$(gofmt -l services/lambda)"
@@ -43,10 +48,20 @@ jobs:
         run: go -C services/lambda test -race ./... -count=1
         env:
           DYNAMODB_INTEGRATION: "1"
-      - name: Lambda packaging checks
+      - name: Node tests and Lambda packaging checks
         run: |
-          node --test local/build-lambdas.test.mjs
+          node --test local/build-lambdas.test.mjs infra/terraform/dev/static-rewrite.test.mjs
           node local/build-lambdas.mjs
+      - name: Terraform offline checks
+        run: |
+          terraform -chdir=infra/terraform/bootstrap fmt -check
+          terraform -chdir=infra/terraform/bootstrap init -backend=false -input=false
+          terraform -chdir=infra/terraform/bootstrap validate
+          terraform -chdir=infra/terraform/bootstrap test
+          terraform -chdir=infra/terraform/dev fmt -check
+          terraform -chdir=infra/terraform/dev init -backend=false -input=false
+          terraform -chdir=infra/terraform/dev validate
+          terraform -chdir=infra/terraform/dev test
       - name: Save Lambda artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
