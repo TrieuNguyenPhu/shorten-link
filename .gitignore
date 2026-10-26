@@ -1,0 +1,49 @@
+# Node / Next.js
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+.pnpm-store/
+*.tsbuildinfo
+next-env.d.ts
+
+# Go / Lambda artifacts
+backend/bin/
+backend/dist/
+dist/
+*.exe
+*.zip
+bootstrap
+coverage.out
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.tfvars.example
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# IDE / OS / Local tools
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.codegraph/
+test-results/
+playwright-report/
+
+# Temporary reference clones (never commit reference repos)
+ref-repo/
+scratch/
+tmp/
