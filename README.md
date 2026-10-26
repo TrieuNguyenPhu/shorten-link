@@ -104,14 +104,14 @@ All management requests require a valid OAuth 2.0 `Bearer` access token (`shortl
 
 Defaults run without creating any environment files. Examples: [`apps/web/.env.example`](apps/web/.env.example), [`services/lambda/.env.example`](services/lambda/.env.example).
 
-| Variable                        | Default                 | Notes                                        |
-| ------------------------------- | ----------------------- | -------------------------------------------- |
-| `API_ADDRESS`                   | `127.0.0.1:8080`        | Go local API; loopback hosts only            |
-| `WEB_ORIGIN`                    | `http://localhost:3000` | Exact frontend CORS origin; loopback only    |
-| `NEXT_PUBLIC_API_BASE_URL`      | `http://127.0.0.1:8080` | Public API origin embedded at frontend build |
-| `NEXT_PUBLIC_COGNITO_CLIENT_ID` | `local-web-client`      | Public Cognito PKCE client ID                |
-| `NEXT_PUBLIC_COGNITO_DOMAIN`    | `http://127.0.0.1:8080` | Cognito Hosted UI origin                     |
-| `NEXT_PUBLIC_COGNITO_ISSUER`    | `http://127.0.0.1:8080` | Cognito User Pool OIDC issuer URL            |
+| Variable                        | Default                              | Notes                                        |
+| ------------------------------- | ------------------------------------ | -------------------------------------------- |
+| `API_ADDRESS`                   | `127.0.0.1:8080`                     | Go local API; loopback hosts only            |
+| `WEB_ORIGIN`                    | `http://localhost:3000`              | Exact frontend CORS origin; loopback only    |
+| `NEXT_PUBLIC_API_BASE_URL`      | `http://127.0.0.1:8080`              | Public API origin embedded at frontend build |
+| `NEXT_PUBLIC_COGNITO_CLIENT_ID` | `local-web-client`                   | Public Cognito PKCE client ID                |
+| `NEXT_PUBLIC_COGNITO_DOMAIN`    | `http://127.0.0.1:8080/oauth2-local` | Cognito Hosted UI base URL                   |
+| `NEXT_PUBLIC_COGNITO_ISSUER`    | `http://127.0.0.1:8080/oauth2-local` | Cognito User Pool OIDC issuer URL            |
 
 ## AWS packaging & deployment (Phase 03)
 

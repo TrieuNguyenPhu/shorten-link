@@ -25,7 +25,7 @@ export const isLocalAPI =
 
 export const cognitoClientId =
   process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID ||
-  (isLocalAPI ? "local-shortly-web" : "");
+  (isLocalAPI ? "local-web-client" : "");
 
 export const cognitoDomain = (
   process.env.NEXT_PUBLIC_COGNITO_DOMAIN ||
