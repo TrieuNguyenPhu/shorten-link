@@ -40,8 +40,9 @@ variable "tags" {
   default = {}
 }
 variable "web_origin" {
-  type    = string
-  default = "https://npt-shortenlink.dev"
+  type        = string
+  default     = "https://npt-shortenlink.dev"
+  description = "Allowed browser origin for direct API Gateway requests. Same-origin CloudFront requests do not need CORS; Cognito URLs follow site_url."
   validation {
     condition     = can(regex("^https://[a-zA-Z0-9.-]+(:[0-9]+)?$", var.web_origin))
     error_message = "Use exactly one HTTPS origin without a path or trailing slash."

@@ -75,16 +75,16 @@ pnpm test:e2e
 
 All management requests require a valid OAuth 2.0 `Bearer` access token (`shortly-api/links.read` for `GET`/`HEAD`, `shortly-api/links.write` for `POST`/`PATCH`/`DELETE`) and use JSON. Codes and aliases are case-sensitive. Generated codes have eight URL-safe characters (48 cryptographically random bits). Custom aliases must match `[A-Za-z0-9_-]{3,32}`. Atomic conditional writes prevent overwrite and enforce optimistic concurrency (`version`).
 
-| Method | Endpoint                        | Scope                     | Behavior                                                              |
-| ------ | ------------------------------- | ------------------------- | --------------------------------------------------------------------- |
-| GET    | `/health`                       | Public                    | 200 liveness response                                                 |
-| POST   | `/api/links`                    | `shortly-api/links.write` | Create; 201 with link JSON (`version: 1`) and relative `Location`     |
-| GET    | `/api/links`                    | `shortly-api/links.read`  | Newest-first page of up to 25 links owned by caller (`USER#sub`)      |
-| GET    | `/api/links?cursor=...`         | `shortly-api/links.read`  | Next page using returned `nextCursor` (verified against caller)       |
-| GET    | `/api/links/{code}`             | `shortly-api/links.read`  | Link metadata if owned by caller; 404 otherwise                       |
-| PATCH  | `/api/links/{code}`             | `shortly-api/links.write` | Update `url`, `enabled`, `expiresAt`, `clearExpiresAt` with `version` |
-| DELETE | `/api/links/{code}?version=...` | `shortly-api/links.write` | 204 tombstone delete; removes from index and retires short code       |
-| GET    | `/r/{code}`                     | Public                    | 302 with destination in `Location`; 410 if disabled/expired/deleted   |
+| Method | Endpoint                        | Scope                     | Behavior                                                                                 |
+| ------ | ------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------- |
+| GET    | `/health`                       | Public                    | 200 liveness response                                                                    |
+| POST   | `/api/links`                    | `shortly-api/links.write` | Create; 201 with link JSON (`version: 1`) and relative `Location`                        |
+| GET    | `/api/links`                    | `shortly-api/links.read`  | Newest-first page of up to 25 links owned by caller (`USER#sub`)                         |
+| GET    | `/api/links?cursor=...`         | `shortly-api/links.read`  | Next page using returned `nextCursor` (verified against caller)                          |
+| GET    | `/api/links/{code}`             | `shortly-api/links.read`  | Link metadata if owned by caller; 404 otherwise                                          |
+| PATCH  | `/api/links/{code}`             | `shortly-api/links.write` | Update `url`, `enabled`, `expiresAt` with `version`; `expiresAt: null` clears expiration |
+| DELETE | `/api/links/{code}?version=...` | `shortly-api/links.write` | 204 tombstone delete; removes from index and retires short code                          |
+| GET    | `/r/{code}`                     | Public                    | 302 with destination in `Location`; 410 if disabled/expired/deleted                      |
 
 | Status | Error code / condition                                                 |
 | ------ | ---------------------------------------------------------------------- |
@@ -104,14 +104,14 @@ All management requests require a valid OAuth 2.0 `Bearer` access token (`shortl
 
 Defaults run without creating any environment files. Examples: [`apps/web/.env.example`](apps/web/.env.example), [`services/lambda/.env.example`](services/lambda/.env.example).
 
-| Variable                        | Default                 | Notes                                        |
-| ------------------------------- | ----------------------- | -------------------------------------------- |
-| `API_ADDRESS`                   | `127.0.0.1:8080`        | Go local API; loopback hosts only            |
-| `WEB_ORIGIN`                    | `http://localhost:3000` | Exact frontend CORS origin; loopback only    |
-| `NEXT_PUBLIC_API_BASE_URL`      | `http://127.0.0.1:8080` | Public API origin embedded at frontend build |
-| `NEXT_PUBLIC_COGNITO_CLIENT_ID` | `local-web-client`      | Public Cognito PKCE client ID                |
-| `NEXT_PUBLIC_COGNITO_DOMAIN`    | `http://127.0.0.1:8080` | Cognito Hosted UI origin                     |
-| `NEXT_PUBLIC_COGNITO_ISSUER`    | `http://127.0.0.1:8080` | Cognito User Pool OIDC issuer URL            |
+| Variable                        | Default                              | Notes                                        |
+| ------------------------------- | ------------------------------------ | -------------------------------------------- |
+| `API_ADDRESS`                   | `127.0.0.1:8080`                     | Go local API; loopback hosts only            |
+| `WEB_ORIGIN`                    | `http://localhost:3000`              | Exact frontend CORS origin; loopback only    |
+| `NEXT_PUBLIC_API_BASE_URL`      | `http://127.0.0.1:8080`              | Public API origin embedded at frontend build |
+| `NEXT_PUBLIC_COGNITO_CLIENT_ID` | `local-web-client`                   | Public Cognito PKCE client ID                |
+| `NEXT_PUBLIC_COGNITO_DOMAIN`    | `http://127.0.0.1:8080/oauth2-local` | Cognito Hosted UI base URL                   |
+| `NEXT_PUBLIC_COGNITO_ISSUER`    | `http://127.0.0.1:8080/oauth2-local` | Cognito User Pool OIDC issuer URL            |
 
 ## AWS packaging & deployment (Phase 03)
 
@@ -126,7 +126,8 @@ pnpm test:dev
 For redeployments to the `ap-southeast-2` stack:
 
 - `pnpm build:lambdas` builds deterministic `linux/arm64` Lambda archives into `dist/lambdas/`.
-- `pnpm deploy:web` verifies the Terraform account/bucket/distribution/Cognito outputs, builds the static export against `site_url` and Cognito settings, syncs immutable assets before HTML, and creates a CloudFront invalidation.
+- Cognito callback and logout URLs follow Terraform's `site_url`, for both the assigned CloudFront hostname and a custom domain. `web_origin` only controls CORS for browser requests made directly to API Gateway.
+- `pnpm deploy:web` verifies the Terraform account/bucket/distribution outputs and the live Cognito client's callback/logout URLs before building or uploading. The deploying identity needs `cognito-idp:DescribeUserPoolClient` in addition to the existing deployment permissions. It builds the static export against `site_url` and Cognito settings, syncs immutable assets before HTML, and creates a CloudFront invalidation.
 - `go -C services/lambda run ./cmd/smoke -api <api_url> -site <site_url> -bucket <web_bucket> -region ap-southeast-2 -user-pool-id <pool_id> -client-id <client_id> -cognito-domain <cognito_domain>` runs the 50-check multi-user Cognito PKCE cloud smoke suite.
 
-See [authentication design](docs/authentication.md) and [Phase 03 completion report](docs/phase-03-completion.md).
+See the [API contract](contracts/openapi.yaml) for ownership, versioning, expiration and error responses.
