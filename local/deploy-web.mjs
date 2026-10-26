@@ -36,17 +36,28 @@ export function deployWeb(execute = command) {
     distribution_id: id,
     aws_account_id: account,
     aws_region: region,
+    cognito_client_id: cognitoClientId,
+    cognito_domain_url: cognitoDomainUrl,
+    cognito_issuer: cognitoIssuer,
   } = values;
   if (
-    [site, api, bucket, id, account, region].some(
-      (value) => typeof value !== "string" || !value,
-    )
+    [
+      site,
+      api,
+      bucket,
+      id,
+      account,
+      region,
+      cognitoClientId,
+      cognitoDomainUrl,
+      cognitoIssuer,
+    ].some((value) => typeof value !== "string" || !value)
   ) {
     throw new Error(
       "Hosting outputs are incomplete. Finish/import the dev stack and apply its reviewed configuration first.",
     );
   }
-  for (const origin of [site, api]) {
+  for (const origin of [site, api, cognitoDomainUrl]) {
     const url = new URL(origin);
     if (
       url.protocol !== "https:" ||
@@ -55,8 +66,16 @@ export function deployWeb(execute = command) {
       url.password
     )
       throw new Error(
-        "Terraform site/API output must be an HTTPS origin without a path.",
+        "Terraform site/API/Cognito output must be an HTTPS origin without a path.",
       );
+  }
+  const issuerUrl = new URL(cognitoIssuer);
+  if (
+    issuerUrl.protocol !== "https:" ||
+    issuerUrl.username ||
+    issuerUrl.password
+  ) {
+    throw new Error("Terraform Cognito issuer must be an HTTPS URL.");
   }
   if (
     !/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(bucket) ||
@@ -125,7 +144,13 @@ export function deployWeb(execute = command) {
   const pnpmCLI = process.env.npm_execpath;
   if (!pnpmCLI) throw new Error("Run this command with pnpm deploy:web.");
   execute(process.execPath, [pnpmCLI, "build"], {
-    env: { ...process.env, NEXT_PUBLIC_API_BASE_URL: site },
+    env: {
+      ...process.env,
+      NEXT_PUBLIC_API_BASE_URL: site,
+      NEXT_PUBLIC_COGNITO_CLIENT_ID: cognitoClientId,
+      NEXT_PUBLIC_COGNITO_DOMAIN: cognitoDomainUrl,
+      NEXT_PUBLIC_COGNITO_ISSUER: cognitoIssuer,
+    },
   });
   const output = join(repository, "apps/web/out");
   const target = `s3://${bucket}/`;

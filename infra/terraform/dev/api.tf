@@ -1,15 +1,16 @@
 locals {
   routes = {
-    "POST /api/links"         = { function = "create-link", auth = "AWS_IAM" }
-    "GET /api/links"          = { function = "manage-links", auth = "AWS_IAM" }
-    "HEAD /api/links"         = { function = "manage-links", auth = "AWS_IAM" }
-    "GET /api/links/{code}"   = { function = "manage-links", auth = "AWS_IAM" }
-    "HEAD /api/links/{code}"  = { function = "manage-links", auth = "AWS_IAM" }
-    "PATCH /api/links/{code}" = { function = "manage-links", auth = "AWS_IAM" }
-    "GET /r/{code}"           = { function = "resolve-link", auth = "NONE" }
-    "HEAD /r/{code}"          = { function = "resolve-link", auth = "NONE" }
-    "GET /health"             = { function = "manage-links", auth = "NONE" }
-    "HEAD /health"            = { function = "manage-links", auth = "NONE" }
+    "POST /api/links"          = { function = "create-link", auth = "JWT", scopes = ["shortly-api/links.write"] }
+    "GET /api/links"           = { function = "manage-links", auth = "JWT", scopes = ["shortly-api/links.read"] }
+    "HEAD /api/links"          = { function = "manage-links", auth = "JWT", scopes = ["shortly-api/links.read"] }
+    "GET /api/links/{code}"    = { function = "manage-links", auth = "JWT", scopes = ["shortly-api/links.read"] }
+    "HEAD /api/links/{code}"   = { function = "manage-links", auth = "JWT", scopes = ["shortly-api/links.read"] }
+    "PATCH /api/links/{code}"  = { function = "manage-links", auth = "JWT", scopes = ["shortly-api/links.write"] }
+    "DELETE /api/links/{code}" = { function = "manage-links", auth = "JWT", scopes = ["shortly-api/links.write"] }
+    "GET /r/{code}"            = { function = "resolve-link", auth = "NONE", scopes = [] }
+    "HEAD /r/{code}"           = { function = "resolve-link", auth = "NONE", scopes = [] }
+    "GET /health"              = { function = "manage-links", auth = "NONE", scopes = [] }
+    "HEAD /health"             = { function = "manage-links", auth = "NONE", scopes = [] }
   }
 }
 resource "aws_apigatewayv2_api" "http" {
@@ -17,9 +18,9 @@ resource "aws_apigatewayv2_api" "http" {
   protocol_type = "HTTP"
   cors_configuration {
     allow_origins  = [var.web_origin]
-    allow_methods  = ["GET", "HEAD", "POST", "PATCH", "OPTIONS"]
-    allow_headers  = ["Content-Type", "Authorization", "X-Amz-Date", "X-Amz-Security-Token", "X-Amz-Content-Sha256"]
-    expose_headers = ["Location"]
+    allow_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST"]
+    allow_headers  = ["Content-Type", "Authorization"]
+    expose_headers = ["Location", "WWW-Authenticate"]
     max_age        = 300
   }
 }
@@ -33,11 +34,13 @@ resource "aws_apigatewayv2_integration" "lambda" {
   timeout_milliseconds   = 12000
 }
 resource "aws_apigatewayv2_route" "route" {
-  for_each           = local.routes
-  api_id             = aws_apigatewayv2_api.http.id
-  route_key          = each.key
-  target             = "integrations/${aws_apigatewayv2_integration.lambda[each.value.function].id}"
-  authorization_type = each.value.auth
+  for_each             = local.routes
+  api_id               = aws_apigatewayv2_api.http.id
+  route_key            = each.key
+  target               = "integrations/${aws_apigatewayv2_integration.lambda[each.value.function].id}"
+  authorization_type   = each.value.auth
+  authorizer_id        = each.value.auth == "JWT" ? aws_apigatewayv2_authorizer.jwt.id : null
+  authorization_scopes = each.value.auth == "JWT" ? each.value.scopes : null
 }
 resource "aws_lambda_permission" "gateway" {
   for_each      = local.routes

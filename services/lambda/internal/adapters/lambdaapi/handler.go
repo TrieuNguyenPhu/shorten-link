@@ -10,6 +10,8 @@ import (
 	"log/slog"
 	"mime"
 	"net/url"
+	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,7 +21,55 @@ import (
 	"shortlink/internal/domain"
 )
 
+const (
+	scopeRead  = "shortly-api/links.read"
+	scopeWrite = "shortly-api/links.write"
+)
+
 type Handler struct{ service *application.Service }
+
+type linkResponse struct {
+	Code      string     `json:"code"`
+	URL       string     `json:"url"`
+	Enabled   bool       `json:"enabled"`
+	Version   int64      `json:"version"`
+	CreatedAt time.Time  `json:"createdAt"`
+	UpdatedAt time.Time  `json:"updatedAt,omitempty"`
+	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
+}
+
+type pageResponse struct {
+	Links      []linkResponse `json:"links"`
+	NextCursor string         `json:"nextCursor,omitempty"`
+}
+
+func toLinkResponse(l domain.Link) linkResponse {
+	version := l.Version
+	if version < 1 {
+		version = 1
+	}
+	updatedAt := l.UpdatedAt
+	if updatedAt.IsZero() {
+		updatedAt = l.CreatedAt
+	}
+	return linkResponse{
+		Code:      l.Code,
+		URL:       l.URL,
+		Enabled:   l.Enabled,
+		Version:   version,
+		CreatedAt: l.CreatedAt,
+		UpdatedAt: updatedAt,
+		ExpiresAt: l.ExpiresAt,
+	}
+}
+
+func toPageResponse(p domain.Page) pageResponse {
+	links := make([]linkResponse, len(p.Links))
+	for i, l := range p.Links {
+		links[i] = toLinkResponse(l)
+	}
+	return pageResponse{Links: links, NextCursor: p.NextCursor}
+}
 
 func New(service *application.Service) *Handler { return &Handler{service: service} }
 
@@ -34,11 +84,39 @@ func (h *Handler) Resolve(ctx context.Context, request events.APIGatewayV2HTTPRe
 }
 
 var routes = map[string]string{
-	"POST /api/links": "create",
-	"GET /api/links":  "manage", "HEAD /api/links": "manage",
-	"GET /api/links/{code}": "manage", "HEAD /api/links/{code}": "manage", "PATCH /api/links/{code}": "manage",
-	"GET /health": "manage", "HEAD /health": "manage",
-	"GET /r/{code}": "resolve", "HEAD /r/{code}": "resolve",
+	"POST /api/links":          "create",
+	"GET /api/links":           "manage",
+	"HEAD /api/links":          "manage",
+	"GET /api/links/{code}":    "manage",
+	"HEAD /api/links/{code}":   "manage",
+	"PATCH /api/links/{code}":  "manage",
+	"DELETE /api/links/{code}": "manage",
+	"GET /health":              "manage",
+	"HEAD /health":             "manage",
+	"GET /r/{code}":            "resolve",
+	"HEAD /r/{code}":           "resolve",
+}
+
+func authorizeRequest(request events.APIGatewayV2HTTPRequest, requiredScope string) (string, error) {
+	if request.RequestContext.Authorizer == nil || request.RequestContext.Authorizer.JWT == nil {
+		return "", domain.ErrUnauthorized
+	}
+	jwt := request.RequestContext.Authorizer.JWT
+	sub := strings.TrimSpace(jwt.Claims["sub"])
+	if !application.ValidActor(sub) {
+		return "", domain.ErrUnauthorized
+	}
+	if tokenUse := strings.TrimSpace(jwt.Claims["token_use"]); tokenUse != "" && tokenUse != "access" {
+		return "", domain.ErrForbidden
+	}
+	scopes := slices.Clone(jwt.Scopes)
+	if rawScope := strings.TrimSpace(jwt.Claims["scope"]); rawScope != "" {
+		scopes = append(scopes, strings.Fields(rawScope)...)
+	}
+	if !slices.Contains(scopes, requiredScope) {
+		return "", domain.ErrForbidden
+	}
+	return sub, nil
 }
 
 func (h *Handler) handle(ctx context.Context, request events.APIGatewayV2HTTPRequest, group string) (response events.APIGatewayV2HTTPResponse) {
@@ -62,15 +140,19 @@ func (h *Handler) handle(ctx context.Context, request events.APIGatewayV2HTTPReq
 	code := request.PathParameters["code"]
 	switch request.RouteKey {
 	case "POST /api/links":
+		actor, err := authorizeRequest(request, scopeWrite)
+		if err != nil {
+			return operationError(err, request)
+		}
 		var input application.CreateInput
 		if invalid := decode(request, &input); invalid != nil {
 			return *invalid
 		}
-		link, err := h.service.Create(ctx, input)
+		link, err := h.service.Create(ctx, actor, input)
 		if err != nil {
 			return operationError(err, request)
 		}
-		response = jsonResponse(201, link)
+		response = jsonResponse(201, toLinkResponse(link))
 		response.Headers["Location"] = "/api/links/" + link.Code
 		return response
 	case "GET /r/{code}", "HEAD /r/{code}":
@@ -84,36 +166,67 @@ func (h *Handler) handle(ctx context.Context, request events.APIGatewayV2HTTPReq
 	case "GET /health", "HEAD /health":
 		return jsonResponse(200, map[string]string{"status": "ok"})
 	case "GET /api/links", "HEAD /api/links":
+		actor, err := authorizeRequest(request, scopeRead)
+		if err != nil {
+			return operationError(err, request)
+		}
 		query, err := url.ParseQuery(request.RawQueryString)
 		if err != nil {
 			return failure(400, "invalid_input", "malformed query string")
 		}
-		page, err := h.service.List(ctx, query.Get("cursor"))
+		page, err := h.service.List(ctx, actor, query.Get("cursor"))
 		if err != nil {
 			return operationError(err, request)
 		}
-		return jsonResponse(200, page)
+		return jsonResponse(200, toPageResponse(page))
 	case "PATCH /api/links/{code}":
-		var input struct {
-			Enabled *bool `json:"enabled"`
+		actor, err := authorizeRequest(request, scopeWrite)
+		if err != nil {
+			return operationError(err, request)
 		}
+		var input application.UpdateInput
 		if invalid := decode(request, &input); invalid != nil {
 			return *invalid
 		}
-		if input.Enabled == nil {
-			return failure(400, "invalid_input", "enabled must be a boolean")
-		}
-		link, err := h.service.SetEnabled(ctx, code, *input.Enabled)
+		link, err := h.service.Update(ctx, actor, code, input)
 		if err != nil {
 			return operationError(err, request)
 		}
-		return jsonResponse(200, link)
+		return jsonResponse(200, toLinkResponse(link))
+	case "DELETE /api/links/{code}":
+		actor, err := authorizeRequest(request, scopeWrite)
+		if err != nil {
+			return operationError(err, request)
+		}
+		query, err := url.ParseQuery(request.RawQueryString)
+		if err != nil {
+			return failure(400, "invalid_input", "malformed query string")
+		}
+		var version int64
+		if rawVersion := query.Get("version"); rawVersion != "" {
+			parsed, parseErr := strconv.ParseInt(rawVersion, 10, 64)
+			if parseErr != nil || parsed < 1 {
+				return failure(400, "invalid_input", "version must be a positive integer")
+			}
+			version = parsed
+		}
+		if err := h.service.Delete(ctx, actor, code, version); err != nil {
+			return operationError(err, request)
+		}
+		return events.APIGatewayV2HTTPResponse{
+			StatusCode: 204,
+			Headers:    map[string]string{"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
+		}
 	default:
-		link, err := h.service.Get(ctx, code)
+		actor, err := authorizeRequest(request, scopeRead)
 		if err != nil {
 			return operationError(err, request)
 		}
-		return jsonResponse(200, link)
+		link, err := h.service.Get(ctx, actor, code)
+		if err != nil {
+			return operationError(err, request)
+		}
+		return jsonResponse(200, toLinkResponse(link))
 	}
 }
 
@@ -162,8 +275,14 @@ func operationError(err error, request events.APIGatewayV2HTTPRequest) events.AP
 	switch {
 	case errors.Is(err, domain.ErrInvalid):
 		return failure(400, "invalid_input", err.Error())
+	case errors.Is(err, domain.ErrUnauthorized):
+		return failure(401, "unauthorized", domain.ErrUnauthorized.Error())
+	case errors.Is(err, domain.ErrForbidden):
+		return failure(403, "forbidden", domain.ErrForbidden.Error())
 	case errors.Is(err, domain.ErrNotFound):
 		return failure(404, "not_found", domain.ErrNotFound.Error())
+	case errors.Is(err, domain.ErrVersionConflict):
+		return failure(409, "version_conflict", "link was modified; refresh and try again")
 	case errors.Is(err, domain.ErrConflict):
 		return failure(409, "conflict", domain.ErrConflict.Error())
 	case errors.Is(err, domain.ErrGone):

@@ -1,0 +1,528 @@
+openapi: 3.1.0
+info:
+  title: Shortly URL Shortener API
+  version: 0.3.0
+  description: >
+    Serverless URL shortener and link management API (Phase 03).
+    Management routes require a Cognito OAuth 2.0 access token with explicit
+    resource-server scopes (`shortly-api/links.read` or `shortly-api/links.write`).
+    Public redirect (`/r/{code}`) and health (`/health`) routes do not require authentication.
+servers:
+  - url: https://npt-shortenlink.dev
+    description: CloudFront edge origin (forwards /api/*, /r/*, and /health uncached to HTTP API Gateway)
+  - url: http://127.0.0.1:8080
+    description: Local loopback development server
+
+components:
+  securitySchemes:
+    cognitoAccessToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Cognito OAuth 2.0 access token issued via Authorization Code + PKCE.
+        Validated at API Gateway HTTP API by issuer
+        `https://cognito-idp.{region}.amazonaws.com/{userPoolId}`, audience (`client_id`),
+        expiration (`exp`), and route-specific `scope` claims (`shortly-api/links.read`,
+        `shortly-api/links.write`). ID tokens do not carry these access scopes and are rejected.
+
+  parameters:
+    CodeParam:
+      name: code
+      in: path
+      required: true
+      description: Short code or custom alias (3–32 ASCII letters, digits, hyphens, or underscores).
+      schema:
+        type: string
+        pattern: "^[A-Za-z0-9_-]{3,32}$"
+        minLength: 3
+        maxLength: 32
+
+  schemas:
+    ShortLink:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - url
+        - enabled
+        - version
+        - createdAt
+      properties:
+        code:
+          type: string
+          pattern: "^[A-Za-z0-9_-]{3,32}$"
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
+        enabled:
+          type: boolean
+        version:
+          type: integer
+          minimum: 1
+          description: Optimistic concurrency version incremented on every mutation.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+
+    LinkPage:
+      type: object
+      additionalProperties: false
+      required:
+        - links
+      properties:
+        links:
+          type: array
+          maxItems: 25
+          items:
+            $ref: "#/components/schemas/ShortLink"
+        nextCursor:
+          type: string
+          description: Actor-bound opaque pagination cursor for the next page.
+
+    CreateLinkRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
+        alias:
+          type: string
+          pattern: "^[A-Za-z0-9_-]{3,32}$"
+          minLength: 3
+          maxLength: 32
+        expiresAt:
+          type: string
+          format: date-time
+
+    UpdateLinkRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - version
+      description: >
+        At least one mutable field (`url`, `enabled`, or `expiresAt`) must be supplied alongside
+        the expected current `version`. Sending `"expiresAt": null` removes an existing expiration.
+      properties:
+        version:
+          type: integer
+          minimum: 1
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
+        enabled:
+          type: boolean
+        expiresAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+
+    ApplicationErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              enum:
+                - invalid_json
+                - invalid_input
+                - unauthorized
+                - forbidden
+                - forbidden_origin
+                - forbidden_host
+                - not_found
+                - method_not_allowed
+                - conflict
+                - version_conflict
+                - gone
+                - body_too_large
+                - unsupported_media_type
+                - internal_error
+                - unavailable
+            message:
+              type: string
+
+    GatewayErrorEnvelope:
+      type: object
+      description: >
+        Default error payload generated directly by AWS API Gateway HTTP API before invoking Lambda
+        (for example on missing/invalid/expired JWT, missing scope, or stage throttling).
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          examples:
+            - Unauthorized
+            - Forbidden
+            - Too Many Requests
+
+    ErrorResponse:
+      oneOf:
+        - $ref: "#/components/schemas/ApplicationErrorEnvelope"
+        - $ref: "#/components/schemas/GatewayErrorEnvelope"
+
+  responses:
+    UnauthorizedError:
+      description: >
+        Missing, malformed, expired, wrong-issuer, or wrong-audience Bearer token.
+        Rejected at API Gateway before Lambda invocation.
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ForbiddenError:
+      description: >
+        Valid JWT lacks the required route scope (`shortly-api/links.read` or `shortly-api/links.write`),
+        such as when an ID token is presented instead of an access token. Rejected at API Gateway before Lambda.
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    TooManyRequestsError:
+      description: Request throttled by API Gateway stage rate/burst limits.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/GatewayErrorEnvelope"
+
+paths:
+  /health:
+    get:
+      summary: Service liveness check
+      security: []
+      responses:
+        "200":
+          description: Service is reachable.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    const: ok
+    head:
+      summary: Service liveness check (headers only)
+      security: []
+      responses:
+        "200":
+          description: Service is reachable.
+
+  /r/{code}:
+    parameters:
+      - $ref: "#/components/parameters/CodeParam"
+    get:
+      summary: Resolve a short code and redirect to its destination URL
+      security: []
+      responses:
+        "302":
+          description: Active link; redirects with Cache-Control no-store.
+          headers:
+            Location:
+              description: Target HTTP(S) destination URL.
+              schema:
+                type: string
+                format: uri
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+        "400":
+          description: Malformed short code.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationErrorEnvelope"
+        "404":
+          description: Short code does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationErrorEnvelope"
+        "410":
+          description: Link is disabled, expired, or has been deleted (tombstone).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationErrorEnvelope"
+    head:
+      summary: Resolve a short code without a response body
+      security: []
+      responses:
+        "302":
+          description: Active link redirect headers.
+        "400":
+          description: Malformed short code.
+        "404":
+          description: Short code does not exist.
+        "410":
+          description: Link is disabled, expired, or deleted.
+
+  /api/links:
+    post:
+      summary: Create a new short link owned by the authenticated actor
+      security:
+        - cognitoAccessToken:
+            - shortly-api/links.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLinkRequest"
+      responses:
+        "201":
+          description: Short link created with version 1 and assigned to caller `sub`.
+          headers:
+            Location:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShortLink"
+        "400":
+          description: Invalid destination URL, alias, expiration, or JSON body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationErrorEnvelope"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "409":
+          description: Custom alias is already in use (including previously deleted tombstones).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationErrorEnvelope"
+        "413":
+          description: Request body exceeds 16 KiB.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationErrorEnvelope"
+        "415":
+          description: Content-Type is not application/json.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationErrorEnvelope"
+        "429":
+          $ref: "#/components/responses/TooManyRequestsError"
+        "503":
+          description: Could not allocate a random short code after retries.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationErrorEnvelope"
+
+    get:
+      summary: List short links owned by the authenticated actor (newest first)
+      security:
+        - cognitoAccessToken:
+            - shortly-api/links.read
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          description: Opaque pagination cursor bound to the authenticated actor.
+          schema:
+            type: string
+            maxLength: 512
+      responses:
+        "200":
+          description: Paginated list of links belonging to the caller.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LinkPage"
+        "400":
+          description: Malformed or cross-actor tampered pagination cursor.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationErrorEnvelope"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "429":
+          $ref: "#/components/responses/TooManyRequestsError"
+
+    head:
+      summary: Check list endpoint headers for the authenticated actor
+      security:
+        - cognitoAccessToken:
+            - shortly-api/links.read
+      responses:
+        "200":
+          description: OK without response body.
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+
+  /api/links/{code}:
+    parameters:
+      - $ref: "#/components/parameters/CodeParam"
+    get:
+      summary: Retrieve metadata for a short link owned by the authenticated actor
+      security:
+        - cognitoAccessToken:
+            - shortly-api/links.read
+      responses:
+        "200":
+          description: Link metadata for the owner.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShortLink"
+        "400":
+          description: Malformed short code.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationErrorEnvelope"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          description: Link does not exist, was deleted, has no owner, or belongs to another user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationErrorEnvelope"
+
+    head:
+      summary: Retrieve metadata headers for an owned link
+      security:
+        - cognitoAccessToken:
+            - shortly-api/links.read
+      responses:
+        "200":
+          description: Link exists and belongs to the caller.
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          description: Link not found or not owned by caller.
+
+    patch:
+      summary: Update destination URL, expiration, or enabled status with optimistic concurrency
+      security:
+        - cognitoAccessToken:
+            - shortly-api/links.write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLinkRequest"
+      responses:
+        "200":
+          description: Link updated and version incremented.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShortLink"
+        "400":
+          description: Invalid URL, past expiration, missing version, or no mutable fields supplied.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationErrorEnvelope"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          description: Link does not exist, was deleted, or belongs to another user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationErrorEnvelope"
+        "409":
+          description: >
+            Optimistic concurrency failure (`version_conflict`). The link belongs to the caller
+            but its stored version differs from the request's `version`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationErrorEnvelope"
+
+    delete:
+      summary: Delete an owned link and replace it with a minimal non-reusable tombstone
+      security:
+        - cognitoAccessToken:
+            - shortly-api/links.write
+      parameters:
+        - name: version
+          in: query
+          required: false
+          description: Optional expected version for optimistic concurrency checking prior to deletion.
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "204":
+          description: >
+            Link deleted. Destination and GSI owner keys are removed; a minimal tombstone remains
+            so the short code cannot be re-allocated and subsequent redirects return 410 Gone.
+        "400":
+          description: Malformed short code or invalid version query parameter.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationErrorEnvelope"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          description: Link does not exist, was already deleted, or belongs to another user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationErrorEnvelope"
+        "409":
+          description: Optimistic concurrency failure (`version_conflict`) when `version` is supplied and stale.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationErrorEnvelope"

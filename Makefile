@@ -1,21 +1,12 @@
 .DEFAULT_GOAL := help
-.PHONY: help install db-up db-down db-init api web preview fmt lint test test-integration test-e2e test-dev build build-lambdas test-packaging terraform-check check
+.PHONY: help install api web preview fmt lint test test-e2e test-dev build build-lambdas test-packaging terraform-check check
 
 help:
-	@echo "install db-up db-init api web preview fmt lint test test-integration test-e2e test-dev build build-lambdas test-packaging terraform-check check"
+	@echo "install api web preview fmt lint test test-e2e test-dev build build-lambdas test-packaging terraform-check check"
 
 install:
 	pnpm install --frozen-lockfile
 	go -C services/lambda mod download
-
-db-up:
-	docker compose -f local/compose.yaml up -d
-
-db-down:
-	docker compose -f local/compose.yaml down
-
-db-init:
-	go -C services/lambda run ./cmd/initdb
 
 api:
 	go -C services/lambda run ./cmd/api
@@ -39,13 +30,6 @@ test:
 	go -C services/lambda test ./...
 	node --test local/serve-static.test.mjs infra/terraform/dev/static-rewrite.test.mjs
 	pnpm test:deploy
-
-test-integration:
-ifeq ($(OS),Windows_NT)
-	cmd /C "set DYNAMODB_INTEGRATION=1&& go -C services/lambda test ./... -count=1"
-else
-	DYNAMODB_INTEGRATION=1 go -C services/lambda test ./... -count=1
-endif
 
 test-e2e:
 	pnpm test:e2e

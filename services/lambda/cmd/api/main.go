@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	"shortlink/internal/adapters/dynamostore"
 	"shortlink/internal/adapters/httpapi"
+	"shortlink/internal/adapters/memstore"
 	"shortlink/internal/application"
 	"shortlink/internal/localconfig"
 )
@@ -21,7 +21,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	repo := dynamostore.New(cfg.Client(), cfg.Table)
+	repo := memstore.New()
 	server := &http.Server{Addr: cfg.Address, Handler: httpapi.New(application.New(repo), cfg.Origin), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 * 1024}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -33,7 +33,7 @@ func run() error {
 			slog.Error("shutdown API", "error", err)
 		}
 	}()
-	slog.Info("single-user local API listening", "address", cfg.Address, "webOrigin", cfg.Origin)
+	slog.Info("local API listening", "address", cfg.Address, "webOrigin", cfg.Origin)
 	err = server.ListenAndServe()
 	if errors.Is(err, http.ErrServerClosed) {
 		return nil

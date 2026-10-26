@@ -28,13 +28,45 @@ func (r *repository) Get(ctx context.Context, _ string) (domain.Link, error) {
 	r.contextValue = ctx.Value(contextKey{})
 	return r.link, r.err
 }
-func (r *repository) List(_ context.Context, cursor string) (domain.Page, error) {
+func (r *repository) List(_ context.Context, _, cursor string) (domain.Page, error) {
 	r.cursor = cursor
 	return domain.Page{Links: []domain.Link{r.link}, NextCursor: "next"}, r.err
 }
-func (r *repository) SetEnabled(_ context.Context, _ string, enabled bool) (domain.Link, error) {
-	r.link.Enabled = enabled
-	return r.link, r.err
+func (r *repository) Update(_ context.Context, ownerID, _ string, patch domain.LinkPatch) (domain.Link, error) {
+	if r.err != nil {
+		return domain.Link{}, r.err
+	}
+	if r.link.OwnerID != ownerID {
+		return domain.Link{}, domain.ErrNotFound
+	}
+	if r.link.Version != patch.Version {
+		return domain.Link{}, domain.ErrVersionConflict
+	}
+	if patch.URL != nil {
+		r.link.URL = *patch.URL
+	}
+	if patch.Enabled != nil {
+		r.link.Enabled = *patch.Enabled
+	}
+	if patch.ExpiresAtSet {
+		r.link.ExpiresAt = patch.ExpiresAt
+	}
+	r.link.Version++
+	r.link.UpdatedAt = r.link.CreatedAt.Add(time.Minute)
+	return r.link, nil
+}
+func (r *repository) Delete(_ context.Context, ownerID, _ string, version int64, _ time.Time) error {
+	if r.err != nil {
+		return r.err
+	}
+	if r.link.OwnerID != ownerID {
+		return domain.ErrNotFound
+	}
+	if version > 0 && r.link.Version != version {
+		return domain.ErrVersionConflict
+	}
+	r.link.Deleted = true
+	return nil
 }
 
 type contextKey struct{}
@@ -44,12 +76,33 @@ func event(method, path, route, body string) events.APIGatewayV2HTTPRequest {
 		Version: "2.0", RouteKey: method + " " + route, RawPath: path, Body: body,
 		Headers:        map[string]string{"content-type": "application/json"},
 		PathParameters: map[string]string{"code": strings.TrimPrefix(strings.TrimPrefix(path, "/api/links/"), "/r/")},
-		RequestContext: events.APIGatewayV2HTTPRequestContext{RequestID: "gateway-test", HTTP: events.APIGatewayV2HTTPRequestContextHTTPDescription{Method: method}},
+		RequestContext: events.APIGatewayV2HTTPRequestContext{
+			RequestID: "gateway-test",
+			HTTP:      events.APIGatewayV2HTTPRequestContextHTTPDescription{Method: method},
+			Authorizer: &events.APIGatewayV2HTTPRequestContextAuthorizerDescription{
+				JWT: &events.APIGatewayV2HTTPRequestContextAuthorizerJWTDescription{
+					Claims: map[string]string{"sub": "user-123", "token_use": "access"},
+					Scopes: []string{scopeRead, scopeWrite},
+				},
+			},
+		},
 	}
 }
 
+func makeBearer(sub string) string {
+	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"RS256","typ":"JWT"}`))
+	rawClaims, _ := json.Marshal(map[string]any{
+		"sub":       sub,
+		"scope":     "openid email shortly-api/links.read shortly-api/links.write",
+		"token_use": "access",
+		"exp":       time.Now().Add(time.Hour).Unix(),
+	})
+	payload := base64.RawURLEncoding.EncodeToString(rawClaims)
+	return "Bearer " + header + "." + payload + ".signature"
+}
+
 func TestHTTPV2(t *testing.T) {
-	past := time.Now().Add(-time.Hour)
+	past := time.Now().Add(-time.Hour).UTC()
 	for _, tc := range []struct {
 		name, group, method, path, route, body string
 		status                                 int
@@ -70,12 +123,15 @@ func TestHTTPV2(t *testing.T) {
 		{name: "database failure", group: "resolve", method: "GET", path: "/r/test-link", route: "/r/{code}", status: 500, err: errors.New("private database details")},
 		{name: "metadata", group: "manage", method: "GET", path: "/api/links/test-link", route: "/api/links/{code}", status: 200},
 		{name: "list", group: "manage", method: "GET", path: "/api/links", route: "/api/links", status: 200},
-		{name: "disable", group: "manage", method: "PATCH", path: "/api/links/test-link", route: "/api/links/{code}", body: `{"enabled":false}`, status: 200},
-		{name: "missing enabled", group: "manage", method: "PATCH", path: "/api/links/test-link", route: "/api/links/{code}", body: `{}`, status: 400},
+		{name: "disable", group: "manage", method: "PATCH", path: "/api/links/test-link", route: "/api/links/{code}", body: `{"version":1,"enabled":false}`, status: 200},
+		{name: "edit url", group: "manage", method: "PATCH", path: "/api/links/test-link", route: "/api/links/{code}", body: `{"version":1,"url":"https://example.com/updated"}`, status: 200},
+		{name: "version conflict", group: "manage", method: "PATCH", path: "/api/links/test-link", route: "/api/links/{code}", body: `{"version":2,"enabled":false}`, status: 409},
+		{name: "delete", group: "manage", method: "DELETE", path: "/api/links/test-link", route: "/api/links/{code}", status: 204},
+		{name: "missing fields", group: "manage", method: "PATCH", path: "/api/links/test-link", route: "/api/links/{code}", body: `{"version":1}`, status: 400},
 		{name: "health", group: "manage", method: "GET", path: "/health", route: "/health", status: 200},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			link := domain.Link{Code: "test-link", URL: "https://example.com/path?q=1#here", Enabled: !tc.disabled, CreatedAt: past}
+			link := domain.Link{Code: "test-link", OwnerID: "user-123", URL: "https://example.com/path?q=1#here", Enabled: !tc.disabled, Version: 1, CreatedAt: past, UpdatedAt: past}
 			if tc.expired {
 				link.ExpiresAt = &past
 			}
@@ -117,11 +173,62 @@ func TestHTTPV2(t *testing.T) {
 			local := httptest.NewRecorder()
 			req := httptest.NewRequest(tc.method, "http://127.0.0.1:8080"+tc.path, strings.NewReader(tc.body))
 			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", makeBearer("user-123"))
 			httpapi.New(application.New(&repository{link: link, err: tc.err}), "http://localhost:3000").ServeHTTP(local, req)
 			if local.Code != response.StatusCode || local.Header().Get("Location") != response.Headers["Location"] {
 				t.Fatalf("local/native contract differs: local=%d native=%d", local.Code, response.StatusCode)
 			}
+			if tc.path == "/api/links/test-link" && tc.status == 200 {
+				var fields map[string]any
+				if err := json.Unmarshal([]byte(response.Body), &fields); err != nil || fields["code"] == nil || fields["url"] == nil || fields["createdAt"] == nil || fields["version"] == nil {
+					t.Fatalf("unexpected link JSON contract: %s", response.Body)
+				}
+				if strings.TrimSpace(local.Body.String()) != response.Body {
+					t.Fatalf("local/native JSON body differs: local=%s native=%s", local.Body.String(), response.Body)
+				}
+			}
 		})
+	}
+}
+
+func TestHTTPV2AuthAndOwnershipEnforcement(t *testing.T) {
+	past := time.Now().Add(-time.Hour).UTC()
+	link := domain.Link{Code: "test-link", OwnerID: "user-123", URL: "https://example.com", Enabled: true, Version: 1, CreatedAt: past, UpdatedAt: past}
+	h := New(application.New(&repository{link: link}))
+
+	// Missing authorizer claims -> 401
+	unauth := event("GET", "/api/links", "/api/links", "")
+	unauth.RequestContext.Authorizer = nil
+	if resp, _ := h.Manage(context.Background(), unauth); resp.StatusCode != 401 {
+		t.Fatalf("expected 401 for missing authorizer, got %d", resp.StatusCode)
+	}
+
+	// ID token instead of access token -> 403
+	idTokenReq := event("GET", "/api/links", "/api/links", "")
+	idTokenReq.RequestContext.Authorizer.JWT.Claims["token_use"] = "id"
+	if resp, _ := h.Manage(context.Background(), idTokenReq); resp.StatusCode != 403 {
+		t.Fatalf("expected 403 for ID token, got %d", resp.StatusCode)
+	}
+
+	// Missing write scope on POST -> 403
+	readOnlyReq := event("POST", "/api/links", "/api/links", `{"url":"https://example.com"}`)
+	readOnlyReq.RequestContext.Authorizer.JWT.Scopes = []string{scopeRead}
+	if resp, _ := h.Create(context.Background(), readOnlyReq); resp.StatusCode != 403 {
+		t.Fatalf("expected 403 for missing write scope, got %d", resp.StatusCode)
+	}
+
+	// Empty scopes -> 403
+	emptyScopeReq := event("GET", "/api/links", "/api/links", "")
+	emptyScopeReq.RequestContext.Authorizer.JWT.Scopes = nil
+	if resp, _ := h.Manage(context.Background(), emptyScopeReq); resp.StatusCode != 403 {
+		t.Fatalf("expected 403 for empty scopes, got %d", resp.StatusCode)
+	}
+
+	// Cross-user access -> 404
+	otherUserReq := event("GET", "/api/links/test-link", "/api/links/{code}", "")
+	otherUserReq.RequestContext.Authorizer.JWT.Claims["sub"] = "user-999"
+	if resp, _ := h.Manage(context.Background(), otherUserReq); resp.StatusCode != 404 {
+		t.Fatalf("expected 404 for cross-user get, got %d", resp.StatusCode)
 	}
 }
 
@@ -169,6 +276,12 @@ func TestHTTPV2QueryAndMissingPathParameter(t *testing.T) {
 	resp, _ = h.Manage(context.Background(), req)
 	if resp.StatusCode != 400 {
 		t.Fatal("malformed query accepted")
+	}
+	req = event("DELETE", "/api/links/test-link", "/api/links/{code}", "")
+	req.RawQueryString = "version=bad"
+	resp, _ = h.Manage(context.Background(), req)
+	if resp.StatusCode != 400 {
+		t.Fatal("malformed version query accepted")
 	}
 	req = event("HEAD", "/health", "/health", "")
 	resp, _ = h.Manage(context.Background(), req)

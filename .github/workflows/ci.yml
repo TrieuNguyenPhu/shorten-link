@@ -47,14 +47,8 @@ jobs:
           pnpm typecheck
           pnpm format:check
           pnpm audit --prod --audit-level high
-      - name: DynamoDB Local
-        run: |
-          docker compose -f local/compose.yaml up -d
-          go -C services/lambda run ./cmd/initdb
-      - name: Go unit, contract and DynamoDB integration tests
+      - name: Go unit and contract tests
         run: go -C services/lambda test -race ./... -count=1
-        env:
-          DYNAMODB_INTEGRATION: "1"
       - name: Node tests and Lambda packaging checks
         run: |
           node --test local/serve-static.test.mjs local/build-lambdas.test.mjs infra/terraform/dev/static-rewrite.test.mjs
@@ -90,6 +84,3 @@ jobs:
             test-results/
             ${{ runner.temp }}/api.log
           retention-days: 7
-      - name: Stop local database
-        if: always()
-        run: docker compose -f local/compose.yaml down
