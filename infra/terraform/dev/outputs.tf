@@ -1,4 +1,8 @@
-output "site_url" { value = "https://${var.site_domain == "" ? aws_cloudfront_distribution.web.domain_name : var.site_domain}" }
+locals {
+  site_url = "https://${var.site_domain == "" ? aws_cloudfront_distribution.web.domain_name : var.site_domain}"
+}
+
+output "site_url" { value = local.site_url }
 output "api_url" {
   description = "Direct HTTP API Gateway origin."
   value       = aws_apigatewayv2_api.http.api_endpoint
