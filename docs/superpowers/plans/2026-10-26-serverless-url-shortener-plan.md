@@ -84,11 +84,11 @@
     - `domain.NormalizeURL(raw string) (string, error)` (chỉ chấp nhận `http`/`https` hợp lệ)
     - `config.Load() (*config.Config, error)` (`TableName`, `EventBusName`, `WSEndpoint`, `PublicRedirectBaseURL`)
 - **Steps:**
-  - [ ] **Step 1:** Unit tests kiểm tra Base62 7 ký tự, alphabet hợp lệ và URL http/https (từ chối javascript/ftp/rỗng/thiếu host); timestamp createdAt UTC cố định milliseconds và ordering cùng giây theo đặc tả4.2. Không dùng RFC3339Nano biến độ dài cho GSI sort key.
-  - [ ] **Step 2:** Chạy `go -C backend test ./...` để xác nhận test fail trước khi cài đặt.
-  - [ ] **Step 3:** Triển khai `models.go`, `shortcode.go`, `config.go`, `Makefile` và CI nền Go test/vet trên PR; pin toolchain/dependencies được hỗ trợ. Chỉ thêm check của thành phần đã tồn tại, mở rộng CI cùng mỗi phase.
-  - [ ] **Step 4:** Chạy `go -C backend test -race -v ./...` và `go -C backend vet ./...` đảm bảo PASS 100%.
-  - [ ] **Step 5:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 1.1.
+  - [x] **Step 1:** Unit tests kiểm tra Base62 7 ký tự, alphabet hợp lệ và URL http/https (từ chối javascript/ftp/rỗng/thiếu host); timestamp createdAt UTC cố định milliseconds và ordering cùng giây theo đặc tả4.2. Không dùng RFC3339Nano biến độ dài cho GSI sort key.
+  - [x] **Step 2:** Chạy `go -C backend test ./...` để xác nhận test fail trước khi cài đặt.
+  - [x] **Step 3:** Triển khai `models.go`, `shortcode.go`, `config.go`, `Makefile` và CI nền Go test/vet trên PR; pin toolchain/dependencies được hỗ trợ. Chỉ thêm check của thành phần đã tồn tại, mở rộng CI cùng mỗi phase.
+  - [x] **Step 4:** Chạy `go -C backend test -race -v ./...` và `go -C backend vet ./...` đảm bảo PASS 100%.
+  - [x] **Step 5:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 1.1.
 
 #### Task 1.2: Observability Middleware (Structured JSON Logs, EMF Metrics, X-Ray) & Script Đóng Gói Lambda `arm64`
 - **Branch:** `feat/phase-01-task-02-observability-and-packaging`

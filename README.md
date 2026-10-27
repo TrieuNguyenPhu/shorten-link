@@ -2,7 +2,7 @@
 
 Đặc tả và kế hoạch tái triển khai hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS bằng **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js App Router (`output: "export"`)** trên **Amazon S3 (Private) + CloudFront Origin Access Control (OAC)**.
 
-Phase 0 hoàn thiện tài liệu ngày 2026-10-27, dựa trên lượt đọc nguồn ngày 2026-10-26. Chưa có ứng dụng Go/Next.js/Terraform chạy được; kiểm thử AWS và triển khai thuộc các phase tiếp theo và cần được cho phép. AWS cũ đã được xóa theo xác nhận người dùng, không phải kết quả kiểm kê AWS trong phiên này.
+Phase 1 cung cấp nền tảng Go chạy local; HTTP handlers, frontend và Terraform thuộc các phase sau. AWS cũ đã được xóa theo xác nhận người dùng; phiên này không triển khai AWS.
 
 Dự án bám sát kiến trúc hướng sự kiện, thiết kế bảng đơn DynamoDB và luồng xử lý của:
 - **Chuỗi 21 bài viết:** [Serverless Thực Chiến Trên AWS](https://kkloudtarus.net/blog/series/serverless-on-aws-event-driven)
@@ -44,3 +44,19 @@ Dự án bám sát kiến trúc hướng sự kiện, thiết kế bảng đơn 
 5. **Phase 4 — Realtime WebSocket & Moderation** *(Task 4.1 & Task 4.2)*
 6. **Phase 5 — Frontend Next.js & S3/CloudFront Hosting** *(Task 5.1, Task 5.2 & Task 5.3)*
 7. **Phase 6 — Production Operations, Observability & Canary CI/CD** *(Task 6.1 & Task 6.2)*
+
+## 4. Kiểm tra nền tảng local
+
+Yêu cầu Go 1.26.10 (pin trong `backend/go.mod` và CI). Chạy từ root:
+
+```sh
+go -C backend test -race ./...
+go -C backend vet ./...
+# Hoặc: make check
+```
+
+Race detector cần CGO và C compiler trên máy chạy test. CI dùng Linux; trên Windows có thể chạy qua WSL với Go/GCC. `gofmt -l backend` phải không liệt kê file nào.
+
+`domain.GenerateShortCode(7)` dùng crypto/rand, `domain.NormalizeURL` nhận HTTP/HTTPS absolute, IP/localhost và DNS ASCII (IDN dùng punycode), không truy cập đích URL. `FormatCreatedAt` trả UTC cố định 3 chữ số milliseconds để sắp xếp GSI1.
+
+`config.Load()` đọc `TABLE_NAME` bắt buộc; `EVENT_BUS`, `WS_ENDPOINT` và `PUBLIC_REDIRECT_BASE_URL` tùy chọn theo Lambda. Caller kiểm tra biến cần cho nghiệp vụ khi khởi tạo. `WS_ENDPOINT` là HTTP(S) Management API (ví dụ `https://abc.execute-api.ap-southeast-1.amazonaws.com/prod`), không phải địa chỉ `wss://` của browser. Base URL bỏ dấu `/` cuối, không nhận credentials/query/fragment; hỗ trợ path stage của API. Không đưa secret vào repository.
