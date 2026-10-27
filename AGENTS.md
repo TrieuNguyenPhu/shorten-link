@@ -15,7 +15,7 @@ Bạn đang làm việc với vai trò **Senior AWS Serverless Architect + Golan
 | Infrastructure as Code | AWS SAM (`template.yaml`) | **Terraform (HCL)** quản lý 100% tài nguyên |
 | Frontend Dashboard | `web/index.html` (Vanilla HTML/JS) | **Next.js App Router + TypeScript + Tailwind CSS** (`output: "export"`) |
 | Frontend Hosting | Mở file tĩnh cục bộ | **Amazon S3 (Private) + CloudFront với Origin Access Control (OAC)** |
-| Các thành phần AWS khác | DynamoDB, Cognito, HTTP API, WebSocket API, EventBridge, SQS + DLQ, Step Functions, CloudWatch/X-Ray, SNS, CodeDeploy Canary | **Giữ nguyên 100% kiến trúc, hành vi, tên bảng/event schema và access patterns** |
+| Các thành phần AWS khác | DynamoDB, Cognito, HTTP API, WebSocket API, EventBridge, SQS + DLQ, Step Functions, CloudWatch/X-Ray, SNS, CodeDeploy Canary | **Giữ dịch vụ cốt lõi, tên bảng/event schema và access patterns; các sửa lỗi có chủ đích được chốt trong đặc tả kiến trúc** |
 
 ### Các Ràng Buộc Nghiêm Cấm Vi Phạm
 
@@ -40,7 +40,7 @@ Bạn đang làm việc với vai trò **Senior AWS Serverless Architect + Golan
 
 ## 2. Hệ Sinh Thái 13 Bộ Skills Đã Cài Đặt (`~/.agents/skills` & `.agents/skills.json`)
 
-Toàn bộ 13 bộ skill/workflow đã được cài đặt tại `~/.agents/skills` và đăng ký qua `.agents/skills.json` + `~/.gemini/config/skills.json`. Agent cần kích hoạt đúng skill tương ứng ở từng bước:
+Kiểm tra ngày 2026-10-26 ghi nhận 314 thư mục cấp đầu có `SKILL.md`, 376 file `SKILL.md` khi đếm đệ quy (có bản trùng), cùng file đại diện cho 13 bộ dưới đây tại `~/.agents/skills`. Hai cấu hình `.agents/skills.json` và `~/.gemini/config/skills.json` đều trỏ tới thư mục này. Đây là bằng chứng hiện diện/cấu hình, không bảo đảm mọi host tự nạp skill hay xác thực độc lập nguồn gốc và phiên bản. Agent đọc và kích hoạt skill phù hợp với task; xem [bằng chứng audit](docs/phase-0-reference-audit.md#6-bằng-chứng-skills-và-giới-hạn-xác-minh).
 
 | # | Nguồn Skill / Framework | Các Skill Tiêu Biểu | Khi Nào Sử Dụng |
 | --- | --- | --- | --- |
@@ -74,14 +74,16 @@ Mỗi Task trong kế hoạch (`docs/superpowers/plans/2026-10-26-serverless-url
   - `feat/phase-01-task-02-...`
   - `feat/phase-02-task-03-...`
 - Tuyệt đối không gộp nhiều task độc lập vào chung một PR.
+- Sửa review của cùng task tiếp tục trên branch/PR đang mở; không tạo branch hay PR mới chỉ để đóng review.
 
 ### Bước 3: Phát triển theo TDD (`test-driven-development` + `ponytail`)
 - Viết unit test / integration test trước để định nghĩa hành vi.
 - Triển khai code tối giản, rõ ràng, đáp ứng đầy đủ đặc tả kỹ thuật.
 - Chạy bộ kiểm tra tương ứng:
   - Backend Go: `go test -race ./...` và `go vet ./...`
-  - Frontend Next.js: `pnpm lint`, `pnpm typecheck`, `pnpm build` (kiểm tra xuất tĩnh `out/`)
-  - Infrastructure Terraform: `terraform fmt -check` và `terraform validate`
+  - Frontend Next.js: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` (kiểm tra xuất tĩnh `out/`)
+  - Infrastructure Terraform: `terraform fmt -check -recursive`, `terraform init -backend=false`, `terraform validate` và các `terraform test` đã định nghĩa
+- Task chỉ sửa tài liệu kiểm tra diff, liên kết và ví dụ; không tuyên bố đã chạy bộ kiểm thử ứng dụng khi chưa có implementation. Unit test dùng mock ở ranh giới phụ thuộc; integration dùng DynamoDB Local/container hoặc AWS đã được phép.
 
 ### Bước 4: Rà soát bảo mật & chất lượng (`differential-review` + `ponytail-review`)
 - Kiểm tra `git diff` để đảm bảo:

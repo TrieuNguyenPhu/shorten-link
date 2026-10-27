@@ -1,6 +1,8 @@
 # Serverless URL Shortener with Realtime Analytics (AWS + Go + Terraform + Next.js)
 
-Hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS, được tái triển khai bằng **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js App Router (`output: "export"`)** trên **Amazon S3 (Private) + CloudFront Origin Access Control (OAC)**.
+Đặc tả và kế hoạch tái triển khai hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS bằng **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js App Router (`output: "export"`)** trên **Amazon S3 (Private) + CloudFront Origin Access Control (OAC)**.
+
+Phase 0 hoàn thiện tài liệu ngày 2026-10-27, dựa trên lượt đọc nguồn ngày 2026-10-26. Chưa có ứng dụng Go/Next.js/Terraform chạy được; kiểm thử AWS và triển khai thuộc các phase tiếp theo và cần được cho phép. AWS cũ đã được xóa theo xác nhận người dùng, không phải kết quả kiểm kê AWS trong phiên này.
 
 Dự án bám sát kiến trúc hướng sự kiện, thiết kế bảng đơn DynamoDB và luồng xử lý của:
 - **Chuỗi 21 bài viết:** [Serverless Thực Chiến Trên AWS](https://kkloudtarus.net/blog/series/serverless-on-aws-event-driven)
@@ -16,7 +18,7 @@ Dự án bám sát kiến trúc hướng sự kiện, thiết kế bảng đơn 
 | **Infrastructure as Code** | AWS SAM (`template.yaml`) | **Terraform (HCL)** quản lý 100% hạ tầng |
 | **Frontend Dashboard** | `web/index.html` (Vanilla HTML/JS) | **Next.js App Router + TypeScript + Tailwind CSS** (`output: "export"`) |
 | **Frontend Hosting** | File tĩnh cục bộ | **Amazon S3 (Private) + CloudFront (OAC)** |
-| **Dịch vụ Backend AWS** | API Gateway (HTTP + WebSocket), DynamoDB Single-Table (`PK`/`SK` + Sparse `GSI1` + `ttl`), Cognito JWT, EventBridge, SQS + DLQ, Step Functions, CloudWatch/X-Ray, SNS, CodeDeploy Canary | **Giữ nguyên 100% kiến trúc, hợp đồng dữ liệu và luồng sự kiện** |
+| **Dịch vụ Backend AWS** | API Gateway (HTTP + WebSocket), DynamoDB Single-Table (`PK`/`SK` + Sparse `GSI1` + `ttl`), Cognito JWT, EventBridge, SQS + DLQ, Step Functions, CloudWatch/X-Ray, SNS, CodeDeploy Canary | **Giữ dịch vụ, schema và access patterns; sửa lỗi publish, transaction và notifier theo đặc tả** |
 
 ---
 

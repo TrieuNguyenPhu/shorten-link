@@ -1,6 +1,15 @@
 # Phase 0 — Phân Tích Chuyên Sâu Bản Gốc (Reference Audit)
 
-Tài liệu này ghi nhận kết quả kiểm toán toàn diện từ **21 bài viết** trong chuỗi *Serverless Thực Chiến Trên AWS* (`kkloudtarus.net/blog/series/serverless-on-aws-event-driven`, trang 1 và trang 2) và **toàn bộ mã nguồn trên nhánh `main`** của repository `nghiadaulau/serverless-url-shortener-aws`.
+Nguồn được đọc ngày **2026-10-26**, tài liệu hoàn thiện ngày **2026-10-27**. Phạm vi gồm toàn bộ thân bài (code, output và kết luận) của **21 bài** trên [trang 1](https://kkloudtarus.net/blog/series/serverless-on-aws-event-driven) và [trang 2](https://kkloudtarus.net/blog/series/serverless-on-aws-event-driven?page=2), cùng **21 tracked files** tại commit [`a5ffed9780d0447fc75a42def3693732bdc87907`](https://github.com/nghiadaulau/serverless-url-shortener-aws/tree/a5ffed9780d0447fc75a42def3693732bdc87907) trên `main` khi đọc.
+
+| Người kiểm chứng trong nhóm | Phạm vi đã đọc |
+| --- | --- |
+| Agent đọc nhóm 1–7 | Đủ thân bài 1–7, các bước chuyển từ demo sang persistence |
+| Agent đọc nhóm 8–14 | Đủ thân bài 8–14; đã đọc được pagination trang 2 sau lỗi mở trang tạm thời |
+| Agent đọc nhóm 15–21 | Đủ thân bài 15–21, kết quả demo, giới hạn benchmark và mở rộng |
+| Controller | Template, 8 handlers, 4 thư viện, ASL, web, CI và metadata repository |
+
+Đây là audit tĩnh của nguồn và bằng chứng bài viết, không phải lần deploy/chạy AWS của nhóm. Không có nguồn còn thiếu; không suy diễn demo của tác giả thành kết quả kiểm thử bản Go. Việc dọn AWS cũ là xác nhận của người dùng, không được kiểm kê lại trong phiên hoàn thiện tài liệu.
 
 ---
 
@@ -8,34 +17,34 @@ Tài liệu này ghi nhận kết quả kiểm toán toàn diện từ **21 bài
 
 | Bài | Tiêu đề & URL | Nội dung kỹ thuật cốt lõi | Trạng thái ở cuối bài 21 (`main`) |
 | --- | --- | --- | --- |
-| **01** | `/blog/what-is-serverless-when-to-use` | Kiến trúc tổng thể hệ thống URL Shortener với Realtime Analytics trên AWS. | Giữ làm kim chỉ nam kiến trúc |
-| **02** | `/blog/aws-sam-first-lambda-function` | Khởi tạo SAM, Lambda đầu tiên (`arm64`, `nodejs22.x`, `esbuild`). | Đã thay bằng 8 hàm nghiệp vụ thực tế |
-| **03** | `/blog/how-lambda-runs-your-code` | Vòng đời Execution Environment (Init/Invoke), khởi tạo SDK ở cấp module để tái sử dụng kết nối warm. | Áp dụng trong `src/lib/db.ts`, `resolve-link.ts`, `ws.ts` |
-| **04** | `/blog/api-gateway-http-vs-rest-api` | So sánh HTTP API v2 và REST API v1; định nghĩa `POST /links`, `GET /{code}`, hàm sinh Base62 7 ký tự. | Giữ nguyên trong `HttpApi` & `shortcode.ts` |
-| **05** | `/blog/dynamodb-single-table-design` | Thiết kế bảng đơn `url-shortener` (`PK`, `SK`, `PAY_PER_REQUEST`), item collection `LINK#<code>` (`META` + `STAT#<date>`). | Giữ nguyên trong `template.yaml` |
-| **06** | `/blog/dynamodb-gsi-and-sparse-index` | Thêm `GSI1` (`GSI1PK`, `GSI1SK`) tận dụng đặc tính Sparse Index (chỉ `META` và `CONN#` có khóa GSI1). | Giữ nguyên trong `template.yaml` |
-| **07** | `/blog/dynamodb-conditional-writes-atomic-counter` | Chống trùng mã ngắn bằng `ConditionExpression: attribute_not_exists(PK)` (tối đa 5 lần thử). Bộ đếm trực tiếp ở `resolve-link` là bước trung gian trước bài 10. | Conditional write ở `create-link` giữ nguyên; bộ đếm ở `resolve-link` được thay bằng EventBridge ở bài 10 |
-| **08** | `/blog/cognito-jwt-authorizer-http-api` | Thêm Cognito `UserPool`, `UserPoolClient` và `CognitoAuthorizer` (JWT) gắn riêng cho route cần bảo vệ; lấy `ownerId` từ `claims.sub`. | Giữ nguyên trong `template.yaml` & các handler |
-| **09** | `/blog/multi-tenant-prevent-idor-dynamodb` | Thêm `GET /links` (query `GSI1` theo `USER#<sub>`) và `DELETE /links/{code}` (chặn IDOR bằng `ConditionExpression: attribute_exists(PK) AND ownerId = :me`). | Giữ nguyên trong `list-links.ts` & `delete-link.ts` |
-| **10** | `/blog/eventbridge-publish-click-events` | Tách việc đếm click khỏi `resolve-link`: phát sự kiện `link.clicked` (`source: urlshortener`) lên custom bus `url-shortener-events` trước khi trả `301`. | Giữ nguyên trong `resolve-link.ts` |
-| **11** | `/blog/lambda-sqs-idempotency-dlq-aggregator` | Đệm sự kiện qua `ClickQueue` + `ClickDLQ` (`maxReceiveCount: 3`), xử lý bằng `ClickAggregatorFunction` với `TransactWriteItems` (tăng `META.clicks`, tăng `STAT#<date>.count`, ghi marker `CLICK#<id>` có TTL 24h) và `ReportBatchItemFailures`. | Giữ nguyên trong `click-aggregator.ts` |
-| **12** | `/blog/api-gateway-websocket-realtime-push` | Thêm `WebSocketApi` (`$connect`, `$disconnect`), lưu `CONN#<connId>` kèm `GSI1PK = WSCODE#<code>` (TTL 2h), đẩy `{ code, clicks }` qua `PostToConnection` và dọn kết nối chết khi gặp `410 GoneException`. | Giữ nguyên trong `ws-connect.ts`, `ws-disconnect.ts`, `ws.ts` |
-| **13** | `/blog/step-functions-workflow-saga` | Thêm Step Functions `LinkModerationStateMachine` (`CheckSafety -> IsSafe -> Activate/Reject/MarkError`) cập nhật trực tiếp DynamoDB; giải thích thêm lý thuyết Saga. | State Machine độc lập trong `statemachine/moderation.asl.json` |
-| **14** | `/blog/lambda-powertools-xray-observability` | Tích hợp Lambda Powertools (Logger, Tracer X-Ray, Metrics EMF `LinkResolved`/`LinkNotFound`) cho `resolve-link`. | Giữ nguyên trong `powertools.ts` & `resolve-link.ts` |
-| **15** | `/blog/cloudwatch-alarms-dashboard-slo` | Thêm SNS `AlarmTopic`, 2 CloudWatch Alarms (`ResolveThrottleAlarm`, `ResolveErrorAlarm`) và CloudWatch Dashboard 3 widgets. | Giữ nguyên trong `template.yaml` |
-| **16** | `/blog/lambda-cold-start-optimization` | Thử nghiệm tăng RAM 128 MB → 512 MB để giảm cold start, sau đó đưa về 128 MB để tiết kiệm chi phí; phân tích SnapStart và Provisioned Concurrency. | Cấu hình cuối cùng giữ `MemorySize: 128` |
-| **17** | `/blog/serverless-security-iam-least-privilege-waf` | Siết IAM least-privilege riêng cho từng hàm, bật API Gateway throttling (`BurstLimit: 2`, `RateLimit: 5`), bàn luận lý thuyết SSM và WAF. | IAM least-privilege & throttling có trong `template.yaml` |
-| **18** | `/blog/serverless-cicd-canary-rollback` | Thêm `.github/workflows/ci.yml` và cấu hình CodeDeploy `Canary10Percent5Minutes` kèm `AutoPublishAlias: live` + tự động rollback theo `ResolveErrorAlarm` cho `ResolveLinkFunction`. | Có trong `template.yaml` & `ci.yml` |
-| **19** | `/blog/serverless-cost-breakdown` | Phân tích chi phí thực tế trên AWS Cost Explorer và các bẫy chi phí ngầm (NAT Gateway, Provisioned Concurrency, CloudWatch). | Tài liệu vận hành & kiểm soát chi phí |
-| **20** | `/blog/serverless-load-test-k6` | Kịch bản k6 kiểm thử tải endpoint `GET /{code}` (40 VUs), quan sát cơ chế cắt tải 2 tầng (`429` ở API Gateway và `503` ở Lambda). | Script k6 nằm trong nội dung bài viết |
-| **21** | `/blog/serverless-capstone-well-architected` | Đánh giá hệ thống theo 5 trụ cột AWS Well-Architected, hướng dẫn dọn dẹp và đề xuất hướng mở rộng. | Trạng thái hoàn chỉnh cuối series + `web/index.html` |
+| **01** | [Tổng quan serverless](https://kkloudtarus.net/blog/what-is-serverless-when-to-use) | Sơ đồ mục tiêu URL Shortener. | WAF/luồng moderation trên sơ đồ không chứng minh được nối trong code; WAF chưa dựng. |
+| **02** | [Lambda đầu tiên với SAM](https://kkloudtarus.net/blog/aws-sam-first-lambda-function) | Lambda arm64, nodejs22.x, esbuild. | Hello Function URL là bước tạm, được thay bằng 8 Lambda nghiệp vụ. |
+| **03** | [Vòng đời Lambda](https://kkloudtarus.net/blog/how-lambda-runs-your-code) | Init/Invoke, tái sử dụng SDK client khi warm. | Demo CPU/cold start Node không phải baseline Go. |
+| **04** | [HTTP API và REST API](https://kkloudtarus.net/blog/api-gateway-http-vs-rest-api) | POST /links, GET /{code}, Base62 7 ký tự. | Create chưa persist, resolve URL giả; thay ở bài 7. Cache 301 có thể bỏ qua backend ở lần mở sau. |
+| **05** | [DynamoDB single-table](https://kkloudtarus.net/blog/dynamodb-single-table-design) | PK/SK, PAY_PER_REQUEST, META/STAT item collection. | Daily collection chỉ CLI demo; không có endpoint daily analytics. |
+| **06** | [GSI và sparse index](https://kkloudtarus.net/blog/dynamodb-gsi-and-sparse-index) | GSI1PK/GSI1SK, META sparse index. | CONN thêm ở bài 12; không gán ngược cho bài 6. |
+| **07** | [Conditional writes và counter](https://kkloudtarus.net/blog/dynamodb-conditional-writes-atomic-counter) | attribute_not_exists(PK), tối đa 5 lần ghi. | Owner user-001 và DynamoDBCrudPolicy là tạm; chống collision không là idempotency POST. Counter trực tiếp thay ở bài 10. |
+| **08** | [Cognito JWT](https://kkloudtarus.net/blog/cognito-jwt-authorizer-http-api) | User Pool, App Client, JWT authorizer, claims.sub. | Có trong main cho 3 route cần bảo vệ; resolve public. |
+| **09** | [Multi-tenant và IDOR](https://kkloudtarus.net/blog/multi-tenant-prevent-idor-dynamodb) | Query USER#sub, delete condition tồn tại và ownerId=:me. | Có trong main; không lấy owner từ client. |
+| **10** | [Publish click qua EventBridge](https://kkloudtarus.net/blog/eventbridge-publish-click-events) | source=urlshortener, detail-type=link.clicked, bus url-shortener-events. | ClickLogger nhận EventBridge trực tiếp là tạm, thay bằng SQS/aggregator ở bài 11. |
+| **11** | [SQS, idempotency và DLQ](https://kkloudtarus.net/blog/lambda-sqs-idempotency-dlq-aggregator) | Transaction META/STAT/CLICK, ReportBatchItemFailures. | Marker+24h, batch10/visibility30/maxReceive3/DLQ14d; dedupe hữu hạn, không exactly-once vô hạn. |
+| **12** | [WebSocket realtime](https://kkloudtarus.net/blog/api-gateway-websocket-realtime-push) | CONN, WSCODE GSI, TTL2h, PostToConnection và cleanup410. | Connect công khai: ai biết code đều theo dõi count được; TTL không là authorization. |
+| **13** | [Step Functions và Saga](https://kkloudtarus.net/blog/step-functions-workflow-saga) | CheckSafety → IsSafe → Activate/Reject; Catch → MarkError. | Độc lập/manual: không pending/StartExecution, không chặn redirect; MarkError là Fail, không ghi status=error. |
+| **14** | [Powertools và X-Ray](https://kkloudtarus.net/blog/lambda-powertools-xray-observability) | Logger/Tracer/EMF LinkResolved/LinkNotFound. | Chỉ resolve có đủ middleware; tracing Active mọi Lambda không đồng nghĩa mọi handler có JSON/EMF. |
+| **15** | [Alarms, dashboard và SLO](https://kkloudtarus.net/blog/cloudwatch-alarms-dashboard-slo) | SNS, ResolveThrottleAlarm, ResolveErrorAlarm, dashboard3widgets. | SNS chưa subscription; alarms Sum>=1/60s/1period/notBreaching. SLO99.9%/p99<200ms là mục tiêu ví dụ chưa enforcement. |
+| **16** | [Tối ưu cold start](https://kkloudtarus.net/blog/lambda-cold-start-optimization) | Thử RAM128→512, phân tích SnapStart/Provisioned Concurrency. | Final memory128/timeout5/arm64. Benchmark Node và quota tài khoản10 không phải baseline Go. |
+| **17** | [IAM, throttling và WAF](https://kkloudtarus.net/blog/serverless-security-iam-least-privilege-waf) | Thu hẹp IAM theo hàm, API throttling. | Final rate5/burst2/CORS*. WAF/SSM chỉ thảo luận. |
+| **18** | [CI/CD và canary](https://kkloudtarus.net/blog/serverless-cicd-canary-rollback) | live alias, canary10%5min, ResolveErrorAlarm. | CI build/validate only, OIDC chưa có. Demo success, chưa chứng minh rollback bằng fault injection. |
+| **19** | [Phân tích chi phí](https://kkloudtarus.net/blog/serverless-cost-breakdown) | Cost Explorer, bẫy NAT/Provisioned Concurrency/Logs. | Hóa đơn lịch sử tác giả không bảo đảm giá hiện tại hay chi phí bằng0 cho tài khoản khác. |
+| **20** | [Kiểm thử k6](https://kkloudtarus.net/blog/serverless-load-test-k6) | 40VU, 429/503, redirects:0. | Script chỉ trong bài; nhiều failed, ~554RPS không phải successful throughput. |
+| **21** | [Capstone Well-Architected](https://kkloudtarus.net/blog/serverless-capstone-well-architected) | Tổng kết, cleanup, hướng mở rộng. | Dashboard được nhắc như mở rộng nhưng main có HTML login/create/list/delete/WS; chưa hosting S3/CloudFront. |
 
 ---
 
 ## 2. Phân Tích Chi Tiết Source Code Gốc (`nghiadaulau/serverless-url-shortener-aws`)
 
 ### 2.1 Cấu Trúc File Của Repository Gốc
-Repository gốc trên nhánh `main` gồm 19 file:
+Repository tại SHA nêu trên gồm **21 tracked files** (đếm bằng `git ls-files`):
 - `template.yaml` (549 dòng): Định nghĩa toàn bộ tài nguyên SAM/CloudFormation.
 - `src/lib/db.ts`: Khởi tạo `DynamoDBDocumentClient` bọc X-Ray, hằng `TABLE` (`TABLE_NAME ?? "url-shortener"`), hàm `linkKey(code)`.
 - `src/lib/powertools.ts`: Khởi tạo `Logger`, `Tracer`, `Metrics` (`namespace: "UrlShortener"`, `serviceName: "url-shortener"`).
@@ -52,8 +61,9 @@ Repository gốc trên nhánh `main` gồm 19 file:
 - `statemachine/moderation.asl.json`: Định nghĩa ASL cho `LinkModerationStateMachine`.
 - `web/index.html`: Giao diện HTML/JS đơn giản gọi Cognito `InitiateAuth` (`USER_PASSWORD_AUTH`), gọi HTTP API và mở kết nối WebSocket theo từng mã link.
 - `.github/workflows/ci.yml`: Chạy `npm ci`, `sam build`, `sam validate --lint`.
+- `.gitignore`, `README.md`, `package.json`, `package-lock.json`, `tsconfig.json`: 5 file metadata/cấu hình còn lại. Lockfile version 3 có 109 packages; không suy diễn đó là baseline dependency Go/Next.js.
 
-### 2.2 Chi Tiết 8 Hàm Lambda & Quyền IAM Least-Privilege Trong Bản Gốc
+### 2.2 Chi Tiết 8 Hàm Lambda & Quyền IAM Trong Bản Gốc
 
 | Hàm Lambda | Trigger | Biến môi trường | Quyền IAM (`template.yaml`) |
 | --- | --- | --- | --- |
@@ -65,6 +75,8 @@ Repository gốc trên nhánh `main` gồm 19 file:
 | `WsConnectFunction` | `WebSocketApi` `$connect` | `TABLE_NAME` | `dynamodb:PutItem` trên `Table.Arn` |
 | `WsDisconnectFunction` | `WebSocketApi` `$disconnect` | `TABLE_NAME` | `dynamodb:DeleteItem` trên `Table.Arn` |
 | `ModerateCheckFunction` | Step Functions `CheckSafety` | *(Không có)* | Quyền mặc định ghi CloudWatch Logs & X-Ray |
+
+SAM còn sinh quyền poll SQS (`ReceiveMessage`, `DeleteMessage`, `GetQueueAttributes`) cho consumer, quyền Logs/X-Ray và role Step Functions. Terraform phải khai báo tường minh, scope theo resource; bảng trên không chứng nhận mọi policy nguồn đã tối thiểu tuyệt đối.
 
 ---
 
@@ -79,7 +91,7 @@ Repository gốc trên nhánh `main` gồm 19 file:
 | Step Functions `LinkModerationStateMachine` | **Đã code độc lập** | Được khai báo trong `template.yaml` và `statemachine/moderation.asl.json`, nhưng **không được tự động kích hoạt** khi tạo link và `resolve-link` **không chặn** theo trường `status` |
 | Powertools (Log/Trace/Metrics) + CloudWatch Alarms + Dashboard | **Đã code** | Áp dụng cho `resolve-link` và `db.ts`; có 2 alarms + SNS topic + Dashboard 3 widgets |
 | CodeDeploy Canary 10% 5 phút + Auto Rollback | **Đã code** | Khai báo trên `ResolveLinkFunction` với alias `live` và `ResolveErrorAlarm` |
-| GitHub Actions OIDC Deploy tự động lên AWS | **Chưa code trong repo (chỉ giải thích ở bài 18)** | File `.github/workflows/ci.yml` gốc chỉ chạy `sam build` và `sam validate --lint`. Trong bản port này, ta sẽ triển khai đầy đủ cả CI và CD dùng GitHub OIDC + Terraform + CodeDeploy + S3/CloudFront theo yêu cầu Mục 11 |
+| GitHub Actions OIDC Deploy tự động lên AWS | **Chưa code trong repo** | CI gốc build/validate; bản port bổ sung bootstrap OIDC ở Task 2.2 và CD ở Task 6.2 |
 | Kịch bản Load Test `k6` | **Nằm trong bài viết 20** | Chưa có file trong repo gốc; ta sẽ đóng gói vào `tests/load/redirect.k6.js` với chế độ mặc định tải nhỏ an toàn và chế độ stress riêng |
 | AWS WAF / Provisioned Concurrency / Route 53 Custom Domain | **Chỉ giải thích mở rộng** | Tốn phí cố định theo giờ/tháng; giữ tắt mặc định đúng theo yêu cầu dự án |
 
@@ -89,29 +101,35 @@ Repository gốc trên nhánh `main` gồm 19 file:
 
 ### 4.1 Những Lỗi Kỹ Thuật Phải Sửa Trong Bản Go Để Đảm Bảo Chính Xác Dữ Liệu
 
-1. **Phân biệt nguyên nhân `TransactionCanceledException` trong `ClickAggregator` (Bắt buộc theo Mục 7):**
+Hợp đồng lỗi đầy đủ nằm tại [đặc tả kiến trúc](architecture-and-contracts.md), mục 3.4, 5.2 và 5.4. Các delta có chủ đích:
+
+1. **Phân biệt nguyên nhân `TransactionCanceledException` trong `ClickAggregator`:**
    - **Vấn đề ở bản gốc:** `click-aggregator.ts` bắt mọi `TransactionCanceledException` và coi toàn bộ là sự kiện trùng (`duplicate, skip`). Tuy nhiên khi nhiều click xảy ra đồng thời trên cùng một mã link, DynamoDB có thể trả về `TransactionCanceledException` với `CancellationReasons[0].Code = "TransactionConflict"` hoặc `CancellationReasons[1].Code = "TransactionConflict"`. Bản gốc nuốt luôn lỗi này khiến sự kiện bị mất vĩnh viễn mà không được SQS retry.
-   - **Cách sửa trong bản Go:** Kiểm tra mảng `CancellationReasons` của `*types.TransactionCanceledException`. Chỉ bỏ qua như duplicate khi `len(reasons) == 3 && reasons[2].Code != nil && *reasons[2].Code == "ConditionalCheckFailed"` (tức chỉ có điều kiện `attribute_not_exists(PK)` của `CLICK#<eventId>` bị vi phạm). Mọi lý do hủy khác (`TransactionConflict`, `ProvisionedThroughputExceeded`, v.v.) phải trả về lỗi để đưa `messageId` vào `batchItemFailures` cho SQS retry.
+   - **Cách sửa trong bản Go:** Kiểm tra đủ cả ba lý do với bounds/nil checks; duplicate chỉ khi marker conditional failure và hai lý do khác `None`. Operational/mixed/unknown errors phải retry. META update thêm condition tồn tại; ack late-deleted chỉ sau consistent read xác nhận META mất, không tạo STAT/marker hoặc push. Không đổi schema để giải quyết code reuse.
 
-2. **Cô lập lỗi đẩy WebSocket khỏi kết quả xử lý Transaction (Bắt buộc theo Mục 7):**
-   - **Vấn đề ở bản gốc:** Trong `click-aggregator.ts`, lệnh `await pushClickUpdate(code)` nằm chung trong khối `try` của record SQS. Nếu API Gateway Management API gặp lỗi mạng tạm thời, record bị đánh dấu thất bại và SQS gửi lại.
-   - **Cách sửa trong bản Go:** Sau khi `TransactWriteItems` thành công, việc gọi `pushClickUpdate(ctx, code)` được bọc xử lý lỗi riêng: ghi structured warning log nếu việc đẩy WebSocket thất bại (trừ `410 GoneException` thì xóa connection), nhưng **không** đánh dấu message SQS thất bại và tuyệt đối không làm tăng bộ đếm lần hai.
+2. **Cô lập lỗi đẩy WebSocket khỏi kết quả transaction:**
+   - **Bản gốc:** `ws.ts` nuốt lỗi `PostToConnection` non-410; lỗi DynamoDB Get/Query/cleanup mới propagate qua `pushClickUpdate` ra khối catch SQS. Vì vậy không đúng khi nói mọi lỗi mạng push đều làm SQS retry.
+   - **Bản Go:** Cô lập toàn bộ notifier sau commit, log lỗi; record đã commit vẫn thành công, push best-effort. Đọc META consistent, paginate mọi connection và list user links qua `LastEvaluatedKey`; GSI vẫn eventual consistency. UI reconnect rồi nạp lại GET links, hợp nhất count bằng max.
 
-3. **Cấu hình `PUBLIC_REDIRECT_BASE_URL` cho `shortUrl` (Bắt buộc theo Mục 5):**
+3. **Cấu hình `PUBLIC_REDIRECT_BASE_URL` cho `shortUrl`:**
    - **Vấn đề khi tách Frontend CloudFront và API Gateway:** Bản gốc ghép `https://${event.requestContext.domainName}/${code}`. Trong bản đích, để đảm bảo luôn tạo đúng `shortUrl` trỏ về public redirect base URL của API Gateway (không bị nhầm sang domain CloudFront của frontend), Lambda `create-link` ưu tiên đọc biến môi trường `PUBLIC_REDIRECT_BASE_URL` do Terraform truyền vào (fallback về `https://${event.requestContext.domainName}` nếu không cấu hình).
 
-4. **Hỗ trợ cả Cognito Hosted UI (Authorization Code + PKCE) và User Password Auth:**
-   - Bản gốc chỉ bật `ALLOW_USER_PASSWORD_AUTH` cho `web/index.html`. Trong Terraform mới, `aws_cognito_user_pool_client` được cấu hình đầy đủ OAuth2 Authorization Code + PKCE (`code` flow, Hosted UI domain, callback/logout URLs trỏ về CloudFront & localhost) theo đúng yêu cầu Mục 9, đồng thời giữ `ALLOW_USER_SRP_AUTH` / `ALLOW_USER_PASSWORD_AUTH` để phục vụ script kiểm thử tích hợp tự động.
+4. **Cognito Hosted UI Authorization Code + PKCE cho UI:** Bản gốc dùng password auth; bản port không thêm direct-login fallback. User password flow chỉ bật khi cấu hình rõ cho E2E CLI. Không mang password demo hoặc nội suy `innerHTML` từ nguồn sang React.
+
+5. **Kiểm tra publish:** `resolve-link.ts` không kiểm `FailedEntryCount`/`Entries.ErrorCode`. Go kiểm từng entry, retry có giới hạn và chỉ trả 301 khi có EventId; lỗi phát metric và Lambda error/API5xx. Timeout publish bất định và bus thiếu có thể làm mất/đếm lại event; xem hợp đồng 3.4.
 
 ### 4.2 Những Hành Vi & Giới Hạn Của Bản Gốc Được Giữ Nguyên (Có Ghi Chú Rõ)
 
 1. **Step Functions Moderation (`LinkModerationStateMachine`) giữ nguyên là workflow độc lập:**
    - Giữ đúng định nghĩa `statemachine/moderation.asl.json` (`CheckSafety` → `IsSafe` → `Activate` / `Reject` / `MarkError`) cập nhật thuộc tính `status` (`active` / `rejected`) trên item `LINK#<code>` (`SK = META`).
    - Không tự ý gắn đồng bộ vào `POST /links` hay chặn `GET /{code}` để bảo toàn 100% hợp đồng API và độ trễ thấp của bản gốc; cung cấp tài liệu và kịch bản kích hoạt thực thi rõ ràng.
+   - Substring blocklist `malware/phishing/evil`; Retry `Lambda.ServiceException`, `Lambda.TooManyRequestsException`, `States.TaskFailed` (1s/3/2), Catch `States.ALL`. `MarkError` là Fail, không ghi status=error. Giữ ASL Activate/Reject có thể upsert META thiếu dữ liệu: runbook tạo item hợp lệ trước và không chạy cùng xóa link.
 2. **Giới hạn bảo mật của WebSocket `$connect` gốc:**
    - Route `$connect?code=<code>` trong bản gốc không gắn authorizer và mỗi kết nối đăng ký theo một `code`. Ta giữ nguyên hành vi này để tương thích hoàn toàn với thiết kế bảng đơn (`PK = CONN#<connectionId>`, `GSI1PK = WSCODE#<code>`), đồng thời ghi rõ giới hạn bảo mật trong tài liệu kiến trúc.
+   - Ai biết code đều có thể theo dõi count; connection TTL không là authorization, push không có durable delivery.
 3. **Thống kê theo ngày (`STAT#<YYYY-MM-DD>`):**
    - `ClickAggregator` vẫn ghi đầy đủ item `PK = LINK#<code>, SK = STAT#<YYYY-MM-DD>` trong cùng transaction như bản gốc. Dashboard Next.js chỉ sử dụng các API gốc (`POST /links`, `GET /links`, `DELETE /links/{code}`) và luồng WebSocket `{ code, clicks }` mà không tự ý bịa thêm endpoint mới.
+4. **Giới hạn count:** giữ marker TTL+24h, không bỏ qua marker còn tồn tại chỉ vì TTL đã qua. Sau khi marker mất, replay có thể đếm lại; DLQ14d yêu cầu đối soát tuổi/cause trước redrive. Cache301, EventBridge id mới khi republish và code reuse ngăn việc hứa unique visits hoặc exactly-once vô hạn.
 
 ---
 
@@ -137,3 +155,25 @@ Repository gốc trên nhánh `main` gồm 19 file:
 | Vanilla HTML Dashboard | `web/index.html` | Next.js App Router (`output: "export"`) + TypeScript + Tailwind CSS trên S3 + CloudFront OAC | `frontend/src/*` |
 | CI Workflow | `.github/workflows/ci.yml` | GitHub Actions CI + CD (OIDC, Go build/test, Next.js export, Terraform, CodeDeploy Canary, S3 sync + CloudFront invalidation) | `.github/workflows/ci.yml` & `.github/workflows/deploy.yml` |
 | Load Test Script | *(Trong bài viết 20)* | Kịch bản k6 với chế độ smoke mặc định và stress test theo biến môi trường | `tests/load/redirect.k6.js` |
+
+## 6. Bằng Chứng Skills Và Giới Hạn Xác Minh
+
+Kiểm tra ngày 2026-10-26: **314** thư mục cấp đầu có `SKILL.md`, **376** file `SKILL.md` đệ quy (có trùng). `.agents/skills.json` và `~/.gemini/config/skills.json` cùng trỏ `~/.agents/skills`; không cài lại trong phiên này.
+
+| Bộ khai báo | File đại diện đã thấy dưới `~/.agents/skills/` |
+| --- | --- |
+| obra/superpowers | `using-superpowers/SKILL.md` |
+| DietrichGebert/ponytail | `ponytail/SKILL.md` |
+| OthmanAdi/planning-with-files | `planning-with-files/SKILL.md` |
+| JuliusBrussee/caveman | `caveman/SKILL.md` |
+| trailofbits/skills | `differential-review/SKILL.md` |
+| vercel-labs/agent-skills | `react-best-practices/SKILL.md` |
+| anthropics/skills | `frontend-design/SKILL.md` |
+| open-gsd/gsd-core | `gsd-help/SKILL.md` |
+| Egonex-AI/Understand-Anything | `understand/SKILL.md` |
+| alibaba/open-code-review | `open-code-review/SKILL.md` |
+| nextlevelbuilder/ui-ux-pro-max-skill | `ui-ux-pro-max/SKILL.md` |
+| Leonxlnx/taste-skill | `taste-skill/SKILL.md` |
+| shanraisshan/claude-code-best-practice | `vibe-to-agentic-framework/SKILL.md` |
+
+Hiện diện file và cấu hình không chứng minh mọi host tự động nạp skill, cũng không xác thực độc lập provenance/phiên bản từng bộ. Phase 0 hoàn thành ở mức audited specification, chưa có app hoặc AWS E2E được chạy.

@@ -1,12 +1,14 @@
 # Serverless URL Shortener with Realtime Analytics — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` or `superpowers:executing-plans` together with `planning-with-files` and `ponytail` to implement this plan task-by-task. Every completed task MUST update `PROJECT_STATUS.md`, `task_plan.md`, `progress.md`, and `findings.md`, and be submitted as its own dedicated Pull Request.
+> **Dành cho agent:** Dùng `superpowers:subagent-driven-development` hoặc `superpowers:executing-plans` cùng `planning-with-files` và `ponytail` theo từng task. Mỗi task hoàn tất phải cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md`, `findings.md` và có PR riêng. Sửa review của cùng task tiếp tục branch/PR đang mở.
 
 **Goal:** Xây dựng hoàn chỉnh hệ thống Serverless URL Shortener with Realtime Analytics trên AWS bằng Golang (`provided.al2023`, `arm64`), Terraform (HCL), và Next.js Static Export (`S3 + CloudFront OAC`), bám sát kiến trúc và nghiệp vụ của chuỗi 21 bài và repository tham chiếu `nghiadaulau/serverless-url-shortener-aws`.
 
 **Architecture:** Kiến trúc hướng sự kiện (Event-Driven Serverless) trên AWS gồm: giao diện tĩnh Next.js phân phối qua CloudFront + S3 (OAC), xác thực người dùng qua Cognito JWT, 4 route HTTP API Gateway và 2 route WebSocket API Gateway kết nối tới 8 hàm Lambda viết bằng Go dùng chung một bảng DynamoDB Single-Table (`PK`/`SK` + Sparse `GSI1` + `ttl`), xử lý đếm click bất đồng bộ qua EventBridge → SQS (+DLQ) → ClickAggregator (`TransactWriteItems` idempotent + đẩy WebSocket realtime), kèm workflow kiểm duyệt link bằng Step Functions và triển khai Canary qua CodeDeploy.
 
-**Tech Stack:** Golang 1.24+, AWS SDK for Go v2, `aws-lambda-go`, Next.js App Router (`output: "export"`), TypeScript, Tailwind CSS, pnpm, Terraform 1.10+, GitHub Actions (AWS OIDC), k6.
+**Tech Stack:** Golang, AWS SDK for Go v2, `aws-lambda-go`, Next.js App Router (`output: "export"`), TypeScript, Tailwind CSS, pnpm, Terraform có S3 native lockfile, GitHub Actions (AWS OIDC), k6. Chọn phiên bản được hỗ trợ và pin toolchain/dependencies ở Task 1.1, 2.2 và 5.1; Phase 0 không xác nhận phiên bản mới nhất.
+
+**Mốc:** đọc nguồn 2026-10-26, hoàn thiện đặc tả 2026-10-27. Phase 0 hoàn tất audit/kế hoạch, chưa chạy app hoặc kiểm thử AWS. Tất cả đường dẫn và lệnh kiểm thử các phase sau là đầu ra phải tạo, không phải bằng chứng đã chạy.
 
 **Spec:**
 - `docs/phase-0-reference-audit.md`
@@ -26,7 +28,7 @@
 
 ## Review Focus
 
-1. **Phân biệt lỗi `TransactionCanceledException` trong `click-aggregator`:** Chỉ coi là duplicate và bỏ qua khi `CancellationReasons[2].Code == "ConditionalCheckFailed"` (trùng `CLICK#<eventId>`); nếu hủy do `TransactionConflict` trên `LINK#<code>` hoặc `STAT#<date>`, phải trả lỗi để SQS retry record đó qua `ReportBatchItemFailures`.
+1. **Publish và transaction:** áp dụng đầy đủ [hợp đồng lỗi](../../architecture-and-contracts.md) mục 3.4 và 5.2: kiểm từng PutEvents entry, bounded retry; duplicate phải kiểm đủ ba cancellation reasons; late-deleted cần consistent read; mixed/unknown errors retry. Không rút gọn thành chỉ kiểm marker index2.
 2. **Cô lập lỗi WebSocket khỏi bộ đếm click:** Lỗi mạng khi gọi `PostToConnection` không được làm fail record SQS hoặc kích hoạt tăng bộ đếm lần hai; riêng lỗi HTTP `410 GoneException` phải tự động xóa item `CONN#<connectionId>` khỏi DynamoDB.
 3. **Chống IDOR tuyệt đối khi xóa và liệt kê link:** `ownerId` chỉ lấy từ JWT claim `sub`; lệnh `DeleteItem` bắt buộc có `ConditionExpression: "attribute_exists(PK) AND ownerId = :me"` và trả cùng mã `404` cho cả trường hợp không tồn tại lẫn không thuộc sở hữu.
 4. **Tách biệt Domain Redirect và Domain Frontend:** `shortUrl` trả về từ `POST /links` phải lấy từ `PUBLIC_REDIRECT_BASE_URL` của API Gateway, không lấy nhầm domain CloudFront của trang tĩnh.
@@ -53,9 +55,9 @@
   - Create: `PROJECT_STATUS.md`
   - Create: `README.md`
 - **Steps:**
-  - [x] **Step 1:** Xóa toàn bộ tài nguyên AWS đã deploy trên stack cũ (`terraform destroy` cho `dev` và `bootstrap`, kiểm tra bằng AWS CLI).
+  - [x] **Step 1:** Ghi nhận người dùng xác nhận ngày 2026-10-26 đã xóa AWS cũ; phiên hoàn thiện Phase 0 không lặp destroy, kiểm kê AWS hoặc xác nhận hóa đơn.
   - [x] **Step 2:** Xóa toàn bộ file và thư mục cũ tại workspace local (giữ lại `.git` để quản lý branch/PR).
-  - [x] **Step 3:** Cài đặt đầy đủ 13 bộ skills vào `~/.agents/skills` và cấu hình `~/.gemini/config/skills.json` + `.agents/skills.json`.
+  - [x] **Step 3:** Đối chiếu cấu hình và file đại diện 13 bộ skills: 314 thư mục cấp đầu/376 SKILL.md đệ quy có trùng; không cài lại hay khẳng định mọi host tự nạp.
   - [x] **Step 4:** Soạn thảo `AGENTS.md`, báo cáo audit `docs/phase-0-reference-audit.md`, đặc tả kiến trúc `docs/architecture-and-contracts.md`, và kế hoạch chi tiết.
   - [x] **Step 5:** Khởi tạo `task_plan.md`, `findings.md`, `progress.md`, `PROJECT_STATUS.md`, `README.md`, commit, push và tạo Pull Request riêng cho Task 0.1.
 
@@ -73,6 +75,7 @@
   - Create: `backend/internal/domain/shortcode_test.go`
   - Create: `backend/internal/config/config.go`
   - Create: `backend/internal/config/config_test.go`
+  - Create: `.github/workflows/ci.yml` (CI nền Go, mở rộng cùng từng phase)
   - Modify: `PROJECT_STATUS.md`, `task_plan.md`, `progress.md`, `findings.md`
 - **Interfaces:**
   - Produces:
@@ -81,9 +84,9 @@
     - `domain.NormalizeURL(raw string) (string, error)` (chỉ chấp nhận `http`/`https` hợp lệ)
     - `config.Load() (*config.Config, error)` (`TableName`, `EventBusName`, `WSEndpoint`, `PublicRedirectBaseURL`)
 - **Steps:**
-  - [ ] **Step 1:** Viết unit tests trong `backend/internal/domain/shortcode_test.go` và `backend/internal/config/config_test.go` kiểm tra sinh mã Base62 dài 7 ký tự, phân phối ký tự hợp lệ, và từ chối các URL không phải `http`/`https` (`javascript:`, `ftp:`, chuỗi rỗng, thiếu host).
+  - [ ] **Step 1:** Unit tests kiểm tra Base62 7 ký tự, alphabet hợp lệ và URL http/https (từ chối javascript/ftp/rỗng/thiếu host); timestamp createdAt UTC cố định milliseconds và ordering cùng giây theo đặc tả4.2. Không dùng RFC3339Nano biến độ dài cho GSI sort key.
   - [ ] **Step 2:** Chạy `go -C backend test ./...` để xác nhận test fail trước khi cài đặt.
-  - [ ] **Step 3:** Triển khai `models.go`, `shortcode.go`, `config.go` và `Makefile` chuẩn cho toàn bộ monorepo.
+  - [ ] **Step 3:** Triển khai `models.go`, `shortcode.go`, `config.go`, `Makefile` và CI nền Go test/vet trên PR; pin toolchain/dependencies được hỗ trợ. Chỉ thêm check của thành phần đã tồn tại, mở rộng CI cùng mỗi phase.
   - [ ] **Step 4:** Chạy `go -C backend test -race -v ./...` và `go -C backend vet ./...` đảm bảo PASS 100%.
   - [ ] **Step 5:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 1.1.
 
@@ -104,7 +107,7 @@
     - `middleware.InstrumentAWSConfig(cfg *aws.Config)`
 - **Steps:**
   - [ ] **Step 1:** Viết unit tests trong `backend/internal/middleware/middleware_test.go` kiểm tra định dạng JSON của `slog` (có `service`, `requestId`, `level`, `msg`) và cấu trúc JSON `_aws.CloudWatchMetrics` của EMF (`Namespace: "UrlShortener"`, metrics `LinkResolved` / `LinkNotFound`).
-  - [ ] **Step 2:** Triển khai `logger.go`, `emf.go`, `xray.go` và chạy `go -C backend test -race -v ./internal/middleware/...` đạt PASS.
+  - [ ] **Step 2:** Xác minh support/compatibility instrumentation Go rồi triển khai `logger.go`, `emf.go`, `xray.go` và test middleware. [X-Ray Go SDK](https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-go.html) đã vào maintenance từ 25/02/2026; đối chiếu [timeline chính thức](https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-daemon-timeline.html) khi chọn instrumentation có export X-Ray. Không giả định tương đương đầy đủ Powertools Node hay mở rộng hạ tầng OTel ngoài phạm vi.
   - [ ] **Step 3:** Viết script biên dịch chéo Go sang `GOOS=linux GOARCH=arm64 CGO_ENABLED=0` tạo file `bootstrap` và nén thành `<handler>.zip` có quyền thực thi chuẩn Linux (`0755`).
   - [ ] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và tạo Pull Request riêng cho Task 1.2.
 
@@ -116,8 +119,13 @@
 - **Branch:** `feat/phase-02-task-01-core-crud-lambdas`
 - **Files:**
   - Create: `backend/internal/repository/dynamodb.go`
-  - Create: `backend/internal/repository/memory.go`
   - Create: `backend/internal/repository/repository_test.go`
+  - Create: `backend/internal/repository/dynamodb_integration_test.go`
+  - Create: `backend/internal/events/eventbridge.go`
+  - Create: `backend/internal/events/eventbridge_test.go`
+  - Create: `backend/tools/local-http/main.go` (adapter trong Go module, được import backend/internal và chạy handler thật)
+  - Create: `scripts/local-http/config.example.json` (DynamoDB Local và endpoint test, không secret)
+  - Create: `docs/local-testing.md`
   - Create: `backend/internal/service/link_service.go`
   - Create: `backend/internal/service/link_service_test.go`
   - Create: `backend/internal/httpapi/handler.go`
@@ -135,14 +143,15 @@
 - **Steps:**
   - [ ] **Step 1:** Viết bộ test đầy đủ trong `link_service_test.go` và `handler_test.go` bao phủ:
     - Chưa có JWT `sub` → trả `401`
-    - URL sai định dạng → trả `400`
-    - Trùng mã ngắn → tự động retry tối đa 5 lần; quá 5 lần trả `500`
+    - URL sai, body null, thiếu url hoặc url không phải string → trả `400`
+    - Trùng mã ngắn → tối đa 5 lần ghi tổng cộng gồm lần đầu; hết lượt trả `500`
     - Tạo thành công → trả `201 {"code", "shortUrl", "target"}` với `shortUrl` dùng `PublicRedirectBaseURL`
     - User A chỉ xem được danh sách link của User A (mới nhất trước)
     - User B xóa link của User A → bị chặn bởi `ConditionExpression`, trả `404`
-    - `GET /{code}` tồn tại → phát sự kiện `link.clicked` và trả `301` kèm header `Location`; không tồn tại → trả `404`
-  - [ ] **Step 2:** Triển khai `dynamodb.go` (sử dụng đúng biểu thức `attribute_not_exists(PK)`, `GSI1PK = USER#<sub_id>`, `attribute_exists(PK) AND ownerId = :me`), `memory.go`, `link_service.go`, `httpapi/handler.go` và 4 `cmd/*/main.go`.
-  - [ ] **Step 3:** Chạy `go -C backend test -race -v ./...` và thử build cả 4 gói ZIP `arm64`.
+    - Resolve thành công chỉ 301 sau EventId hợp lệ; missing link404; publish HTTP200/FailedEntryCount1, nonretryable, retry success/exhausted, entry thiếu/sai theo hợp đồng 3.4
+    - List paginate đến hết LastEvaluatedKey; giữ JSON links, thứ tự và owner scope
+  - [ ] **Step 2:** Triển khai `dynamodb.go`, `link_service.go`, `httpapi/handler.go`, EventBridge publisher và 4 `cmd/*/main.go` theo đặc tả; tạo local HTTP harness dùng handler/repository thật và DynamoDB Local, không production memory storage. Unit mock chỉ tại ranh giới SDK/publisher; harness không chứng minh JWT authorizer/IAM AWS.
+  - [ ] **Step 3:** Chạy Go race/vet, integration DynamoDB Local và build 4 ZIP arm64; ghi lệnh khởi động harness, cấu hình test và bằng chứng vào `docs/local-testing.md`, mở rộng CI tương ứng.
   - [ ] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 2.1.
 
 #### Task 2.2: Terraform Bootstrap & Core Infrastructure Modules (`dynamodb`, `cognito`, `http_api`, `lambda`)
@@ -152,6 +161,12 @@
   - Create: `infrastructure/terraform/bootstrap/variables.tf`
   - Create: `infrastructure/terraform/bootstrap/main.tf`
   - Create: `infrastructure/terraform/bootstrap/outputs.tf`
+  - Create: `infrastructure/terraform/bootstrap/oidc.tf`
+  - Create: `infrastructure/terraform/bootstrap/tests/trust.tftest.hcl`
+  - Create: `infrastructure/terraform/modules/event_bus/main.tf`
+  - Create: `infrastructure/terraform/modules/event_bus/outputs.tf`
+  - Create: `infrastructure/terraform/environments/dev/tests/core.tftest.hcl`
+  - Create: `tests/e2e/aws-flow.ps1` (mở rộng scenario theo từng phase có hạ tầng)
   - Create: `infrastructure/terraform/modules/dynamodb/main.tf`
   - Create: `infrastructure/terraform/modules/cognito/main.tf`
   - Create: `infrastructure/terraform/modules/lambda/main.tf`
@@ -164,9 +179,9 @@
   - Create: `infrastructure/terraform/environments/dev/backend.hcl.example`
   - Modify: `Makefile`, `PROJECT_STATUS.md`, `task_plan.md`, `progress.md`, `findings.md`
 - **Steps:**
-  - [ ] **Step 1:** Thiết kế module `bootstrap` tạo S3 bucket lưu remote state với versioning, mã hóa AES256, chặn public access và hỗ trợ `use_lockfile = true`.
-  - [ ] **Step 2:** Thiết kế các module `dynamodb` (`PK`/`SK`, `GSI1`, `ttl`), `cognito` (User Pool, Domain, App Client hỗ trợ OAuth2 Code PKCE + User Auth), `lambda` (`provided.al2023`, `arm64`, IAM least-privilege riêng cho từng hàm), và `http_api` (4 routes, Cognito JWT Authorizer, CORS, Throttling).
-  - [ ] **Step 3:** Chạy `terraform fmt -check` và `terraform validate` trên cả `bootstrap` và `environments/dev`.
+  - [ ] **Step 1:** Bootstrap S3 state/versioning/AES256/public block/use_lockfile và GitHub OIDC provider/deployment role theo kiến trúc mục 6. Trust aud/sub chính xác repo/main hoặc protected environment; provider có sẵn import. Operator credentials/SSO bootstrap lần đầu khi được phép, state bootstrap độc lập; app role không sửa trust/bootstrap. Scope state object, lockfile, ListBucket và PassRole; output role ARN cho CD.
+  - [ ] **Step 2:** Tạo modules `dynamodb`, `cognito` Hosted UI PKCE (password flow chỉ bật rõ cho E2E CLI), `lambda` provided.al2023/arm64, `http_api` 4 routes/JWT/CORS/throttling và custom `event_bus` url-shortener-events. Truyền EVENT_BUS, PUBLIC_REDIRECT_BASE_URL, bus ARN/IAM PutEvents cho resolve ngay Phase 2. Pin provider/toolchain; tags thống nhất, region mặc định ap-southeast-1, memory128/timeout5, IAM từng hàm và Logs/X-Ray. Publish version/alias live ban đầu, API integration + invoke permission dùng qualified alias ARN. Output API/Cognito/bus/role cho phase sau; analytics chỉ end-to-end sau rule Phase 3.
+  - [ ] **Step 3:** Chạy Terraform fmt/init-backend=false/validate/tests theo cổng kiểm tra cuối kế hoạch cho bootstrap/dev; CI mở rộng không apply AWS.
   - [ ] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 2.2.
 
 ---
@@ -176,26 +191,26 @@
 #### Task 3.1: Go Lambda `click-aggregator` (Transactional Idempotency, `CancellationReasons` Inspection & Partial Batch Failure)
 - **Branch:** `feat/phase-03-task-01-click-aggregator-lambda`
 - **Files:**
-  - Create: `backend/internal/events/eventbridge.go`
   - Create: `backend/internal/service/aggregator_service.go`
   - Create: `backend/internal/service/aggregator_service_test.go`
   - Create: `backend/cmd/click-aggregator/main.go`
-  - Modify: `backend/internal/repository/dynamodb.go`, `backend/internal/repository/memory.go`, `PROJECT_STATUS.md`, `task_plan.md`, `progress.md`, `findings.md`
+  - Modify: `backend/internal/repository/dynamodb.go`, `backend/internal/repository/dynamodb_integration_test.go`, `PROJECT_STATUS.md`, `task_plan.md`, `progress.md`, `findings.md`
 - **Interfaces:**
   - Consumes: `events.SQSEvent` (chứa EventBridge envelope `source: "urlshortener"`, `detail-type: "link.clicked"`)
   - Produces: `events.SQSEventResponse` (`BatchItemFailures`)
 - **Steps:**
   - [ ] **Step 1:** Viết unit/integration tests trong `aggregator_service_test.go` kiểm chứng:
     - Sự kiện hợp lệ tăng `META.clicks` lên 1, tăng `STAT#YYYY-MM-DD.count` lên 1, và tạo `CLICK#<eventId>` với `ttl = now + 86400`.
-    - Sự kiện trùng `eventId` (`CancellationReasons[2].Code == "ConditionalCheckFailed"`) được bỏ qua an toàn, không tăng click lần hai và **không** nằm trong `BatchItemFailures`.
+    - Duplicate đúng cả ba reasons, mixed reasons, empty/nil/unknown reasons, conflicts và throttle theo bảng phân loại kiến trúc5.2; không chỉ xét marker index2.
+    - Delete race không tái tạo META/STAT/marker; chỉ ack late-deleted sau consistent read xác nhận, Get lỗi hoặc META còn thì retry. Marker TTL đã qua nhưng còn item vẫn dedupe; marker bị xóa rồi replay đếm lại.
     - Lỗi `TransactionCanceledException` do `TransactionConflict` hoặc lỗi mạng DynamoDB **bắt buộc** đưa `messageId` vào `BatchItemFailures` để SQS retry.
     - Trong một batch 10 messages có 2 messages lỗi và 8 messages hợp lệ, chỉ đúng 2 `messageId` lỗi được trả về trong `BatchItemFailures`.
     - Khi notifier WebSocket trả lỗi, bộ đếm đã ghi không bị ảnh hưởng và record SQS vẫn thành công.
   - [ ] **Step 2:** Triển khai `RecordClickTransaction` trong `dynamodb.go`, `aggregator_service.go` và `backend/cmd/click-aggregator/main.go`.
-  - [ ] **Step 3:** Chạy `go -C backend test -race -v ./...` và đóng gói `click-aggregator.zip`.
+  - [ ] **Step 3:** Chạy Go race/vet và integration DynamoDB Local cho transaction, cập nhật CI và đóng gói `click-aggregator.zip`.
   - [ ] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 3.1.
 
-#### Task 3.2: Terraform Module `event_pipeline` (EventBridge Custom Bus, Rule, SQS `ClickQueue` + `ClickDLQ`, Event Source Mapping)
+#### Task 3.2: Terraform Module `event_pipeline` (Nhận EventBridge Bus, Rule, SQS `ClickQueue` + `ClickDLQ`, Event Source Mapping)
 - **Branch:** `feat/phase-03-task-02-terraform-event-pipeline`
 - **Files:**
   - Create: `infrastructure/terraform/modules/event_pipeline/main.tf`
@@ -203,9 +218,9 @@
   - Create: `infrastructure/terraform/modules/event_pipeline/outputs.tf`
   - Modify: `infrastructure/terraform/environments/dev/main.tf`, `infrastructure/terraform/environments/dev/outputs.tf`, `PROJECT_STATUS.md`, `task_plan.md`, `progress.md`, `findings.md`
 - **Steps:**
-  - [ ] **Step 1:** Tạo module `event_pipeline` gồm custom bus `url-shortener-events`, rule khớp `source=["urlshortener"]` & `detail-type=["link.clicked"]`, SQS `ClickQueue` (`visibility_timeout_seconds = 30`, `maxReceiveCount = 3`), `ClickDLQ` (`message_retention_seconds = 1209600` — 14 ngày), `aws_sqs_queue_policy` giới hạn theo `aws:SourceArn`, và `aws_lambda_event_source_mapping` (`batch_size = 10`, `function_response_types = ["ReportBatchItemFailures"]`).
-  - [ ] **Step 2:** Kết nối `click-aggregator` Lambda và quyền IAM least-privilege vào `environments/dev`.
-  - [ ] **Step 3:** Chạy `terraform fmt -check` và `terraform validate`.
+  - [ ] **Step 1:** Module nhận bus name/ARN từ Task 2.2, không tạo bus duplicate; thêm rule source=urlshortener/detail-type=link.clicked, ClickQueue visibility30/maxReceive3, ClickDLQ retention14d, queue policy SourceArn và ESM batch10/ReportBatchItemFailures. Giữ maxReceive3 có chủ đích dù AWS khuyến nghị >=5.
+  - [ ] **Step 2:** Kết nối aggregator, khai báo quyền poll SQS ReceiveMessage/DeleteMessage/GetQueueAttributes scoped queue và quyền DynamoDB transaction; kiểm thử ESM/DLQ thực tế chỉ trong AWS được phép. Thêm assertions Terraform cho bus input, queue policy/redrive/ESM, mở rộng CI.
+  - [ ] **Step 3:** Chạy cổng Terraform fmt/init-backend=false/validate/test ở cuối kế hoạch, cập nhật CI.
   - [ ] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 3.2.
 
 ---
@@ -230,10 +245,10 @@
   - [ ] **Step 1:** Viết unit tests cho:
     - `$connect` thiếu `?code=` → trả `400`; có `code` → lưu `PK=CONN#<id>, SK=META, code, GSI1PK=WSCODE#<code>, GSI1SK=CONN#<id>, ttl=now+7200` và trả `200`.
     - `$disconnect` → xóa `PK=CONN#<id>, SK=META` và trả `200`.
-    - `PushClickUpdate(ctx, code)` → lấy tổng `clicks`, query `GSI1` theo `WSCODE#<code>`, gửi JSON `{"code": code, "clicks": clicks}` tới từng connection; nếu gặp `GoneException` (HTTP 410) thì tự động gọi `DeleteItem` dọn connection chết.
+    - Pusher đọc META ConsistentRead, paginate GSI WSCODE mọi trang, gửi `{code, clicks}`; 410 cleanup, non410/Get/Query/cleanup lỗi đều được log và cô lập sau commit; public connect không có owner auth.
     - `moderate-check` → kiểm tra danh sách từ khóa cấm (`malware`, `phishing`, `evil`), trả `{code, target, safe}`.
-  - [ ] **Step 2:** Triển khai code Go và file `statemachine/moderation.asl.json` giữ nguyên cấu trúc Retry, Catch và `dynamodb:updateItem` của bản gốc.
-  - [ ] **Step 3:** Chạy `go -C backend test -race -v ./...` và build toàn bộ 8 Lambda binaries.
+  - [ ] **Step 2:** Triển khai Go/ASL giữ Retry/Catch/updateItem gốc theo kiến trúc5.3; thêm runbook manual input `{code,target}`, safe/reject/retry/Fail, tạo META hợp lệ trước và không xóa song song vì ASL có thể upsert. Không nối moderation vào create/redirect.
+  - [ ] **Step 3:** Chạy Go race/vet, build 8 binaries và mở rộng CI; execution history Step Functions thật nằm trong AWS E2E khi được phép.
   - [ ] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 4.1.
 
 #### Task 4.2: Terraform Modules `websocket_api` & `moderation_sfn`
@@ -249,7 +264,7 @@
 - **Steps:**
   - [ ] **Step 1:** Tạo module `websocket_api` (`ProtocolType = WEBSOCKET`, route `$connect` và `$disconnect`, stage `prod` với `auto_deploy = true`, Lambda permissions) và cấp biến môi trường `WS_ENDPOINT` + quyền `execute-api:ManageConnections` cho `click-aggregator`.
   - [ ] **Step 2:** Tạo module `moderation_sfn` triển khai `aws_sfn_state_machine` (`type = "STANDARD"`) từ `statemachine/moderation.asl.json` kèm IAM role chỉ cấp quyền `lambda:InvokeFunction` trên `moderate-check` và `dynamodb:UpdateItem` trên bảng DynamoDB.
-  - [ ] **Step 3:** Chạy `terraform fmt -check` và `terraform validate`.
+  - [ ] **Step 3:** Chạy cổng Terraform fmt/init-backend=false/validate/test ở cuối kế hoạch, cập nhật CI và AWS E2E scenarios.
   - [ ] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 4.2.
 
 ---
@@ -266,14 +281,16 @@
   - Create: `frontend/src/components/Navbar.tsx`
   - Create: `frontend/src/app/layout.tsx`, `frontend/src/app/globals.css`
   - Create: `frontend/src/app/page.tsx` (Landing page)
-  - Create: `frontend/src/app/login/page.tsx` (Login / Signup với Cognito Hosted UI PKCE & Direct Auth fallback)
+  - Create: `frontend/src/app/login/page.tsx` (Login / Signup với Cognito Hosted UI PKCE)
   - Create: `frontend/src/app/auth/callback/page.tsx` (OAuth2 PKCE Callback)
+  - Create: `frontend/src/lib/auth.test.ts`
+  - Create: `tests/e2e/frontend.spec.ts` (mở rộng theo Task 5.2/5.3)
   - Modify: `PROJECT_STATUS.md`, `task_plan.md`, `progress.md`, `findings.md`
 - **Steps:**
-  - [ ] **Step 1:** Khởi tạo project Next.js trong `frontend/` với `output: "export"`, `trailingSlash: true`, `images: { unoptimized: true }`.
-  - [ ] **Step 2:** Triển khai module xác thực Cognito (`auth.ts`) hỗ trợ đầy đủ Authorization Code + PKCE qua Hosted UI (sinh `code_verifier`, `code_challenge` S256, đổi `code` lấy `id_token`/`access_token` tại `/oauth2/token`) cũng như đăng nhập trực tiếp, lưu trữ phiên an toàn và đăng xuất.
+  - [ ] **Step 1:** Khởi tạo Next.js với output export/trailingSlash/unoptimized; chọn và pin phiên bản đang hỗ trợ, package manager/lockfile và test runner, mở rộng CI.
+  - [ ] **Step 2:** Auth Hosted UI PKCE S256 duy nhất; test state/nonce/verifier, redirect allowlist, callback lỗi/thiếu/lặp code, token expiry và logout theo kiến trúc7. Không direct-login fallback; không dùng password demo/innerHTML. Public config build lấy output môi trường, validation không chấp nhận endpoint placeholder.
   - [ ] **Step 3:** Xây dựng Landing page, Login/Signup page và Auth Callback page với giao diện sạch, hiện đại, responsive.
-  - [ ] **Step 4:** Chạy `pnpm --dir frontend lint`, `pnpm --dir frontend typecheck`, `pnpm --dir frontend build` kiểm chứng xuất tĩnh thành công.
+  - [ ] **Step 4:** Chạy frontend lint/typecheck/test/build theo cổng kiểm tra; kiểm chứng output tĩnh và callback không cần Node runtime.
   - [ ] **Step 5:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 5.1.
 
 #### Task 5.2: Dashboard, My Links, Tích Hợp HTTP API Thật & Native WebSocket Realtime Hook
@@ -281,6 +298,7 @@
 - **Files:**
   - Create: `frontend/src/lib/api.ts`
   - Create: `frontend/src/hooks/useRealtimeClicks.ts`
+  - Create: `frontend/src/hooks/useRealtimeClicks.test.ts`
   - Create: `frontend/src/features/links/CreateLinkForm.tsx`
   - Create: `frontend/src/features/links/LinksTable.tsx`
   - Create: `frontend/src/app/dashboard/page.tsx`
@@ -288,9 +306,9 @@
   - Modify: `PROJECT_STATUS.md`, `task_plan.md`, `progress.md`, `findings.md`
 - **Steps:**
   - [ ] **Step 1:** Xây dựng `api.ts` gọi trực tiếp `POST /links`, `GET /links`, `DELETE /links/{code}` kèm header `Authorization: Bearer <token>` và xử lý rõ ràng các trạng thái lỗi `400`, `401`, `404`, `429`, `500`.
-  - [ ] **Step 2:** Xây dựng hook `useRealtimeClicks.ts` sử dụng `WebSocket` gốc của trình duyệt kết nối tới `${WS_URL}?code=${code}`, tự động reconnect theo exponential backoff khi rớt mạng, dọn dẹp kết nối khi link bị xóa hoặc component unmount, và kích hoạt hiệu ứng highlight khi nhận `{ code, clicks }`.
+  - [ ] **Step 2:** Hook WebSocket native kết nối theo code, reconnect exponential backoff, nạp lại GET links khi reconnect, dọn socket khi delete/unmount; hợp nhất snapshot/push bằng max để count không lùi. Test disconnect/reconnect/out-of-order, không polling giả realtime; hiển thị trạng thái kết nối và giới hạn push best-effort.
   - [ ] **Step 3:** Hoàn thiện trang `/dashboard` và `/links` (tạo link, copy short link, nút mở link/click thử, xóa link, tổng số clicks nhảy realtime, trạng thái kết nối WebSocket).
-  - [ ] **Step 4:** Chạy `pnpm --dir frontend lint`, `pnpm --dir frontend typecheck`, `pnpm --dir frontend build` và kiểm tra thư mục `frontend/out/`.
+  - [ ] **Step 4:** Chạy frontend lint/typecheck/test/build; kiểm tra `frontend/out/` và E2E với HTTP harness thật khi local, AWS API thật khi đã được phép.
   - [ ] **Step 5:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 5.2.
 
 #### Task 5.3: Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + Static Rewrite)
@@ -303,9 +321,9 @@
   - Modify: `infrastructure/terraform/environments/dev/main.tf`, `infrastructure/terraform/environments/dev/outputs.tf`, `PROJECT_STATUS.md`, `task_plan.md`, `progress.md`, `findings.md`
 - **Steps:**
   - [ ] **Step 1:** Tạo module `frontend_hosting` gồm S3 bucket private (`aws_s3_bucket_public_access_block` bật cả 4 cờ), `aws_cloudfront_origin_access_control` (SigV4 `always`), bucket policy chỉ cho phép CloudFront distribution ARN đọc object qua HTTPS.
-  - [ ] **Step 2:** Cấu hình CloudFront cache behavior tách biệt: `_next/static/*` cache dài hạn (immutable 1 năm), còn HTML/default behavior có TTL ngắn để nhận bản cập nhật nhanh; kèm CloudFront Function `viewer-request` chuẩn hóa đường dẫn `/dashboard` → `/dashboard/index.html` mà **không** dùng custom error response catch-all `200`.
+  - [ ] **Step 2:** CloudFront cache `_next/static/*` immutable1year, HTML TTL ngắn; viewer-request rewrite `/dashboard` → `/dashboard/index.html`, bảo toàn callback query. Missing route/asset non-200 (403 hoặc404 private S3), không catch-all200; không cấp ListBucket rộng hay che OAC error để ép404. Test rewrite và E2E routes/assets/missing/auth callback.
   - [ ] **Step 3:** Cập nhật CORS của HTTP API và callback URLs của Cognito tự động nhận domain CloudFront.
-  - [ ] **Step 4:** Chạy `terraform fmt -check` và `terraform validate`.
+  - [ ] **Step 4:** Chạy cổng Terraform fmt/init-backend=false/validate/test ở cuối kế hoạch, cập nhật CI và frontend E2E.
   - [ ] **Step 5:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 5.3.
 
 ---
@@ -323,23 +341,52 @@
   - Create: `infrastructure/terraform/modules/codedeploy_canary/outputs.tf`
   - Modify: `infrastructure/terraform/modules/lambda/main.tf`, `infrastructure/terraform/environments/dev/main.tf`, `infrastructure/terraform/environments/dev/outputs.tf`, `PROJECT_STATUS.md`, `task_plan.md`, `progress.md`, `findings.md`
 - **Steps:**
-  - [ ] **Step 1:** Tạo module `observability` gồm SNS `AlarmTopic`, `ResolveThrottleAlarm`, `ResolveErrorAlarm`, `ClickDLQVisibleMessagesAlarm`, và `aws_cloudwatch_dashboard` hiển thị Invocations/Errors/Throttles, Duration p50/p99, SQS backlog/DLQ và custom metric `UrlShortener/LinkResolved`.
-  - [ ] **Step 2:** Tạo module `codedeploy_canary` (`aws_codedeploy_app` compute platform `Lambda`, `aws_codedeploy_deployment_group` với `LambdaCanary10Percent5Minutes`, tự động rollback khi `ResolveErrorAlarm` hoặc `ResolveThrottleAlarm` kích hoạt) và cấu hình `aws_lambda_alias.live` với `lifecycle { ignore_changes = [function_version, routing_config] }`.
-  - [ ] **Step 3:** Chạy `terraform fmt -check` và `terraform validate`.
+  - [ ] **Step 1:** Observability giữ 2 alarms nguồn Sum>=1/60s/1period/notBreaching; bổ sung DLQ alarm và metrics ClickPublishFailed/ClickDiscardedDeleted như delta đích. Dashboard hiển thị Invocations/Errors/Throttles, Duration p50/p99, backlog/DLQ và LinkResolved. Đặt retention Logs, tags; SNS subscription tùy chọn do người dùng cấu hình/confirm, không tự gửi email. SLO chỉ mục tiêu đến khi có evidence.
+  - [ ] **Step 2:** CodeDeploy LambdaCanary10Percent5Minutes dùng ResolveErrorAlarm (thêm throttle alarm là delta đích), auto rollback; tiếp nhận alias live đã tạo Task2.2 với ignore_changes function_version/routing_config. API integration và permission phải dùng alias, lấy CurrentVersion từ alias thật và target published version mới. Một writer, same version no-op, đợi deployment success/rollback kết thúc, không manual alias reset khi lỗi.
+  - [ ] **Step 3:** Chạy cổng Terraform fmt/init-backend=false/validate/test ở cuối kế hoạch, cập nhật CI và canary E2E.
   - [ ] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 6.1.
 
 #### Task 6.2: GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), k6 Load Test & Tài Liệu Vận Hành E2E
 - **Branch:** `feat/phase-06-task-02-cicd-k6-and-runbook`
 - **Files:**
-  - Create: `.github/workflows/ci.yml`
+  - Modify: `.github/workflows/ci.yml` (đã có từ Task 1.1)
   - Create: `.github/workflows/deploy.yml`
   - Create: `scripts/deploy-canary.sh`
   - Create: `tests/load/redirect.k6.js`
+  - Modify: `tests/e2e/aws-flow.ps1`, `tests/e2e/frontend.spec.ts`
   - Create: `docs/e2e-verification-and-operations.md`
   - Modify: `README.md`, `Makefile`, `PROJECT_STATUS.md`, `task_plan.md`, `progress.md`, `findings.md`
 - **Steps:**
-  - [ ] **Step 1:** Xây dựng `.github/workflows/ci.yml` tự động chạy trên mỗi PR/push: Go test (`-race`), Go vet, build 8 gói ZIP `arm64`, Next.js lint/typecheck/static build, và `terraform fmt -check` + `terraform validate`.
-  - [ ] **Step 2:** Xây dựng `.github/workflows/deploy.yml` xác thực AWS qua OIDC (`aws-actions/configure-aws-credentials@v4`), chạy `terraform apply`, kích hoạt CodeDeploy canary deployment cho `resolve-link` alias `live` kèm theo dõi rollback, đồng bộ `frontend/out/` lên S3 và tạo CloudFront invalidation.
-  - [ ] **Step 3:** Viết kịch bản `tests/load/redirect.k6.js` với chế độ mặc định tải nhỏ (`MODE=smoke`, 2 VUs trong 10s) và chế độ stress test (`MODE=stress`, ramp lên 40 VUs như Bài 20).
-  - [ ] **Step 4:** Biên soạn hướng dẫn kiểm thử E2E, phân tích chi phí và quy trình dọn dẹp tài nguyên trong `docs/e2e-verification-and-operations.md`.
+  - [ ] **Step 1:** Hoàn thiện CI đã mở rộng qua các phase: Go race/vet, build8ZIP, Next lint/typecheck/test/static build, Terraform fmt/init-backend=false/validate/test. Không đợi Phase6 mới chạy CI.
+  - [ ] **Step 2:** CD OIDC dùng id-token:write/contents:read, role-to-assume bootstrap output, exact aud/sub, protected environment và manual workflow_dispatch; serialized concurrency, không apply PR/fork không tin cậy. Pin actions lúc triển khai. Bootstrap operator chạy riêng khi được phép. Build Lambda → saved Terraform plan được review → apply app → lấy API/WS/Cognito/CF outputs → public config → Next static build → canary success → sync hashed assets trước HTML → invalidate. Build placeholder bị chặn; rollback/failure dừng publish frontend. Tuân thủ alias ownership ở kiến trúc6.
+  - [ ] **Step 3:** k6 dùng redirects:0, mặc định MODE=smoke 2VUs/10s với sleep1s sau mỗi request (tối đa khoảng2RPS); MODE=stress ramp40 chỉ khi được yêu cầu rõ, báo cả successful throughput và failed/throttled, không dùng benchmark Node làm baseline Go.
+  - [ ] **Step 4:** Tạo E2E scripts/runbook theo ma trận bên dưới: service ESM/DLQ, SFN execution history, OIDC negative trust, canary success và fault-induced rollback trong sandbox được phép. Ghi retention/chi phí/cleanup và redrive có đối soát vì DLQ14d dài hơn dedupe24h; không blanket replay dữ liệu cũ.
   - [ ] **Step 5:** Chạy toàn bộ lệnh kiểm tra (`make check`), cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 6.2.
+
+---
+
+## Cổng Kiểm Tra Và Bằng Chứng Nghiệm Thu
+
+Các lệnh dưới đây là hợp đồng đầu ra cho task tương ứng; file test/harness chưa tồn tại ở Phase0. Unit mock chỉ ở ranh giới SDK/clock/network; integration chạy DynamoDB Local/container hoặc AWS được phép. Local không chứng minh JWT authorizer, IAM, ESM, DLQ hay canary thật. Mỗi task mở rộng `.github/workflows/ci.yml` cùng implementation.
+
+- Backend: `go -C backend test -race ./...`, `go -C backend vet ./...`; integration `go -C backend test -tags=integration ./internal/repository/...` với `DYNAMODB_ENDPOINT` trỏ DynamoDB Local/container.
+- Frontend: `pnpm --dir frontend lint`, `pnpm --dir frontend typecheck`, `pnpm --dir frontend test`, `pnpm --dir frontend build`; kiểm `out/` có HTML các route, không đòi Node runtime.
+- Terraform: `terraform fmt -check -recursive infrastructure/terraform`; mỗi root bootstrap/dev chạy `terraform -chdir=<root> init -backend=false`, `validate`, `test` (tests chỉ plan/mock provider trong CI; không AWS apply). Assertions module tập trung qua root tests.
+- Mỗi lần kiểm ghi command/environment/exit code, assertion và đường dẫn artifact; không ghi token/password. AWS tests giữ **pending** đến khi có quyền triển khai rõ ràng, không thay bằng kết quả unit.
+
+| Task / file cần tạo hoặc mở rộng | Ca kiểm thử và lệnh | Môi trường / bằng chứng |
+| --- | --- | --- |
+| 1.1, 2.1: `backend/internal/httpapi/handler_test.go`, `backend/internal/service/link_service_test.go` | Go race/vet: unauth401; invalid URL, body null/nonstring400; collision đúng5 lần tổng; create201, resolve301/404; A list chỉ của A, B delete A404 | Unit boundary mocks; assertion status/body/Location/số lần gọi |
+| 2.1: `backend/internal/events/eventbridge_test.go` | `go -C backend test -race ./internal/events/...`: HTTP200 nhưng failed1, nonretryable, retry success/exhausted, entry thiếu/sai; deadline/retry budget | Unit SDK boundary; assert không301/LinkResolved khi chưa có EventId, ClickPublishFailed khi lỗi |
+| 2.1: `backend/internal/repository/dynamodb_integration_test.go`, `backend/tools/local-http/main.go` | Integration command trên; `go -C backend run ./tools/local-http -config ../scripts/local-http/config.example.json`; gọi 4 routes qua harness | DynamoDB Local/container và handler thật; owner condition, collision, pagination, timestamp ordering, response; docs/local-testing.md ghi cách cấp test identity/publisher endpoint local, không giả IAM |
+| 2.2: `tests/e2e/aws-flow.ps1` | `pwsh tests/e2e/aws-flow.ps1 -Scenario Core`: thiếu JWT401, A tạo/list, B không thấy và delete A404, invalid/null/nonstring400, redirect301 với redirects disabled | AWS được phép, hai test users Cognito; actual authorizer/IAM/DynamoDB, HTTP evidence và cleanup chỉ link do test tạo; token/password không ghi log |
+| 3.1: `backend/internal/service/aggregator_service_test.go`, repository integration | Go race + integration: duplicate, mixed/nil/empty reasons, conflicts, delete race, consistent-read lỗi, TTL qua nhưng marker còn và marker removal/replay | DDB Local transaction; kiểm META/STAT/marker sau từng bước; chỉ message lỗi trong BatchItemFailures |
+| 2.2, 3.2: `tests/e2e/aws-flow.ps1` | `pwsh tests/e2e/aws-flow.ps1 -Scenario Pipeline`: resolve publish → bus rule → SQS → ESM; gây lỗi xử lý để kiểm maxReceive3 và DLQ | AWS sandbox được phép; ARN config, message/event IDs, receive observations, DLQ evidence; unit không thay thế service test |
+| 4.1, 5.2: `backend/internal/events/ws_pusher_test.go`, `frontend/src/hooks/useRealtimeClicks.test.ts`, `tests/e2e/frontend.spec.ts` | Go events tests + pnpm test; `pnpm --dir frontend exec playwright test ../tests/e2e/frontend.spec.ts`: push410 cleanup, non410/Get/Query/cleanup error, reconnect reload, out-of-order max | Unit faults; browser E2E với API/WS thật khi được phép, record commit không retry vì notifier |
+| 4.1, 4.2: `tests/e2e/aws-flow.ps1` | `pwsh tests/e2e/aws-flow.ps1 -Scenario Moderation`: safe/reject/retry/MarkError; tạo META hợp lệ trước, không xóa song song | AWS sandbox; execution history chứng minh Retry/Catch/Fail và status, không chỉ test hàm blocklist |
+| 5.1, 5.3: `frontend/src/lib/auth.test.ts`, frontend E2E | pnpm test/build + Playwright: state/nonce/verifier/callback errors, logout; CF `/dashboard`, `/auth/callback?code=...&state=...`, assets, missing non-200 (403/404) | Unit auth và static build local; CloudFront/Cognito callback thật khi deploy được phép, chụp response/status và không lưu token |
+| 2.2, 6.2: `bootstrap/tests/trust.tftest.hcl`, `tests/e2e/aws-flow.ps1` | Terraform test; `pwsh tests/e2e/aws-flow.ps1 -Scenario OIDC`: đúng repo/ref/environment được assume, sai aud/sub/ref/fork bị từ chối | Unit/plan assertions + workflow sandbox được phép; STS denial/success evidence, không in JWT |
+| 6.1, 6.2: `scripts/deploy-canary.sh`, `tests/e2e/aws-flow.ps1` | `pwsh tests/e2e/aws-flow.ps1 -Scenario Canary`: same-version no-op, rollout thành công và fault-induced alarm rollback | AWS sandbox được phép; deployment ID/history, alarm transition, alias trước/sau, qualified API invocation; frontend không publish khi fail |
+| 6.2: `tests/load/redirect.k6.js` | `k6 run -e MODE=smoke tests/load/redirect.k6.js` (base URL/code từ cấu hình); redirects0 | AWS được phép hoặc local harness; tách status301/429/5xx, failed và successful RPS; stress cần yêu cầu riêng |
+
+Task sở hữu hành vi chịu trách nhiệm thêm test/file trong ma trận ngay khi triển khai; Task6.2 nối các kịch bản AWS thành runbook thống nhất. Phase0 chỉ chạy kiểm tra diff/liên kết/ví dụ JSON, không chạy các lệnh app/Terraform chưa có implementation.
