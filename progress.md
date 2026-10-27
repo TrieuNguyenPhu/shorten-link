@@ -1,6 +1,19 @@
 # Progress Log
 
+## Session: 2026-10-26 → 2026-10-27 — Hoàn thiện Phase 0 sau review
+
+- **Status:** in_progress — tiếp tục Task 0.1 trên nhánh và PR #65 hiện có; không tạo task độc lập hay merge PR.
+- **Phạm vi:** audit đủ 21 bài và source main, sửa đặc tả/kế hoạch, đối chiếu skills, kiểm tra tài liệu và cập nhật trạng thái. Không triển khai Phase 1.
+- **Ruling:** Người dùng xác nhận đã xóa AWS cũ; coi đây là baseline do người dùng cung cấp, không lặp lại destroy hoặc khẳng định đã kiểm kê chi phí.
+- **Ruling:** Các bản sửa review thuộc Task 0.1 đang mở, tiếp tục nhánh hiện có đã tách từ main; các task mới sau này vẫn tạo branch/PR riêng từ main.
+- **Nguồn:** Ba lượt kiểm chứng độc lập đã đọc toàn thân bài 1–7, 8–14 và 15–21 ở hai trang series; source đối chiếu commit `a5ffed9780d0447fc75a42def3693732bdc87907`.
+- **Lỗi công cụ đã xử lý:** Lượt review trước xuất nội dung HTML qua Python gặp encoding cp1252; dùng UTF-8 khi đọc nội dung tiếng Việt. Không có thay đổi AWS.
+- **Tiếp tục ngày 2026-10-27:** Agent triển khai trước đó bị giới hạn usage và chưa sửa file; đã kiểm tra Git trước khi tiếp tục, giữ nguyên kết quả đọc nguồn. Lỗi mở trang series 2 tạm thời đã được xử lý bằng link phân trang/Python; đủ 21 bài được đọc.
+- **Setup đã kiểm:** 314 thư mục skill cấp đầu, 376 `SKILL.md` đệ quy; đủ 13 file đại diện và hai file cấu hình entry hợp lệ.
+
 ## Session: 2026-10-26
+
+> Nhật ký lịch sử được giữ lại từ phiên trước. Phiên hoàn thiện không thực hiện lại các thao tác destroy hay xác minh tài khoản. Số file nguồn thực tế ở commit `a5ffed9` là 21, sửa nhận định 19 file bên dưới; mốc đọc toàn thân 21 bài và phạm vi xác minh mới ở mục trên.
 
 ### Task 0.1 — Clean Reset, 13 Skill Packs Setup, `AGENTS.md`, Reference Audit & Master Plan
 - **Status:** complete
