@@ -23,7 +23,7 @@
 | --- | --- | --- | --- | --- | --- |
 | **Phase 0** | **Task 0.1** | Xác minh setup skills/`AGENTS.md`, hoàn thiện Reference Audit, Architecture & Master Plan | `chore/phase-00-reset-and-architecture-plan` | **complete (PR chờ merge)** | [PR #65](https://github.com/TrieuNguyenPhu/shorten-link/pull/65) |
 | **Phase 1** | **Task 1.1** | Monorepo, `Makefile`, Go module, Domain Models, Base62 Generator & URL Validator + Unit Tests, CI nền | `feat/phase-01-task-01-monorepo-and-domain` | complete | [PR #66](https://github.com/TrieuNguyenPhu/shorten-link/pull/66) |
-| **Phase 1** | **Task 1.2** | Observability Middleware (`slog` JSON, CloudWatch EMF, X-Ray) & Script đóng gói Lambda `arm64` ZIP | `feat/phase-01-task-02-observability-and-packaging` | complete | PR đang tạo |
+| **Phase 1** | **Task 1.2** | Observability Middleware (`slog` JSON, CloudWatch EMF, X-Ray) & Script đóng gói Lambda `arm64` ZIP | `feat/phase-01-task-02-observability-and-packaging` | complete | [PR #67](https://github.com/TrieuNguyenPhu/shorten-link/pull/67) |
 | **Phase 2** | **Task 2.1** | DynamoDB Repository, Link Service, EventBridge publisher, local HTTP harness & 4 HTTP Lambdas + Tests | `feat/phase-02-task-01-core-crud-lambdas` | ⏳ Pending | — |
 | **Phase 2** | **Task 2.2** | Terraform Bootstrap (S3 state/lockfile, OIDC) & Core Modules, Cognito Google-only, custom event bus | `feat/phase-02-task-02-terraform-core-infra` | ⏳ Pending | — |
 | **Phase 3** | **Task 3.1** | Go Lambda `click-aggregator` (`TransactWriteItems`, `CancellationReasons`, `ReportBatchItemFailures`) + Tests | `feat/phase-03-task-01-click-aggregator-lambda` | ⏳ Pending | — |
@@ -69,4 +69,4 @@
 - `go mod verify`, `gofmt -l backend`, `git diff --check` PASS. Review độc lập cả hai task không có finding code phải sửa.
 - Ruling: EmitCountMetric trả error để không nuốt lỗi JSON/write; WithRequestID lấy invocation context cho logger. Hai wrapper dùng Go helper chung để bảo toàn quyền Unix trên Windows.
 - X-Ray SDK maintenance và SDKv1 gián tiếp là giới hạn được công bố; chưa xác minh trace export trên AWS. Không gọi AWS, Terraform hoặc load test; frontend untracked được giữ nguyên.
-- Thứ tự review/merge: #65 → #66 → PR Task1.2. Retarget về main sau khi PR phụ thuộc đã merge; không tự merge.
+- Thứ tự review/merge: #65 → #66 → #67. Retarget về main sau khi PR phụ thuộc đã merge; không tự merge.

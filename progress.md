@@ -56,4 +56,5 @@
 - Sửa review Task1.1: nâng minimum/CI từ Go1.26.5 lên Go1.26.10 sau khi scan Phase1 phát hiện stdlib vulnerabilities; PR #66 được cập nhật cùng branch trước khi merge.
 - Task1.2 complete / Phase1 complete: Windows Go1.26.10 test ./... và vet ./... PASS; WSL Go1.26.10 test -race ./... và vet ./... PASS cả4 packages. Packaging scripts thực/ELF/ZIP0755 và failure retention đều PASS. go mod verify, formatting, diff check PASS. Review độc lập không finding code.
 - Scan cuối Go1.26.10: exit0, 0 symbol/package vulnerabilities; còn 2 module-only S3 Crypto của SDKv1 gián tiếp (GO-2022-0646, GO-2022-0635) không được app import/call. Đã ghi README/findings/status và thêm scan vào CI.
-- Không gọi AWS, Terraform, E2E business hoặc sửa frontend untracked; Task2.1 tiếp theo. PR riêng Task1.2 đang tạo.
+- Không gọi AWS, Terraform, E2E business hoặc sửa frontend untracked; Task2.1 tiếp theo. PR riêng Task1.2: [#67](https://github.com/TrieuNguyenPhu/shorten-link/pull/67), base nhánh Task1.1 (#66).
+- PR #66 sau nâng Go1.26.10: CI backend PASS (29s). PR #67 chờ CI cho revision mới.
