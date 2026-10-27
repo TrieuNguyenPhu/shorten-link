@@ -1,133 +1,46 @@
-# Shortly — Serverless URL Shortener
+# Serverless URL Shortener with Realtime Analytics (AWS + Go + Terraform + Next.js)
 
-Phase 03 of a URL Shortener & Analytics Platform: authenticate with OAuth 2.0 Authorization Code + PKCE (`S256`), create short links, edit destinations/expirations with optimistic concurrency (`version`), enable/disable redirects, delete links with tombstone semantics, and follow public redirects locally or on AWS (`ap-southeast-2`, live at [npt-shortenlink.dev](https://npt-shortenlink.dev)). The Next.js UI exports to static files served via CloudFront + private S3 (OAC); the Go backend runs both locally and on native `provided.al2023` (`arm64`) Lambda functions backed by a DynamoDB single-table store. Business logic is independent of HTTP, DynamoDB, and Lambda event types.
+Đặc tả và kế hoạch tái triển khai hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS bằng **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js App Router (`output: "export"`)** trên **Amazon S3 (Private) + CloudFront Origin Access Control (OAC)**.
 
-**Cloud management routes are protected by Amazon Cognito + API Gateway HTTP API JWT Authorizer (`shortly-api/links.read` and `shortly-api/links.write` scopes) and enforce per-owner (`USER#<sub_id>`) isolation at the application and DynamoDB layers.** Local development runs a zero-Docker in-memory store with a local PKCE OAuth2 loopback simulator and never requires AWS credentials.
+Phase 0 hoàn thiện tài liệu ngày 2026-10-27, dựa trên lượt đọc nguồn ngày 2026-10-26. Chưa có ứng dụng Go/Next.js/Terraform chạy được; kiểm thử AWS và triển khai thuộc các phase tiếp theo và cần được cho phép. AWS cũ đã được xóa theo xác nhận người dùng, không phải kết quả kiểm kê AWS trong phiên này.
 
-## Start locally
+Dự án bám sát kiến trúc hướng sự kiện, thiết kế bảng đơn DynamoDB và luồng xử lý của:
+- **Chuỗi 21 bài viết:** [Serverless Thực Chiến Trên AWS](https://kkloudtarus.net/blog/series/serverless-on-aws-event-driven)
+- **Repository gốc:** [nghiadaulau/serverless-url-shortener-aws](https://github.com/nghiadaulau/serverless-url-shortener-aws)
 
-Prerequisites: Go **1.26+**, Node.js **24 LTS**, pnpm **10.33.2**. GNU Make is optional. Run commands from the repository root.
+---
 
-```sh
-pnpm install --frozen-lockfile
-go -C services/lambda mod download
-```
+## 1. Bảng Đối Chiếu Thay Đổi Kiến Trúc
 
-Start the API in one terminal:
+| Thành phần | Bản gốc | Bản triển khai này |
+| --- | --- | --- |
+| **Lambda Runtime** | Node.js 22 / TypeScript (`esbuild`) | **Golang** (`provided.al2023`, `arm64`, binary `bootstrap`) |
+| **Infrastructure as Code** | AWS SAM (`template.yaml`) | **Terraform (HCL)** quản lý 100% hạ tầng |
+| **Frontend Dashboard** | `web/index.html` (Vanilla HTML/JS) | **Next.js App Router + TypeScript + Tailwind CSS** (`output: "export"`) |
+| **Frontend Hosting** | File tĩnh cục bộ | **Amazon S3 (Private) + CloudFront (OAC)** |
+| **Xác thực** | Cognito email/mật khẩu trong web gốc | **Chỉ Google qua Cognito User Pool, Authorization Code + PKCE** |
+| **Phong cách UI** | HTML/JS tối giản | **Hand-Drawn / Doodle & Sketch UI**, responsive, dễ đọc |
+| **Dịch vụ Backend AWS** | API Gateway (HTTP + WebSocket), DynamoDB Single-Table (`PK`/`SK` + Sparse `GSI1` + `ttl`), Cognito JWT, EventBridge, SQS + DLQ, Step Functions, CloudWatch/X-Ray, SNS, CodeDeploy Canary | **Giữ dịch vụ, schema và access patterns; sửa lỗi publish, transaction và notifier theo đặc tả** |
 
-```sh
-go -C services/lambda run ./cmd/api
-```
+---
 
-Start the frontend in another:
+## 2. Tài Liệu & Trạng Thái Dự Án
 
-```sh
-pnpm dev
-```
+- 📊 **Trạng thái hiện tại của dự án:** [`PROJECT_STATUS.md`](./PROJECT_STATUS.md)
+- 🤖 **Quy chuẩn Agent & 13 Bộ Skills:** [`AGENTS.md`](./AGENTS.md)
+- 🔍 **Báo cáo Audit bản gốc (21 bài + source code):** [`docs/phase-0-reference-audit.md`](./docs/phase-0-reference-audit.md)
+- 🏗️ **Kiến trúc Mermaid, Hợp đồng API & DynamoDB Single-Table:** [`docs/architecture-and-contracts.md`](./docs/architecture-and-contracts.md)
+- 🗺️ **Kế hoạch triển khai chi tiết (Phase 0 → Phase 6):** [`docs/superpowers/plans/2026-10-26-serverless-url-shortener-plan.md`](./docs/superpowers/plans/2026-10-26-serverless-url-shortener-plan.md)
+- 📝 **Bộ nhớ làm việc (`planning-with-files`):** [`task_plan.md`](./task_plan.md) · [`findings.md`](./findings.md) · [`progress.md`](./progress.md)
 
-Open **http://localhost:3000**. The API is **http://127.0.0.1:8080**, with liveness at `/health`. Click **Sign in** to complete the local PKCE OAuth 2.0 flow. The form accepts a destination, an optional custom alias, and an optional expiration. The library at `/dashboard/` lists your links, edits destinations/expirations, enables/disables redirects, and permanently deletes links with confirmation.
+---
 
-## Static export
+## 3. Lộ Trình Phát Triển (Development Phases)
 
-```sh
-pnpm build
-node local/serve-static.mjs
-```
-
-This previews `apps/web/out/` at port 3000 without a Next.js server. Stop `pnpm dev` first. Client components fetch the Go API in the browser. There are no API Routes, Server Actions, runtime SSR, runtime image optimization, or dynamically generated server pages.
-
-## Development commands
-
-| Make target           | Purpose                                                      |
-| --------------------- | ------------------------------------------------------------ |
-| `make install`        | Install locked frontend dependencies and download Go modules |
-| `make api`/`make web` | Start Go API / Next.js development server                    |
-| `make preview`        | Serve an existing static export                              |
-| `make fmt`            | Apply gofmt and Prettier                                     |
-| `make test`           | Go unit/contract tests, static preview & deploy script tests |
-| `make lint`           | Go vet, ESLint, TypeScript checks                            |
-| `make build`          | Build Go packages and frontend static export                 |
-| `make check`          | Unit tests, lint, typecheck, builds, format check            |
-| `make test-e2e`       | Browser tests against the real API and exported frontend     |
-
-Equivalent commands without Make:
-
-```sh
-go -C services/lambda test ./...
-go -C services/lambda vet ./...
-go -C services/lambda build ./...
-node --test local/serve-static.test.mjs local/deploy-web.test.mjs
-pnpm lint
-pnpm typecheck
-pnpm build
-pnpm format:check
-```
-
-For browser E2E tests, start `cmd/api` and run Playwright:
-
-```sh
-pnpm exec playwright install chromium
-pnpm build
-pnpm test:e2e
-```
-
-## API
-
-All management requests require a valid OAuth 2.0 `Bearer` access token (`shortly-api/links.read` for `GET`/`HEAD`, `shortly-api/links.write` for `POST`/`PATCH`/`DELETE`) and use JSON. Codes and aliases are case-sensitive. Generated codes have eight URL-safe characters (48 cryptographically random bits). Custom aliases must match `[A-Za-z0-9_-]{3,32}`. Atomic conditional writes prevent overwrite and enforce optimistic concurrency (`version`).
-
-| Method | Endpoint                        | Scope                     | Behavior                                                                                 |
-| ------ | ------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------- |
-| GET    | `/health`                       | Public                    | 200 liveness response                                                                    |
-| POST   | `/api/links`                    | `shortly-api/links.write` | Create; 201 with link JSON (`version: 1`) and relative `Location`                        |
-| GET    | `/api/links`                    | `shortly-api/links.read`  | Newest-first page of up to 25 links owned by caller (`USER#sub`)                         |
-| GET    | `/api/links?cursor=...`         | `shortly-api/links.read`  | Next page using returned `nextCursor` (verified against caller)                          |
-| GET    | `/api/links/{code}`             | `shortly-api/links.read`  | Link metadata if owned by caller; 404 otherwise                                          |
-| PATCH  | `/api/links/{code}`             | `shortly-api/links.write` | Update `url`, `enabled`, `expiresAt` with `version`; `expiresAt: null` clears expiration |
-| DELETE | `/api/links/{code}?version=...` | `shortly-api/links.write` | 204 tombstone delete; removes from index and retires short code                          |
-| GET    | `/r/{code}`                     | Public                    | 302 with destination in `Location`; 410 if disabled/expired/deleted                      |
-
-| Status | Error code / condition                                                 |
-| ------ | ---------------------------------------------------------------------- |
-| 400    | `invalid_input` or `invalid_json`; includes malformed/tampered cursor  |
-| 401    | `unauthorized`; missing, malformed, or expired Bearer access token     |
-| 403    | `forbidden` or `forbidden_origin`; insufficient token scope or origin  |
-| 404    | `not_found`; missing, deleted, or owned by another user                |
-| 405    | `method_not_allowed`                                                   |
-| 409    | `conflict` (alias in use / retired) or `version_conflict` (stale edit) |
-| 410    | `gone`; disabled, expired, or deleted redirect                         |
-| 413    | `body_too_large`                                                       |
-| 415    | `unsupported_media_type`                                               |
-| 500    | `internal_error`; unexpected persistence failure                       |
-| 503    | `unavailable`; random-code collision retries exhausted                 |
-
-## Environment
-
-Defaults run without creating any environment files. Examples: [`apps/web/.env.example`](apps/web/.env.example), [`services/lambda/.env.example`](services/lambda/.env.example).
-
-| Variable                        | Default                              | Notes                                        |
-| ------------------------------- | ------------------------------------ | -------------------------------------------- |
-| `API_ADDRESS`                   | `127.0.0.1:8080`                     | Go local API; loopback hosts only            |
-| `WEB_ORIGIN`                    | `http://localhost:3000`              | Exact frontend CORS origin; loopback only    |
-| `NEXT_PUBLIC_API_BASE_URL`      | `http://127.0.0.1:8080`              | Public API origin embedded at frontend build |
-| `NEXT_PUBLIC_COGNITO_CLIENT_ID` | `local-web-client`                   | Public Cognito PKCE client ID                |
-| `NEXT_PUBLIC_COGNITO_DOMAIN`    | `http://127.0.0.1:8080/oauth2-local` | Cognito Hosted UI base URL                   |
-| `NEXT_PUBLIC_COGNITO_ISSUER`    | `http://127.0.0.1:8080/oauth2-local` | Cognito User Pool OIDC issuer URL            |
-
-## AWS packaging & deployment (Phase 03)
-
-Offline verification commands (no AWS credentials required):
-
-```sh
-make build-lambdas test-packaging terraform-check
-pnpm test:deploy
-pnpm test:dev
-```
-
-For redeployments to the `ap-southeast-2` stack:
-
-- `pnpm build:lambdas` builds deterministic `linux/arm64` Lambda archives into `dist/lambdas/`.
-- Cognito callback and logout URLs follow Terraform's `site_url`, for both the assigned CloudFront hostname and a custom domain. `web_origin` only controls CORS for browser requests made directly to API Gateway.
-- `pnpm deploy:web` verifies the Terraform account/bucket/distribution outputs and the live Cognito client's callback/logout URLs before building or uploading. The deploying identity needs `cognito-idp:DescribeUserPoolClient` in addition to the existing deployment permissions. It builds the static export against `site_url` and Cognito settings, syncs immutable assets before HTML, and creates a CloudFront invalidation.
-- `go -C services/lambda run ./cmd/smoke -api <api_url> -site <site_url> -bucket <web_bucket> -region ap-southeast-2 -user-pool-id <pool_id> -client-id <client_id> -cognito-domain <cognito_domain>` runs the 50-check multi-user Cognito PKCE cloud smoke suite.
-
-See the [API contract](contracts/openapi.yaml) for ownership, versioning, expiration and error responses.
+1. **Phase 0 — Reference Audit & Architecture** *(Hoàn tất)*
+2. **Phase 1 — Monorepo & Local Foundation** *(Task 1.1 & Task 1.2)*
+3. **Phase 2 — Core URL Shortener** *(Task 2.1 & Task 2.2)*
+4. **Phase 3 — Event-Driven Analytics** *(Task 3.1 & Task 3.2)*
+5. **Phase 4 — Realtime WebSocket & Moderation** *(Task 4.1 & Task 4.2)*
+6. **Phase 5 — Frontend Next.js & S3/CloudFront Hosting** *(Task 5.1, Task 5.2 & Task 5.3)*
+7. **Phase 6 — Production Operations, Observability & Canary CI/CD** *(Task 6.1 & Task 6.2)*
