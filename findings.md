@@ -51,3 +51,4 @@
 - Ruling Git: tạo từng branch từ origin/main rồi fast-forward baseline phụ thuộc; PR 1.1 base nhánh Phase 0, PR 1.2 base nhánh 1.1. PR #65 đang OPEN; chưa merge main, tránh đưa lại toàn bộ reset Phase 0 vào diff task. Retarget sau khi upstream merge.
 - Go local 1.26.5; pin toolchain 1.26.5 (không tuyên bố mới nhất), CI Linux chạy race. Windows chưa có gcc trong PATH, có WSL Ubuntu để kiểm chứng race.
 - AWS xác nhận X-Ray SDK/daemon maintenance từ 25/02/2026, chỉ cập nhật bảo mật; lựa chọn instrumentation sẽ được ghi rõ ở Task 1.2. Nguồn: https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-daemon-timeline.html
+- Bản cuối Task1.1 dùng Go1.26.10 thay pin1.26.5 ban đầu; sửa cùng PR #66 để baseline của Task1.2 cũng yêu cầu bản vá.

@@ -47,7 +47,7 @@ Dự án bám sát kiến trúc hướng sự kiện, thiết kế bảng đơn 
 
 ## 4. Kiểm tra nền tảng local
 
-Yêu cầu Go 1.26.5 (pin trong `backend/go.mod` và CI). Chạy từ root:
+Yêu cầu Go 1.26.10 (pin trong `backend/go.mod` và CI). Chạy từ root:
 
 ```sh
 go -C backend test -race ./...
