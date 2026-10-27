@@ -114,7 +114,7 @@ Hợp đồng lỗi đầy đủ nằm tại [đặc tả kiến trúc](architec
 3. **Cấu hình `PUBLIC_REDIRECT_BASE_URL` cho `shortUrl`:**
    - **Vấn đề khi tách Frontend CloudFront và API Gateway:** Bản gốc ghép `https://${event.requestContext.domainName}/${code}`. Trong bản đích, để đảm bảo luôn tạo đúng `shortUrl` trỏ về public redirect base URL của API Gateway (không bị nhầm sang domain CloudFront của frontend), Lambda `create-link` ưu tiên đọc biến môi trường `PUBLIC_REDIRECT_BASE_URL` do Terraform truyền vào (fallback về `https://${event.requestContext.domainName}` nếu không cấu hình).
 
-4. **Cognito Hosted UI Authorization Code + PKCE cho UI:** Bản gốc dùng password auth; bản port không thêm direct-login fallback. User password flow chỉ bật khi cấu hình rõ cho E2E CLI. Không mang password demo hoặc nội suy `innerHTML` từ nguồn sang React.
+4. **Google-only qua Cognito User Pool + Authorization Code/PKCE:** Đây là thay đổi theo yêu cầu người dùng sau audit. Bản gốc dùng password auth; bản port chỉ hỗ trợ Google social IdP, không cung cấp form đăng nhập/đăng ký hay password flow kể cả E2E. Cognito cấp token cho ứng dụng; API dùng Cognito access token. Không mang password demo hoặc nội suy `innerHTML` từ nguồn sang React.
 
 5. **Kiểm tra publish:** `resolve-link.ts` không kiểm `FailedEntryCount`/`Entries.ErrorCode`. Go kiểm từng entry, retry có giới hạn và chỉ trả 301 khi có EventId; lỗi phát metric và Lambda error/API5xx. Timeout publish bất định và bus thiếu có thể làm mất/đếm lại event; xem hợp đồng 3.4.
 
@@ -152,7 +152,7 @@ Hợp đồng lỗi đầy đủ nằm tại [đặc tả kiến trúc](architec
 | `WsDisconnectFunction` | `src/handlers/ws-disconnect.ts` | Go Lambda `ws-disconnect` (`provided.al2023`, `arm64`) | `backend/cmd/ws-disconnect/main.go` |
 | `ModerateCheckFunction` | `src/handlers/moderate-check.ts` | Go Lambda `moderate-check` (`provided.al2023`, `arm64`) | `backend/cmd/moderate-check/main.go` |
 | Step Functions ASL | `statemachine/moderation.asl.json` | Giữ nguyên cấu trúc ASL chuẩn, truyền ARN/TableName qua Terraform `templatefile` | `statemachine/moderation.asl.json` |
-| Vanilla HTML Dashboard | `web/index.html` | Next.js App Router (`output: "export"`) + TypeScript + Tailwind CSS trên S3 + CloudFront OAC | `frontend/src/*` |
+| Vanilla HTML Dashboard | `web/index.html` | Next.js App Router (`output: "export"`) + TypeScript + Tailwind CSS, Hand-Drawn / Doodle & Sketch UI trên S3 + CloudFront OAC | `frontend/src/*` |
 | CI Workflow | `.github/workflows/ci.yml` | GitHub Actions CI + CD (OIDC, Go build/test, Next.js export, Terraform, CodeDeploy Canary, S3 sync + CloudFront invalidation) | `.github/workflows/ci.yml` & `.github/workflows/deploy.yml` |
 | Load Test Script | *(Trong bài viết 20)* | Kịch bản k6 với chế độ smoke mặc định và stress test theo biến môi trường | `tests/load/redirect.k6.js` |
 

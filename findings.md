@@ -30,6 +30,8 @@
 - `$connect` công khai: ai biết code đều có thể nghe số click. List/delete HTTP vẫn enforce owner qua JWT và DynamoDB.
 - Moderation độc lập, `MarkError` là Fail, không update status lỗi; không có quét URL thật. Activate/Reject của ASL gốc có thể upsert item, nên runbook phải chuẩn bị link hợp lệ trước khi chạy demo.
 - Bài 21 còn mô tả dashboard như hướng mở rộng nhưng source cuối đã có `web/index.html`; chưa có S3/CloudFront hosting. UI đích không mang password demo hay nội suy `innerHTML` từ URL người dùng.
+- Người dùng cập nhật ngày 2026-10-27: chỉ đăng nhập Google qua Cognito User Pool; giao diện Hand-Drawn / Doodle & Sketch UI. Đây là thay đổi so với source gốc. Không tạo password/signup flow, kể cả E2E; hai tài khoản Google thử nghiệm đi qua browser federation.
+- Google OAuth Web client đặt redirect URI ở Cognito `/oauth2/idpresponse`; app callback ở CloudFront `/auth/callback/`. Cognito phát hành access token cho API Gateway JWT authorizer (ba route riêng tư yêu cầu scope `openid`), Lambda lấy Cognito `sub`. Google ID token/secret không vào frontend hoặc API. Google app/consent cần tạo ngoài AWS; Terraform quản lý Cognito IdP và state phải được bảo vệ vì có thể chứa Google secret. Nguồn: [AWS Google social IdP](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-social-idp-google.html), [AWS HTTP API JWT authorizer](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-jwt-authorizer.html).
 - CI gốc chỉ build/validate; OIDC deploy là phần bổ sung. Custom bus/publisher cần có từ Phase 2; rule/SQS/aggregator nối hoàn chỉnh ở Phase 3.
 - Số đo Node, quota tài khoản tác giả và hóa đơn lịch sử không phải benchmark/quota/chi phí bảo đảm của bản Go.
 

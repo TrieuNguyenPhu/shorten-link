@@ -18,6 +18,8 @@ Dự án bám sát kiến trúc hướng sự kiện, thiết kế bảng đơn 
 | **Infrastructure as Code** | AWS SAM (`template.yaml`) | **Terraform (HCL)** quản lý 100% hạ tầng |
 | **Frontend Dashboard** | `web/index.html` (Vanilla HTML/JS) | **Next.js App Router + TypeScript + Tailwind CSS** (`output: "export"`) |
 | **Frontend Hosting** | File tĩnh cục bộ | **Amazon S3 (Private) + CloudFront (OAC)** |
+| **Xác thực** | Cognito email/mật khẩu trong web gốc | **Chỉ Google qua Cognito User Pool, Authorization Code + PKCE** |
+| **Phong cách UI** | HTML/JS tối giản | **Hand-Drawn / Doodle & Sketch UI**, responsive, dễ đọc |
 | **Dịch vụ Backend AWS** | API Gateway (HTTP + WebSocket), DynamoDB Single-Table (`PK`/`SK` + Sparse `GSI1` + `ttl`), Cognito JWT, EventBridge, SQS + DLQ, Step Functions, CloudWatch/X-Ray, SNS, CodeDeploy Canary | **Giữ dịch vụ, schema và access patterns; sửa lỗi publish, transaction và notifier theo đặc tả** |
 
 ---

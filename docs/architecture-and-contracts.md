@@ -18,7 +18,8 @@ flowchart TB
   subgraph Edge["Frontend Hosting & Auth"]
     CF["Amazon CloudFront<br/>(HTTPS, Caching, Static Rewrite)"]
     S3["Amazon S3 Private Bucket<br/>(Origin Access Control - OAC)"]
-    Cognito["Amazon Cognito User Pool<br/>(Hosted UI PKCE)"]
+    Cognito["Amazon Cognito User Pool<br/>(Google social IdP, Code + PKCE)"]
+    Google["Google OAuth<br/>(đăng nhập duy nhất)"]
   end
 
   subgraph APILayer["API Layer (Amazon API Gateway v2)"]
@@ -52,7 +53,8 @@ flowchart TB
   end
 
   UI -->|"1. Tải Static Assets"| CF -->|"OAC SigV4"| S3
-  UI -->|"2. OAuth2 PKCE / Auth"| Cognito
+  UI -->|"2. OAuth2 Code + PKCE"| Cognito
+  Cognito <-->|"Federation"| Google
   UI -->|"3. REST CRUD + Bearer JWT"| HttpAPI
   UI <-->|"4. WebSocket ?code=..."| WsAPI
   Visitor -->|"GET /{code}"| HttpAPI
@@ -340,4 +342,12 @@ Frontend reconnect bằng backoff và nạp lại `GET /links` khi reconnect, kh
 
 Next.js `output: "export"`, `trailingSlash: true`, S3 private/OAC; CloudFront rewrite route tĩnh sang `index.html`, missing route/asset phải non-200 (403 hoặc 404 với private S3), không catch-all 200. Không cấp ListBucket rộng hay che lỗi OAC để ép404. `_next/static/*` cache immutable, HTML TTL ngắn. Public build config phải lấy từ Terraform outputs đúng môi trường; không chứa secret.
 
-UI chỉ dùng Cognito Hosted UI Authorization Code + PKCE (S256): sinh và lưu ngắn hạn `state`, `nonce`, `code_verifier`; xác thực state/nonce, redirect URL allowlist, xử lý callback lỗi/thiếu hoặc lặp code, token hết hạn và logout; dọn dữ liệu tạm sau xử lý. Không thêm direct-login fallback. User password flow chỉ bật khi cấu hình rõ cho E2E CLI. Không mang password demo hoặc nội suy `innerHTML` từ nguồn sang React; hiển thị URL qua React escaping và kiểm tra scheme.
+**Đăng nhập Google duy nhất:** Browser mở Cognito `/oauth2/authorize` với `identity_provider=Google`, `response_type=code`, `scope=openid email profile`, `state`, `nonce` và PKCE `S256`. Cognito chuyển sang Google, nhận kết quả tại `https://<cognito-domain>/oauth2/idpresponse`, rồi trả authorization code về `https://<cloudfront-domain>/auth/callback/`. Browser đổi code lấy token của **Cognito User Pool** bằng public app client không có client secret; API Gateway xác thực Cognito access token, Lambda dùng Cognito claim `sub` làm `ownerId`. Google ID token và Google client secret không đi tới API/frontend. Cognito app client chỉ hỗ trợ IdP `Google`, không hỗ trợ `COGNITO` làm cách đăng nhập, không bật `USER_PASSWORD_AUTH`/`ADMIN_USER_PASSWORD_AUTH` hoặc password flow cho E2E; giao diện chỉ có nút **Tiếp tục với Google**, không có form mật khẩu/đăng ký riêng. Việc đăng nhập Google lần đầu có thể tạo federated user trong Cognito. Đây là thay đổi sản phẩm so với password auth của `web/index.html` gốc. [AWS: Google social IdP](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-social-idp-google.html).
+
+**Thiết lập từ tài khoản sạch:** Task 2.2 tạo User Pool và Cognito domain với prefix xác định. Người vận hành tạo Google OAuth **Web application** trong Google Auth Platform, khai báo authorized redirect URI là Cognito `/oauth2/idpresponse` (không phải callback CloudFront), scopes `openid email profile`, rồi cung cấp Google client ID/secret qua kênh secret của môi trường deploy. Terraform quản lý Cognito Google IdP, map ít nhất `email` và `email_verified`, app client, domain và callback/logout URLs. Secret là input nhạy cảm: không commit vào repo, `.tfvars`, GitHub artifact/log hay biến `NEXT_PUBLIC_*`; giới hạn quyền đọc và mã hóa remote Terraform state vì provider details có thể lưu secret trong state. Google Cloud OAuth app/consent screen là cấu hình ngoài AWS, phải hoàn thành thủ công trước khi apply IdP; Task 5.3 cập nhật callback/logout URL sang domain CloudFront thật sau khi distribution tồn tại. [AWS: Google redirect/scopes](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-social-idp-google.html).
+
+**API và callback:** Frontend gửi `Authorization: Bearer <Cognito access token>`. JWT authorizer có issuer là User Pool, audience là app client ID; ba route riêng tư yêu cầu `authorizationScopes = ["openid"]` để ID token không thay thế access token. API Gateway kiểm `aud` hoặc `client_id` theo token, rồi chuyển claims cho Lambda. Test thực tế token Google/ID bị từ chối, access token đúng scope được nhận và `claims.sub` là user Cognito ổn định. [AWS: HTTP API JWT authorizer](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-jwt-authorizer.html), [Cognito token claims](https://docs.aws.amazon.com/cognito/latest/developerguide/amazon-cognito-user-pools-using-tokens-verifying-a-jwt.html).
+
+Frontend sinh/lưu ngắn hạn `state`, `nonce`, `code_verifier`, xác thực state/nonce và redirect URL allowlist, xử lý callback lỗi/thiếu/lặp code, token hết hạn và logout; dọn dữ liệu tạm sau xử lý. Không mang password demo hoặc nội suy `innerHTML` từ nguồn sang React; hiển thị URL qua React escaping và kiểm tra scheme. E2E dùng hai tài khoản Google thử nghiệm qua browser federation, không dùng `InitiateAuth` password.
+
+**Thiết kế giao diện:** Hand-Drawn / Doodle & Sketch UI trên cả landing, nút Google, dashboard và My Links: giấy sáng màu, nét viền không đều có kiểm soát, nét gạch/chú thích vẽ tay và typography thân thiện. Doodle chỉ là trang trí; thứ bậc nội dung, số click, trạng thái kết nối, loading/error, focus bàn phím, độ tương phản và `prefers-reduced-motion` phải rõ ràng. Giữ responsive, không biến biểu đồ hay số liệu thành mock và không nhúng ảnh chụp bình luận người dùng vào sản phẩm.

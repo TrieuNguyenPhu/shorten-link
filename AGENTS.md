@@ -15,6 +15,7 @@ Bạn đang làm việc với vai trò **Senior AWS Serverless Architect + Golan
 | Infrastructure as Code | AWS SAM (`template.yaml`) | **Terraform (HCL)** quản lý 100% tài nguyên |
 | Frontend Dashboard | `web/index.html` (Vanilla HTML/JS) | **Next.js App Router + TypeScript + Tailwind CSS** (`output: "export"`) |
 | Frontend Hosting | Mở file tĩnh cục bộ | **Amazon S3 (Private) + CloudFront với Origin Access Control (OAC)** |
+| Đăng nhập | Cognito User Pool bằng email/mật khẩu trong `web/index.html` | **Chỉ Google qua Cognito User Pool social IdP, Authorization Code + PKCE**; không có form/flow mật khẩu hoặc đăng ký riêng |
 | Các thành phần AWS khác | DynamoDB, Cognito, HTTP API, WebSocket API, EventBridge, SQS + DLQ, Step Functions, CloudWatch/X-Ray, SNS, CodeDeploy Canary | **Giữ dịch vụ cốt lõi, tên bảng/event schema và access patterns; các sửa lỗi có chủ đích được chốt trong đặc tả kiến trúc** |
 
 ### Các Ràng Buộc Nghiêm Cấm Vi Phạm
@@ -35,6 +36,7 @@ Bạn đang làm việc với vai trò **Senior AWS Serverless Architect + Golan
    - Tên biến, hàm, package, file, commit message và mã nguồn viết bằng **tiếng Anh** chuẩn.
 5. **Không dùng mock data cho luồng chính:** Mọi luồng nghiệp vụ phải đi qua code thực thi thật, có unit test, integration test và kịch bản E2E kiểm chứng.
 6. **An toàn chi phí AWS:** Không tự ý chạy `terraform apply` hoặc chạy load test lớn trên AWS khi chưa được người dùng yêu cầu rõ ràng.
+7. **Giao diện:** Frontend dùng phong cách **Hand-Drawn / Doodle & Sketch UI** xuyên suốt landing, đăng nhập và dashboard; giữ chữ, thao tác và trạng thái dễ đọc, responsive và accessible.
 
 ---
 
