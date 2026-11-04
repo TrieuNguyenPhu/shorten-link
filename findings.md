@@ -102,3 +102,12 @@
 
 - Cognito DescribeIdentityProvider tự bổ sung username=sub và metadata endpoints/method. [Provider6.71.0](https://github.com/hashicorp/terraform-provider-aws/blob/v6.71.0/internal/service/cognitoidp/identity_provider.go) ghi toàn bộ map vào state nên cấu hình chỉ3provider keys bị perpetual diff. Ignore chỉ username và6metadata keys giải quyết actual plan exit2→0, vẫn quản lý credentials/scopes/app mapping.
 - IAM Access Analyzer trên policy thực đã pin không có finding; IAM simulation thử nghiệm không cho kết quả dùng được (custom input lỗi, principal result có ARN placeholder), không coi là evidence quyền. Runtime permissions được smoke qua Lambda thực với DynamoDB/EventBridge; GitHub STS/OIDC matrix vẫn pending. Bootstrap local state cần giữ backup tách app backend để tránh deployment role tự quản bootstrap.
+
+
+## Phase 3 / Task 3.1 — 2026-11-04
+- Tách `aggregator.go` trong repository để giữ implementation transaction/reason classifier tập trung; vẫn dùng cùng DynamoDB repository/client/table, không thêm kho dữ liệu hay framework. Mở rộng SDK interface và test doubles ở ba package để bảo toàn unit tests cũ.
+- Giữ cố định transaction META/STAT/marker, chỉ ack đúng3reasons và consistent read xác nhận delete. Nil SDK responses fail closed; conflict/throttle/mixed/unknown/thiếu reason phải retry.
+- Ngày STAT lấy từ timestamp event chuẩn hóa UTC, TTL từ processing time; event trễ không bị chuyển sang ngày nhận. Envelope invalid source/type/id/code/at bị retry, không tạo item. Dedupe dựa item tồn tại, không dựa thời điểm TTL.
+- Local DynamoDB3.3.0 xác nhận transaction/reasons Go SDK, dedupe finite window, sparse marker/STAT, concurrent deliveries và delete race. Marker mất rồi replay đếm lại là giới hạn chủ đích; không thêm generation/outbox.
+- Batch có deadline4s; remaining records được retry. Notifier sau commit với budget200ms, không rollback/retry click đã commit nếu notifier hoặc EMF lỗi; production notifier chưa gắn cho tới Phase4.
+- HTTP E2E giữ actual publisher entry/detail/EventId và handoff tường minh vào consumer; fixture chỉ thay external event delivery. Không dùng fixture làm evidence AWS EventBridge/SQS/ESM/DLQ hoặc WebSocket.

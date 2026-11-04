@@ -29,11 +29,11 @@ jobs:
         run: go -C backend test -race ./...
       - name: Vet
         run: go -C backend vet ./...
-      - name: DynamoDB Local integration and HTTP E2E
+      - name: DynamoDB Local transactions and HTTP analytics E2E
         env:
           DYNAMODB_ENDPOINT: http://127.0.0.1:8000
         run: go -C backend test -race -tags=integration -count=1 ./internal/repository/... ./tools/local-http/...
-      - name: Build HTTP Lambda arm64 archives
+      - name: Build Lambda arm64 archives
         run: bash scripts/build-lambdas.sh
       - name: Check reachable vulnerabilities
         run: go -C backend run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...

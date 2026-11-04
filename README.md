@@ -2,7 +2,7 @@
 
 Đặc tả và kế hoạch tái triển khai hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS bằng **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js App Router (`output: "export"`)** trên **Amazon S3 (Private) + CloudFront Origin Access Control (OAC)**.
 
-Phase 1 cung cấp nền tảng Go chạy local và đã vào main qua PR #68/#69. Scaffold frontend có static export và kiểm tra artifact; Task 2.1 bổ sung bốn HTTP Lambda, repository DynamoDB, EventBridge publisher và HTTP harness. Task 2.2 bổ sung Terraform bootstrap/core modules với kiểm thử plan offline; chưa triển khai AWS. Google login frontend, Doodle UI và dashboard chưa hoàn thiện. AWS cũ đã được xóa theo xác nhận người dùng; phiên này không triển khai AWS.
+Phase 1 cung cấp nền tảng Go qua PR #68/#69; scaffold frontend có static export và kiểm tra artifact. Phase 2 có bốn HTTP Lambda, DynamoDB repository, EventBridge publisher, HTTP harness và Terraform bootstrap/core; AWS core đã triển khai ngày 2026-11-04 qua đợt final review PR #73. Task 3.1 bổ sung click-aggregator với transaction idempotency và kiểm thử DynamoDB Local/HTTP analytics E2E; EventBridge rule/SQS/ESM thuộc Task 3.2 vẫn pending. Google login frontend, Doodle UI, dashboard và WebSocket chưa hoàn thiện. Phiên Task 3.1 chỉ kiểm thử local, không thay đổi tài nguyên AWS.
 
 Dự án bám sát kiến trúc hướng sự kiện, thiết kế bảng đơn DynamoDB và luồng xử lý của:
 - **Chuỗi 21 bài viết:** [Serverless Thực Chiến Trên AWS](https://kkloudtarus.net/blog/series/serverless-on-aws-event-driven)
@@ -90,7 +90,7 @@ bash scripts/build-lambdas.sh
 
 Hai wrapper dùng chung `backend/tools/build-lambdas`, tìm các `backend/cmd/<handler>/main.go` hiện có, build `GOOS=linux GOARCH=arm64 CGO_ENABLED=0` với `lambda.norpc`, tạo `backend/dist/<handler>.zip`. Mỗi ZIP chứa đúng file gốc `bootstrap` với quyền Unix `0755`, dùng được cho `provided.al2023`/`arm64`; không cần cài zip/Python riêng. Artifact cũ được giữ nếu handler build lỗi.
 
-Task 2.1 có bốn handler thật: create-link, resolve-link, list-links, delete-link. Lệnh build tạo bốn ZIP; Phase 3–4 bổ sung bốn Lambda còn lại. Test dùng một chương trình Go tối thiểu trong thư mục tạm để kiểm ELF/ZIP và wrapper thực trên Windows/Linux; fixture này không phải Lambda nghiệp vụ và không chứng minh E2E AWS. Không dùng placeholder handler để tạo artifact triển khai giả.
+Hiện có năm handler thật: create-link, resolve-link, list-links, delete-link và click-aggregator. Lệnh build tạo năm ZIP; Phase 4 bổ sung ba Lambda còn lại. Test dùng một chương trình Go tối thiểu trong thư mục tạm để kiểm ELF/ZIP và wrapper thực trên Windows/Linux; fixture này không phải Lambda nghiệp vụ và không chứng minh E2E AWS. Không dùng placeholder handler để tạo artifact triển khai giả.
 
 ## 6. Kiểm tra scaffold frontend tĩnh
 

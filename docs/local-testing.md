@@ -1,6 +1,6 @@
-# Kiểm thử core HTTP API trên máy local
+# Kiểm thử HTTP API và click analytics trên máy local
 
-Task 2.1 chạy handler/service/repository thật với DynamoDB Local. Không dùng kho link trong bộ nhớ. Unit tests thay dependency tại ranh giới repository/SDK/publisher; integration và HTTP E2E dùng DynamoDB Local. Recorder chỉ thay dịch vụ EventBridge tại ranh giới giao thức HTTP, không phát sinh số click giả và không chuyển sự kiện đến consumer.
+Task 2.1 và Task 3.1 chạy handler/service/repository thật với DynamoDB Local. Không dùng kho link trong bộ nhớ. Unit tests thay dependency tại ranh giới repository/SDK/publisher; integration và HTTP E2E dùng DynamoDB Local. Recorder trong harness chỉ thay dịch vụ EventBridge tại ranh giới giao thức HTTP. E2E Task 3.1 chuyển envelope từ entry đã publish sang consumer bằng fixture tường minh; aggregator và transaction DynamoDB vẫn chạy thật.
 
 ## 1. Khởi động DynamoDB Local
 
@@ -85,3 +85,20 @@ Go 1.26.10/Linux amd64 và DynamoDB Local 3.3.0 (digest bên trên): unit/race, 
 ## 6. Cursor pagination sau final review
 
 `GET /links?limit=25&cursor=<nextCursor>`: limit1–100, mặc định25, cursor trả400 nếu malformed hoặc thuộc owner khác. Khi còn dữ liệu, response có nextCursor; trang cuối chỉ có links. Mỗi trang được giới hạn byte budget trước JSON Lambda envelope; không silently truncate. Local HTTP harness chuyển query parameters thật vào handler. Unit regression duyệt450link với URL dài/nhiều ký tự cần escape, kiểm tất cả response<6MiB và không mất/trùng code. Integration kiểm limit1 qua2 trang, hết cursor và cross-owner400 bằng DynamoDB Local.
+
+
+## 7. Click aggregator — Task 3.1
+
+Các lệnh unit/race, integration và build ở mục2 tự bao gồm `click-aggregator`; output hiện có năm ZIP. `TABLE_NAME` là cấu hình bắt buộc. Lambda dùng SDK v2 được instrument X-Ray, retry SDK tối đa2attempts/backoff100ms, deadline cả batch4s dưới timeout Lambda5s. Record chưa xử lý khi deadline đã hết nằm trong `batchItemFailures`; không fail toàn batch vì một record lỗi. ESM `ReportBatchItemFailures` sẽ được cấu hình trong Task3.2, không thể suy ra từ unit test.
+
+Consumer nhận EventBridge envelope có `source=urlshortener`, `detail-type=link.clicked`, `id`/`detail.code` không rỗng và `detail.at` là RFC3339. JSON/envelope/timestamp không hợp lệ phải retry rồi vào DLQ theo ESM, không được ack âm thầm. `STAT` dùng ngày UTC của `detail.at`, marker TTL dùng thời điểm xử lý+86400giây; producer thật luôn phát timestamp UTC. Không dùng thời điểm nhận SQS để chuyển click trễ sang ngày khác.
+
+Transaction giữ đúng thứ tự META Update có `attribute_exists(PK)`, STAT Update và marker Put có `attribute_not_exists(PK)`. Chỉ `[None,None,ConditionalCheckFailed]` là duplicate. Late-deleted phải có reasons chính xác theo kiến trúc5.2 và GetItem consistent xác nhận META mất; error/nil response/META còn đều retry. Không đọc TTL để bỏ qua marker vẫn tồn tại.
+
+`TestDynamoDBLocalClickAtomicityTTLAndReplay` kiểm counter/STAT/marker, UTC day, sparse attributes, duplicate, marker hết TTL nhưng còn item, replay sau xóa marker và late-deleted không tạo lại META/STAT/marker. `TestDynamoDBLocalConcurrentClicksAndDeleteRace` kiểm12delivery cùng event chỉ commit1lần,12event khác không mất cập nhật, rồi transaction đua với delete. Contention retries trong test chỉ mô phỏng lần giao SQS tiếp theo, không che validation/network failures.
+
+`TestLocalHTTPEndToEnd` dùng request HTTP thật → handler/service → SDK PutEvents tại protocol fixture. Fixture giữ nguyên detail và EventId được ack, đóng envelope rồi gọi aggregator thật với hai delivery cùng event và một record JSON lỗi. Kiểm chỉ record lỗi được trả về, `META.clicks=1`, `STAT.count=1`, marker tồn tại; replay sau delete không tạo lại META. Kết quả này không chứng minh rule/EventBridge/SQS/ESM/IAM/redrive trên AWS.
+
+Notifier là dependency best-effort sau commit, budget200ms và giữ deadline cha. Lỗi notifier/EMF chỉ log, không đưa record đã commit vào retry; duplicate/deleted không push lại. Runtime chưa gắn WebSocket notifier; triển khai pusher/`WS_ENDPOINT` thuộc Phase4.
+
+Marker24h là cửa sổ hữu hạn, ClickDLQ14ngày nằm ngoài cửa sổ này. Trước khi redrive phải kiểm tuổi event, nguyên nhân và đối soát counter; replay sau khi marker biến mất có thể đếm lại. Không redrive hàng loạt dữ liệu cũ mà không đối soát. Hướng dẫn API: [AWS transaction reasons](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_TransactWriteItems.html), [AWS partial batch failures](https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-errorhandling.html).

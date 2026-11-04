@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -20,8 +21,10 @@ import (
 	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/httpapi"
 	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/repository"
 	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/service"
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 // This exercises real HTTP, SDK serialization, DynamoDB and business code.
@@ -30,6 +33,9 @@ func TestLocalHTTPEndToEnd(t *testing.T) {
 	var fail atomic.Bool
 	var publications atomic.Int64
 	recorder := newEventRecorder(io.Discard)
+	// Explicitly hand the actual published event to the consumer. This is a local
+	// protocol boundary fixture, not evidence of EventBridge/SQS/ESM delivery.
+	delivered := make(chan events.SQSMessage, 1)
 	eb := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if fail.Load() {
 			w.Header().Set("Content-Type", "application/x-amz-json-1.1")
@@ -37,7 +43,35 @@ func TestLocalHTTPEndToEnd(t *testing.T) {
 			return
 		}
 		publications.Add(1)
-		recorder.ServeHTTP(w, r)
+		data, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Error(err)
+			http.Error(w, "read failed", 500)
+			return
+		}
+		r.Body = io.NopCloser(bytes.NewReader(data))
+		response := httptest.NewRecorder()
+		recorder.ServeHTTP(response, r)
+		var published struct {
+			Entries []struct{ EventBusName, Source, DetailType, Detail string }
+		}
+		var ack struct{ Entries []struct{ EventID string } }
+		if response.Code != 200 || json.Unmarshal(data, &published) != nil || len(published.Entries) != 1 || json.Unmarshal(response.Body.Bytes(), &ack) != nil || len(ack.Entries) != 1 {
+			t.Error("invalid publication")
+			http.Error(w, "invalid publication", 500)
+			return
+		}
+		entry := published.Entries[0]
+		envelope, err := json.Marshal(map[string]any{"id": ack.Entries[0].EventID, "source": entry.Source, "detail-type": entry.DetailType, "detail": json.RawMessage(entry.Detail)})
+		if err != nil {
+			t.Error(err)
+			http.Error(w, "invalid detail", 500)
+			return
+		}
+		delivered <- events.SQSMessage{MessageId: "local-message", Body: string(envelope)}
+		w.Header().Set("Content-Type", "application/x-amz-json-1.1")
+		w.WriteHeader(response.Code)
+		_, _ = w.Write(response.Body.Bytes())
 	}))
 	defer eb.Close()
 	cfg := validConfig()
@@ -138,6 +172,37 @@ func TestLocalHTTPEndToEnd(t *testing.T) {
 	if publications.Load() != 1 {
 		t.Fatal("click not published")
 	}
+	message := <-delivered
+	repo := repository.New(ddb, cfg.TableName)
+	aggregator := service.NewAggregator(repo, nil, slog.New(slog.NewJSONHandler(io.Discard, nil)), io.Discard)
+	batchResponse, err := aggregator.HandleBatch(ctx, events.SQSEvent{Records: []events.SQSMessage{message, {MessageId: "duplicate-delivery", Body: message.Body}, {MessageId: "malformed", Body: "{"}}})
+	if err != nil || len(batchResponse.BatchItemFailures) != 1 || batchResponse.BatchItemFailures[0].ItemIdentifier != "malformed" {
+		t.Fatal(batchResponse, err)
+	}
+	counted, err := repo.GetLink(ctx, link.Code)
+	if err != nil || counted.Clicks != 1 {
+		t.Fatal("published click not committed exactly once while marker exists", counted, err)
+	}
+	var event struct {
+		ID     string
+		Detail struct{ At string }
+	}
+	if err := json.Unmarshal([]byte(message.Body), &event); err != nil {
+		t.Fatal(err)
+	}
+	for _, check := range []struct{ pk, sk, attribute, want string }{
+		{"LINK#" + link.Code, "STAT#" + event.Detail.At[:10], "count", "1"},
+		{"CLICK#" + event.ID, "CLICK", "ttl", ""},
+	} {
+		item, err := ddb.GetItem(ctx, &dynamodb.GetItemInput{TableName: aws.String(cfg.TableName), Key: map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: check.pk}, "SK": &types.AttributeValueMemberS{Value: check.sk}}, ConsistentRead: aws.Bool(true)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		value, ok := item.Item[check.attribute].(*types.AttributeValueMemberN)
+		if !ok || (check.want != "" && value.Value != check.want) {
+			t.Fatal(check, item)
+		}
+	}
 	fail.Store(true)
 	call("GET", "/"+link.Code, "", "", 502)
 	if publications.Load() != 1 {
@@ -145,6 +210,13 @@ func TestLocalHTTPEndToEnd(t *testing.T) {
 	}
 	call("DELETE", "/links/"+link.Code, "alice", "", 200)
 	call("GET", "/"+link.Code, "", "", 404)
+	lateResponse, err := aggregator.HandleBatch(ctx, events.SQSEvent{Records: []events.SQSMessage{message}})
+	if err != nil || len(lateResponse.BatchItemFailures) != 0 {
+		t.Fatal(lateResponse, err)
+	}
+	if _, err := repo.GetLink(ctx, link.Code); err != repository.ErrNotFound {
+		t.Fatal("late event resurrected link", err)
+	}
 	if list := call("GET", "/links", "alice", "", 200); list != `{"links":[]}` {
 		t.Fatal(list)
 	}

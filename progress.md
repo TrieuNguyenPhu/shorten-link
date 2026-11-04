@@ -116,3 +116,16 @@
 - PR #73 đã mở; code commit b62811f qua CI170 cả4jobs PASS. Apply được ủy quyền: bootstrap10create, core42create, sau đó1inlinepolicy update để pin API txnaexyh3d/pool ap-southeast-1_SGj2otrc0; không destroy. State app remote S3, bootstrap local được backup riêng quyền0600.
 - AWS smoke PASS qua endpoint thật và operator Lambda invokes: JWT negatives, create/list2pages/delete ownership/cursor validation, resolve301/publish ack, cleanup404 và Cognito302Google. Không có access tokens Google nên authenticated Core E2E chưa chạy; không tuyên bố STS trust matrix hoặc X-Ray export PASS.
 - Post-apply RED actual core plan exit2 vì Cognito read-back thêm username mapping/6metadata fields. Đối chiếu provider6.71.0 source; sửa ignore_changes đúng7map entries, không ignore client_id/client_secret/authorize_scopes hay app mapping. GREEN fmt/validate/8core tests và final bootstrap/core plan detailed-exitcode0. Final review không còn finding cần sửa trong phạm vi Phase2.
+
+
+## Session 2026-11-04 — Phase 3 / Task 3.1
+- Đã đọc bốn file trạng thái, master plan và kiến trúc5.2; PR#73 đã merge main e1e8bed. Nhánh riêng feat/phase-03-task-01-click-aggregator-lambda từ main; Task3.1 in_progress.
+- Dùng aws-serverless và test-driven-development (bản plugin superpowers); planning-with-files/ponytail/differential-review không có trong host, áp dụng quy trình AGENTS và bốn file trạng thái. Không apply AWS trong task này.
+
+- Task3.1 complete về implementation/local: RED API missing → GREEN repository/service/runtime; Go1.26.10 unit/race-count1-cover/vet/mod verify PASS. DynamoDB Local integration/HTTP analytics E2E PASS; concurrency/delete race lặp10lượt PASS. Một lượt thiếu DYNAMODB_ENDPOINT bị guard từ chối đúng; rerun đủ cấu hình PASS.
+- Build5ZIP PASS và kiểm bootstrap0755/ELF64 AArch64/static; govulncheckverbose exit0,0symbol/package và4module-only advisories cũ. Markdown13links/6JSON examples, gofmt và diff-check PASS. Review độc lập không finding cần sửa; không gọi AWS/apply/load test. Task3.2 giữ pending để có branch riêng từ main sau Task3.1 merge.
+- Theo workflow plan, dùng verification-before-completion và review độc lập bởi subagent; finishing-a-development-branch áp dụng lựa chọn push/PR đã được AGENTS ủy quyền, không hỏi lại. Giữ checkout cho sửa review; không merge PR tự động.
+
+- PR riêng Task3.1: [#74](https://github.com/TrieuNguyenPhu/shorten-link/pull/74), base main e1e8bed và commit fbd9ab1; chưa merge. Git author/gh/HTTPS credential helper chưa có, tạo commit/branch bằng connector và xác minh tree ee08d52 trùng local trước đồng bộ. CI đang chạy; commit tiếp theo chỉ cập nhật URL/evidence tài liệu.
+
+- CI [run #174](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41784113801) trên587dc7f PASS cả4jobs: backend, terraform, packaging-windows, frontend. README cập nhật5handler/5ZIP và tình trạng AWS core hiện có; commit cuối chỉ tài liệu. Checkout sạch sau đồng bộ, container DynamoDB Local của phiên đã dừng; không merge PR.

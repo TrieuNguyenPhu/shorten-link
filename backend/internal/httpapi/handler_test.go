@@ -26,6 +26,10 @@ type sdkStub struct {
 	delete func(*dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error)
 }
 
+func (s sdkStub) TransactWriteItems(context.Context, *dynamodb.TransactWriteItemsInput, ...func(*dynamodb.Options)) (*dynamodb.TransactWriteItemsOutput, error) {
+	panic("unexpected transaction")
+}
+
 func (s sdkStub) PutItem(_ context.Context, in *dynamodb.PutItemInput, _ ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error) {
 	return s.put(in)
 }

@@ -4,7 +4,7 @@
 Tái hiện hoàn chỉnh hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS theo chuỗi 21 bài và repository `nghiadaulau/serverless-url-shortener-aws`, chuyển đổi sang **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js Static Export (`S3 + CloudFront OAC`)**, với mỗi Task hoàn thành được tạo một **Pull Request riêng** và luôn cập nhật trạng thái hiện tại của dự án.
 
 ## Current Phase
-Phase 2 final review/deployment — complete. #71/#72 đã merge; sửa review qua PR #73. Bootstrap/core đã apply account654822777701/ap-southeast-1, smoke AWS PASS, cuối cùng cả hai plan no changes. Google authenticated E2E và OIDC trust matrix còn pending; kế tiếp Task3.1.
+Phase 3 — in_progress. Task 3.1 implementation/local complete từ origin/main e1e8bed sau PR #73 đã merge; [PR #74](https://github.com/TrieuNguyenPhu/shorten-link/pull/74) CI #174 PASS; chờ review. Task 3.2 pending, bắt đầu từ main sau khi Task 3.1 merge.
 
 ## Phases & Tasks
 
@@ -25,9 +25,10 @@ Phase 2 final review/deployment — complete. #71/#72 đã merge; sửa review q
 - **Status:** complete (implementation + AWS core apply/smoke; Google authenticated E2E pending)
 
 ### Phase 3: Event-Driven Analytics (EventBridge, SQS + DLQ, ClickAggregator)
-- [ ] **Task 3.1:** Triển khai Go Lambda `click-aggregator` (`TransactWriteItems` 3 thao tác, phân biệt chính xác `CancellationReasons`, `ReportBatchItemFailures`) kèm unit/integration tests.
+- **Task hiện tại:** Task 3.1 — complete (implementation/local; PR #74 CI #174 PASS; chờ review)
+- [x] **Task 3.1:** Triển khai Go Lambda `click-aggregator` (`TransactWriteItems` 3 thao tác, phân biệt chính xác `CancellationReasons`, `ReportBatchItemFailures`) kèm unit/integration tests.
 - [ ] **Task 3.2:** Xây dựng Terraform Module `event_pipeline` nhận custom bus từ Task 2.2, thêm rule `link.clicked`, SQS `ClickQueue` + `ClickDLQ` 14d, Event Source Mapping.
-- **Status:** pending
+- **Status:** in_progress
 
 ### Phase 4: Realtime WebSocket & Step Functions Moderation
 - [ ] **Task 4.1:** Triển khai Go Lambdas `ws-connect`, `ws-disconnect`, `PostToConnection` Pusher (xử lý `410 GoneException`) & `moderate-check` + `statemachine/moderation.asl.json` kèm tests.
