@@ -85,3 +85,5 @@
 - Go 1.26.10/Linux: test-race-count1-cover/vet/mod-verify/gofmt/diff-check PASS, cả 4 packages. Packaging test chạy compiler và Bash wrapper thật, kiểm ELF AArch64/tĩnh, ZIP root bootstrap0755 và bảo toàn artifact khi build lỗi.
 - govulncheck v1.9.0 verbose: exit0, 0 symbol/package vulnerabilities; 4 module-only: GO-2026-6866/GO-2026-6860 ở x/net và GO-2022-0646/GO-2022-0635 ở S3 Crypto SDKv1, không có đường gọi từ ứng dụng. Không suppress hoặc tuyên bố không còn mọi cảnh báo.
 - Chưa có handler nghiệp vụ; không chạy AWS/Terraform. Static export sửa qua PR riêng trước Phase 2.
+
+- PR tích hợp Task 1.2 vào main: [#69](https://github.com/TrieuNguyenPhu/shorten-link/pull/69), chờ CI/merge.

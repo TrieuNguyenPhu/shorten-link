@@ -71,3 +71,5 @@
 - Nhánh từ origin/main sau #68; giữ nguyên IPv4 regression. Phục hồi middleware/packaging/CI và hợp nhất tài liệu, không đưa frontend vào task này.
 - Test -race -count=1 -cover cả 4 packages, vet, mod verify, gofmt và diff-check PASS trên Go1.26.10/Linux. Packaging/compiler/Bash wrapper thật PASS.
 - govulncheck@v1.9.0 verbose exit0: 0 symbol/package, 4 module-only advisories như PROJECT_STATUS. Không xác minh trace export AWS và không chạy apply.
+
+- PR tích hợp Task 1.2 vào main: [#69](https://github.com/TrieuNguyenPhu/shorten-link/pull/69), chờ CI/merge.
