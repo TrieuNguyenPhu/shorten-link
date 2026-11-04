@@ -9,6 +9,12 @@ output "cognito_client_id" { value = module.auth.client_id }
 output "cognito_issuer" { value = module.auth.issuer }
 output "cognito_login_domain" { value = module.auth.login_domain }
 output "google_redirect_uri" { value = module.auth.google_redirect_uri }
-output "lambda_roles" { value = { for key, fn in module.functions : key => fn.role_arn } }
-output "lambda_aliases" { value = { for key, fn in module.functions : key => fn.alias_arn } }
+output "lambda_roles" { value = merge({ for key, fn in module.functions : key => fn.role_arn }, { click-aggregator = module.event_pipeline.aggregator_role_arn }) }
+output "lambda_aliases" { value = merge({ for key, fn in module.functions : key => fn.alias_arn }, { click-aggregator = module.event_pipeline.aggregator_alias_arn }) }
 output "resolve_published_version" { value = module.functions["resolve-link"].version }
+output "click_queue_arn" { value = module.event_pipeline.click_queue_arn }
+output "click_queue_url" { value = module.event_pipeline.click_queue_url }
+output "click_dlq_arn" { value = module.event_pipeline.click_dlq_arn }
+output "click_dlq_url" { value = module.event_pipeline.click_dlq_url }
+output "click_rule_arn" { value = module.event_pipeline.click_rule_arn }
+output "click_event_source_mapping_id" { value = module.event_pipeline.event_source_mapping_id }

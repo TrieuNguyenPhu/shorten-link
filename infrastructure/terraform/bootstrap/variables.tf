@@ -88,3 +88,13 @@ variable "cognito_user_pool_ids" {
     error_message = "Use actual Cognito pool IDs from this region, without wildcards."
   }
 }
+
+variable "click_event_source_mapping_ids" {
+  type        = set(string)
+  default     = []
+  description = "Exact click ESM UUIDs created by the operator; pin dev click_event_source_mapping_id before CD. Replacement mappings require operator provisioning and repinning."
+  validation {
+    condition     = alltrue([for id in var.click_event_source_mapping_ids : can(regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", id))])
+    error_message = "Use actual lowercase ESM UUIDs, without wildcards."
+  }
+}

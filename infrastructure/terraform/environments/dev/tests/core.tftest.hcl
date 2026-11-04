@@ -7,6 +7,9 @@ mock_provider "aws" {
   mock_resource "aws_dynamodb_table" { defaults = { arn = "arn:aws:dynamodb:ap-southeast-1:111111111111:table/url-shortener" } }
   mock_resource "aws_cloudwatch_log_group" { defaults = { arn = "arn:aws:logs:ap-southeast-1:111111111111:log-group:test" } }
   mock_resource "aws_cloudwatch_event_bus" { defaults = { arn = "arn:aws:events:ap-southeast-1:111111111111:event-bus/url-shortener-events" } }
+  mock_resource "aws_lambda_event_source_mapping" { defaults = { uuid = "12345678-1234-1234-1234-123456789012" } }
+  mock_resource "aws_sqs_queue" { defaults = { arn = "arn:aws:sqs:ap-southeast-1:111111111111:url-shortener-dev-ClickQueue", url = "https://sqs.ap-southeast-1.amazonaws.com/111111111111/url-shortener-dev-ClickQueue" } }
+  mock_resource "aws_lambda_alias" { defaults = { arn = "arn:aws:lambda:ap-southeast-1:111111111111:function:url-shortener-dev-click-aggregator:live" } }
   mock_resource "aws_cognito_user_pool" { defaults = { endpoint = "cognito-idp.ap-southeast-1.amazonaws.com/ap-southeast-1_test" } }
 }
 variables {
@@ -28,6 +31,13 @@ run "core_wiring" {
   assert {
     condition     = module.functions["create-link"].environment_variables.PUBLIC_REDIRECT_BASE_URL == module.http_api.endpoint
     error_message = "Short URLs must use the redirect API endpoint, not a frontend domain."
+  }
+}
+run "pipeline_root_wiring" {
+  command = plan
+  assert {
+    condition     = module.event_pipeline.event_bus_name == module.event_bus.name && module.event_pipeline.event_bus_arn == module.event_bus.arn && toset(keys(output.lambda_roles)) == toset(["create-link", "resolve-link", "list-links", "delete-link", "click-aggregator"]) && output.lambda_aliases["click-aggregator"] == module.event_pipeline.aggregator_alias_arn && output.click_queue_arn == module.event_pipeline.click_queue_arn && output.click_event_source_mapping_id == module.event_pipeline.event_source_mapping_id
+    error_message = "The existing bus and fifth Lambda must be exposed without changing the four HTTP targets."
   }
 }
 run "per_handler_permissions" {

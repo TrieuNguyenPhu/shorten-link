@@ -224,12 +224,14 @@
   - Create: `infrastructure/terraform/modules/event_pipeline/outputs.tf`
   - Modify: `infrastructure/terraform/environments/dev/main.tf`, `infrastructure/terraform/environments/dev/outputs.tf`, `PROJECT_STATUS.md`, `task_plan.md`, `progress.md`, `findings.md`
 - **Steps:**
-  - [ ] **Step 1:** Module nhận bus name/ARN từ Task 2.2, không tạo bus duplicate; thêm rule source=urlshortener/detail-type=link.clicked, ClickQueue visibility30/maxReceive3, ClickDLQ retention14d, queue policy SourceArn và ESM batch10/ReportBatchItemFailures. Giữ maxReceive3 có chủ đích dù AWS khuyến nghị >=5.
-  - [ ] **Step 2:** Kết nối aggregator, khai báo quyền poll SQS ReceiveMessage/DeleteMessage/GetQueueAttributes scoped queue và quyền DynamoDB transaction; kiểm thử ESM/DLQ thực tế chỉ trong AWS được phép. Thêm assertions Terraform cho bus input, queue policy/redrive/ESM, mở rộng CI.
-  - [ ] **Step 3:** Chạy cổng Terraform fmt/init-backend=false/validate/test ở cuối kế hoạch, cập nhật CI.
-  - [ ] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 3.2.
+  - [x] **Step 1:** Module nhận bus name/ARN từ Task 2.2, không tạo bus duplicate; thêm rule source=urlshortener/detail-type=link.clicked, ClickQueue visibility30/maxReceive3, ClickDLQ retention14d, queue policy SourceArn và ESM batch10/ReportBatchItemFailures. Giữ maxReceive3 có chủ đích dù AWS khuyến nghị >=5.
+  - [x] **Step 2:** Kết nối aggregator, khai báo quyền poll SQS ReceiveMessage/DeleteMessage/GetQueueAttributes scoped queue và quyền DynamoDB transaction; kiểm thử ESM/DLQ thực tế chỉ trong AWS được phép. Thêm assertions Terraform cho bus input, queue policy/redrive/ESM, mở rộng CI.
+  - [x] **Step 3:** Chạy cổng Terraform fmt/init-backend=false/validate/test ở cuối kế hoạch, cập nhật CI.
+  - [x] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 3.2.
 
 ---
+
+- **Kết quả 2026-11-04:** implementation/local complete; Terraform14+13plan tests, Go race/vet/build5ZIP, PS7.5 offline Pipeline preflight/regressions và review PASS. Bootstrap policy quota tách managed; operator provision ESM lần đầu rồi pin UUID trước CD. AWS apply/Scenario Pipeline vẫn pending; chuẩn bị PR riêng.
 
 ### Phase 4 — Realtime WebSocket & Step Functions Moderation
 

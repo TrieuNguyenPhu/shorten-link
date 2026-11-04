@@ -2,7 +2,7 @@
 
 Đặc tả và kế hoạch tái triển khai hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS bằng **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js App Router (`output: "export"`)** trên **Amazon S3 (Private) + CloudFront Origin Access Control (OAC)**.
 
-Phase 1 cung cấp nền tảng Go qua PR #68/#69; scaffold frontend có static export và kiểm tra artifact. Phase 2 có bốn HTTP Lambda, DynamoDB repository, EventBridge publisher, HTTP harness và Terraform bootstrap/core; AWS core đã triển khai ngày 2026-11-04 qua đợt final review PR #73. Task 3.1 bổ sung click-aggregator với transaction idempotency và kiểm thử DynamoDB Local/HTTP analytics E2E; EventBridge rule/SQS/ESM thuộc Task 3.2 vẫn pending. Google login frontend, Doodle UI, dashboard và WebSocket chưa hoàn thiện. Phiên Task 3.1 chỉ kiểm thử local, không thay đổi tài nguyên AWS.
+Phase 1 cung cấp nền tảng Go qua PR #68/#69; scaffold frontend có static export và kiểm tra artifact. Phase 2 có bốn HTTP Lambda, DynamoDB repository, EventBridge publisher, HTTP harness và Terraform bootstrap/core; AWS core đã triển khai ngày 2026-11-04 qua đợt final review PR #73. Task 3.1 bổ sung click-aggregator với transaction idempotency và kiểm thử DynamoDB Local/HTTP analytics E2E; Task3.2 bổ sung Terraform EventBridge rule/SQS/DLQ/ESM cùng Scenario Pipeline; phần pipeline chưa được apply trên AWS. Google login frontend, Doodle UI, dashboard và WebSocket chưa hoàn thiện. Các phiên Phase3 chỉ kiểm thử local, không thay đổi tài nguyên AWS.
 
 Dự án bám sát kiến trúc hướng sự kiện, thiết kế bảng đơn DynamoDB và luồng xử lý của:
 - **Chuỗi 21 bài viết:** [Serverless Thực Chiến Trên AWS](https://kkloudtarus.net/blog/series/serverless-on-aws-event-driven)
@@ -120,3 +120,6 @@ Local harness chỉ bind loopback và dùng header `X-Local-User` nằm trong al
 Xem [runbook Task 2.2](docs/terraform-core-infrastructure.md) cho S3 remote state/lockfile, OIDC trust, permissions boundary, Cognito Google-only, core modules và AWS E2E Core. Chạy `make terraform-check` để build Lambda rồi fmt/init-backend=false/validate/test hai root bằng mock provider; không gọi AWS. Terraform1.17.1 và AWS provider6.71.0 được pin cùng lockfiles.
 
 Google OAuth Web client/secret và operator authorization là đầu vào khi triển khai. AWS E2E vẫn pending; Task2.2 không chạy apply. Sau lần app deployment được phép đầu tiên, pin http_api_id trong bootstrap trước khi bật CD để thu hẹp quyền API Gateway child resources.
+
+
+Hạ tầng analytics và E2E AWS: [runbook event pipeline](docs/terraform-event-pipeline.md). Bootstrap/dev có27plan tests; Scenario Pipeline mới chỉ được kiểm parser/preflight offline, chưa có evidence delivery/DLQ trên AWS.

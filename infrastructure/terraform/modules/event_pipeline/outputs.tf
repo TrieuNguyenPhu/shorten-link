@@ -1,0 +1,10 @@
+output "click_queue_arn" { value = aws_sqs_queue.clicks.arn }
+output "click_queue_url" { value = aws_sqs_queue.clicks.url }
+output "click_dlq_arn" { value = aws_sqs_queue.dlq.arn }
+output "click_dlq_url" { value = aws_sqs_queue.dlq.url }
+output "click_rule_arn" { value = aws_cloudwatch_event_rule.clicked.arn }
+output "event_source_mapping_id" { value = aws_lambda_event_source_mapping.clicks.uuid }
+output "aggregator_role_arn" { value = module.aggregator.role_arn }
+output "aggregator_alias_arn" { value = module.aggregator.alias_arn }
+output "event_bus_name" { value = var.event_bus_name }
+output "event_bus_arn" { value = var.event_bus_arn }

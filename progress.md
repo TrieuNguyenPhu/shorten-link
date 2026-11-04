@@ -129,3 +129,12 @@
 - PR riêng Task3.1: [#74](https://github.com/TrieuNguyenPhu/shorten-link/pull/74), base main e1e8bed và commit fbd9ab1; chưa merge. Git author/gh/HTTPS credential helper chưa có, tạo commit/branch bằng connector và xác minh tree ee08d52 trùng local trước đồng bộ. CI đang chạy; commit tiếp theo chỉ cập nhật URL/evidence tài liệu.
 
 - CI [run #174](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41784113801) trên587dc7f PASS cả4jobs: backend, terraform, packaging-windows, frontend. README cập nhật5handler/5ZIP và tình trạng AWS core hiện có; commit cuối chỉ tài liệu. Checkout sạch sau đồng bộ, container DynamoDB Local của phiên đã dừng; không merge PR.
+
+
+## Session 2026-11-04 — Phase 3 / Task 3.2
+- Người dùng xác nhận PR#74 đã merge; fetch kiểm main113d969. Nhánh feat/phase-03-task-02-terraform-event-pipeline từ main; Task3.2 in_progress. Đọc lại bốn file trạng thái và plan/spec; dùng aws-serverless, aws-iam, TDD và verification-before-completion. Không có authorization apply mới.
+
+- Task3.2 implementation/local complete: TDD RED module missing và boundary/allowlist/policy permissions thiếu; GREEN Terraform1.17.1/provider6.71.0 với14bootstrap+13dev plan/mock tests, fmt/init-backend=false-lockfile-readonly/validate PASS. Fixture fifo default null và unknown UUID đã được làm rõ, không apply AWS để né test.
+- Quota regression RED tổng inline11256byte, GREEN sau tách policy pipeline managed, test inline/managed quotas và ESM pin UUID. Autopilot command exit127 do thiếuuvx; fallback SAR4services chính thức, không upload policy/call account.
+- Go1.26.10 race/vet/build5ZIP PASS. PS7.5 container parser/Core/OIDC/Pipeline preflight PASS. Review Terraform không finding; review PS phát hiện scalar/array DLQ JSON, đã regression RED→GREEN và scoped re-review PASS, cả hai lượt dùng --network none. Không chạy scenario AWS, apply hoặc load test.
+- CI tự chạy thêm9plan tests (tổng27) và parser/preflight/shape regression Pipeline; README/spec/runbook cập nhật module ownership, managed policy quota, operator-first ESM/pin và AWS delivery pending. Chuẩn bị PR riêng Task3.2 từ main113d969; chưa merge, Phase3 complete về implementation/local sau task này.

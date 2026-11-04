@@ -362,3 +362,8 @@ Frontend sinh/lưu ngắn hạn `state`, `nonce`, `code_verifier`, xác thực s
 - Thêm lambda:GetFunctionCodeSigningConfig cho Terraform provider refresh ZIP; không cấp quyền code signing write.
 - AWS E2E sau delete dùng bounded polling 301→404; 5xx/401 hoặc status khác fail ngay, không che lỗi bằng retry vô hạn.
 - Người dùng đã yêu cầu terraform apply sau sửa và final review; authorization này thay giới hạn chưa-deploy của các phiên trước. Google Web client/secret vẫn là đầu vào ngoài AWS, không dùng placeholder để triển khai.
+
+
+## Delta Phase3 / Task3.2 — 2026-11-04
+
+Module event_pipeline giữ nguyên bus/schema/access patterns và tái dùng module Lambda. Runtime boundary thêm UpdateItem/poll ClickQueue, deployment allowlist năm handlers. Policy triển khai pipeline tách managed policy bootstrap để giữ quota inline10KiB; operator provision ESM bằng Terraform lần đầu rồi pin UUID vào bootstrap, maintenance chỉ đúng UUID và aggregator live ARN, không wildcard claim mapping bằng TagResource. Replacement cần operator/repin như Cognito pool. AWS delivery/redrive chưa được chạy; chi tiết [runbook pipeline](./terraform-event-pipeline.md).

@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('Core', 'OIDC')]
+    [ValidateSet('Core', 'OIDC', 'Pipeline')]
     [string]$Scenario = 'Core',
     [Parameter(Mandatory)]
     [string]$OutputsPath
@@ -25,6 +25,11 @@ function Require-Environment([string]$Name) {
 }
 
 $outputs = Get-Content -LiteralPath $OutputsPath -Raw | ConvertFrom-Json -AsHashtable
+if ($Scenario -eq 'Pipeline') {
+    . (Join-Path $PSScriptRoot 'pipeline.ps1')
+    Invoke-Pipeline $outputs
+    return
+}
 if ($Scenario -eq 'OIDC') {
     $roleArn = $outputs.deployment_role_arn.value
     $subject = $outputs.github_subject.value
