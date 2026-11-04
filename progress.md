@@ -138,3 +138,7 @@
 - Quota regression RED tổng inline11256byte, GREEN sau tách policy pipeline managed, test inline/managed quotas và ESM pin UUID. Autopilot command exit127 do thiếuuvx; fallback SAR4services chính thức, không upload policy/call account.
 - Go1.26.10 race/vet/build5ZIP PASS. PS7.5 container parser/Core/OIDC/Pipeline preflight PASS. Review Terraform không finding; review PS phát hiện scalar/array DLQ JSON, đã regression RED→GREEN và scoped re-review PASS, cả hai lượt dùng --network none. Không chạy scenario AWS, apply hoặc load test.
 - CI tự chạy thêm9plan tests (tổng27) và parser/preflight/shape regression Pipeline; README/spec/runbook cập nhật module ownership, managed policy quota, operator-first ESM/pin và AWS delivery pending. Chuẩn bị PR riêng Task3.2 từ main113d969; chưa merge, Phase3 complete về implementation/local sau task này.
+
+- PR riêng Task3.2: [#75](https://github.com/TrieuNguyenPhu/shorten-link/pull/75), main113d969→a2f926f, tree eed7829 đã đối chiếu local/remote. GitHub connector dùng thay host thiếu Git author/gh/HTTPS helper; không merge. CI #177 đang chạy; commit chốt chỉ thêm URL/evidence tài liệu.
+
+- CI [run #177](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41786916663) trên a2f926f PASS backend (race/vet/DynamoDB Local integration/HTTP analytics E2E/build5ZIP/scan), terraform (27plan tests + PS parser/preflight/regressions), packaging-windows và frontend. Commit cuối chỉ tài liệu; không apply AWS hoặc merge PR.

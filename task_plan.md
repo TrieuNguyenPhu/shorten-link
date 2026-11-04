@@ -4,7 +4,7 @@
 Tái hiện hoàn chỉnh hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS theo chuỗi 21 bài và repository `nghiadaulau/serverless-url-shortener-aws`, chuyển đổi sang **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js Static Export (`S3 + CloudFront OAC`)**, với mỗi Task hoàn thành được tạo một **Pull Request riêng** và luôn cập nhật trạng thái hiện tại của dự án.
 
 ## Current Phase
-Phase 3 — complete (implementation/local). Task3.1/PR #74 đã merge main113d969; Task3.2 đã có module/event pipeline và27plan tests, Go checks/PS offline regressions PASS, chuẩn bị PR riêng. AWS pipeline apply/delivery/ESM/DLQ E2E pending. Task4.1 kế tiếp sau Task3.2 merge.
+Phase 3 — complete (implementation/local). Task3.1/PR #74 đã merge main113d969; Task3.2 đã có module/event pipeline và27plan tests, Go checks/PS offline regressions PASS, [PR #75](https://github.com/TrieuNguyenPhu/shorten-link/pull/75) CI #177 PASS; chờ review. AWS pipeline apply/delivery/ESM/DLQ E2E pending. Task4.1 kế tiếp sau Task3.2 merge.
 
 ## Phases & Tasks
 
@@ -25,7 +25,7 @@ Phase 3 — complete (implementation/local). Task3.1/PR #74 đã merge main113d9
 - **Status:** complete (implementation + AWS core apply/smoke; Google authenticated E2E pending)
 
 ### Phase 3: Event-Driven Analytics (EventBridge, SQS + DLQ, ClickAggregator)
-- **Task hiện tại:** Task 3.2 — complete (implementation/local; chuẩn bị PR)
+- **Task hiện tại:** Task 3.2 — complete (implementation/local; PR #75 CI #177 PASS; chờ review)
 - [x] **Task 3.1:** Triển khai Go Lambda `click-aggregator` (`TransactWriteItems` 3 thao tác, phân biệt chính xác `CancellationReasons`, `ReportBatchItemFailures`) kèm unit/integration tests.
 - [x] **Task 3.2:** Xây dựng Terraform Module `event_pipeline` nhận custom bus từ Task 2.2, thêm rule `link.clicked`, SQS `ClickQueue` + `ClickDLQ` 14d, Event Source Mapping.
 - **Status:** complete (implementation/local; AWS pipeline chưa deploy)

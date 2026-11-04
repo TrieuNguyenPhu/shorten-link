@@ -231,7 +231,7 @@
 
 ---
 
-- **Kết quả 2026-11-04:** implementation/local complete; Terraform14+13plan tests, Go race/vet/build5ZIP, PS7.5 offline Pipeline preflight/regressions và review PASS. Bootstrap policy quota tách managed; operator provision ESM lần đầu rồi pin UUID trước CD. AWS apply/Scenario Pipeline vẫn pending; chuẩn bị PR riêng.
+- **Kết quả 2026-11-04:** implementation/local complete; Terraform14+13plan tests, Go race/vet/build5ZIP, PS7.5 offline Pipeline preflight/regressions và review PASS. Bootstrap policy quota tách managed; operator provision ESM lần đầu rồi pin UUID trước CD. AWS apply/Scenario Pipeline vẫn pending; [PR #75](https://github.com/TrieuNguyenPhu/shorten-link/pull/75) CI #177 PASS, chờ review.
 
 ### Phase 4 — Realtime WebSocket & Step Functions Moderation
 
