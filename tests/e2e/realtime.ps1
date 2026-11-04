@@ -75,15 +75,22 @@ function Invoke-Realtime([hashtable]$Outputs) {
         # Re-check the complete META immediately before execution to avoid known upserts.
         $meta=Read-RealtimeMeta $Code
         if ($meta.ownerId.S -ne $claims['sub'] -or -not $meta.createdAt.S -or -not $meta.ContainsKey('clicks') -or ($Target -and $meta.target.S -ne $Target)) { throw 'Invalid test META; refusing moderation.' }
-        $started=Invoke-RealtimeAWS @('stepfunctions','start-execution') @{stateMachineArn=$Outputs.moderation_state_machine_arn.value;input=(@{code=$Code;target=$Target}|ConvertTo-Json -Compress)}
-        $arn=[string]$started.executionArn; [void]$running.Add($arn)
+        # A transport failure does not prove StartExecution was rejected. Know and
+        # track its identity before sending; native CLI retries reuse this name/input.
+        $name="e2e-$Code-$([guid]::NewGuid().ToString('N'))"
+        $machineArn=[string]$Outputs.moderation_state_machine_arn.value
+        $arn="$($machineArn.Replace(':stateMachine:', ':execution:')):$name"
+        [void]$running.Add($arn)
+        $started=Invoke-RealtimeAWS @('stepfunctions','start-execution') @{stateMachineArn=$machineArn;name=$name;input=(@{code=$Code;target=$Target}|ConvertTo-Json -Compress)}
+        if ($started.executionArn -ne $arn) { throw 'StartExecution returned an unexpected execution ARN.' }
         for ($attempt=0;$attempt -lt 40;$attempt++) {
             $execution=Invoke-RealtimeAWS @('stepfunctions','describe-execution','--execution-arn',$arn)
-            if ($execution.status -ne 'RUNNING') {
+            if ($execution.status -in @('SUCCEEDED','FAILED','TIMED_OUT','ABORTED')) {
                 [void]$running.Remove($arn)
                 if ($execution.status -ne $Expected) { throw 'Unexpected moderation execution outcome.' }
                 return @{Execution=$execution;History=(Invoke-RealtimeAWS @('stepfunctions','get-execution-history','--execution-arn',$arn))}
             }
+            if ($execution.status -ne 'RUNNING') { throw 'Moderation execution state is not confirmed terminal.' }
             Start-Sleep -Milliseconds 500
         }
         throw 'Moderation did not finish within the bounded wait.'
@@ -150,10 +157,17 @@ function Invoke-Realtime([hashtable]$Outputs) {
         $safeToDelete=$true
         foreach ($arn in @($running)) {
             try {
-                [void](Invoke-RealtimeAWS @('stepfunctions','stop-execution','--execution-arn',$arn,'--error','E2ECleanup'))
                 $terminal=$false
                 for ($attempt=0;$attempt -lt 20;$attempt++) {
-                    if ((Invoke-RealtimeAWS @('stepfunctions','describe-execution','--execution-arn',$arn)).status -ne 'RUNNING') {$terminal=$true;break}
+                    $execution=Invoke-RealtimeAWS @('stepfunctions','describe-execution','--execution-arn',$arn)
+                    if ($execution.status -in @('SUCCEEDED','FAILED','TIMED_OUT','ABORTED')) {
+                        $terminal=$true; [void]$running.Remove($arn); break
+                    }
+                    if ($execution.status -ne 'RUNNING') { break }
+                    if ($attempt -eq 0) {
+                        try { [void](Invoke-RealtimeAWS @('stepfunctions','stop-execution','--execution-arn',$arn,'--error','E2ECleanup')) }
+                        catch { Write-Warning 'StopExecution response unavailable; confirming state before cleanup.' }
+                    }
                     Start-Sleep -Milliseconds 250
                 }
                 if (-not $terminal) {$safeToDelete=$false}
@@ -165,7 +179,7 @@ function Invoke-Realtime([hashtable]$Outputs) {
                 try {if ((Invoke-RealtimeApi DELETE "/links/$code").Status -ne 200) {$cleanupFailed=$true}}
                 catch {$cleanupFailed=$true}
             }
-        } else {Write-Warning "Executions may still run; retain test links until terminal: $($codes -join ',')"; $cleanupFailed=$true}
+        } else {Write-Warning "Execution state unresolved; retain test links $($codes -join ',') and reconcile: $(@($running) -join ',')"; $cleanupFailed=$true}
         $client.Dispose(); $transport.Dispose()
         if ($cleanupFailed) {throw 'Realtime cleanup incomplete; inspect test links and executions before retrying.'}
     }

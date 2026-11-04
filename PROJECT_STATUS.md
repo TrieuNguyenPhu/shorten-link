@@ -1,6 +1,6 @@
 # PROJECT_STATUS.md — Trạng Thái Hiện Tại Của Dự Án
 
-> **Cập nhật lần cuối:** 2026-11-04 (**Phase 4 implementation/local complete; Task4.2 PR #77 CI #183 PASS, chờ review; 37plan tests PASS**)
+> **Cập nhật lần cuối:** 2026-11-04 (**Phase 4 implementation/local complete; PR #77 đã merge; cleanup review fix chuẩn bị PR riêng**)
 > **Quy tắc bắt buộc:** File này luôn được cập nhật ngay sau khi hoàn thành mỗi Task trước khi mở Pull Request tương ứng.
 
 ---
@@ -10,7 +10,7 @@
 | Hạng mục | Trạng thái | Chi tiết |
 | --- | --- | --- |
 | **Giai đoạn hiện tại (Current Phase)** | **Phase 4 — `complete` (implementation/local)** | Task4.1 đã merge; Task4.2 Terraform/local complete, AWS Phase3/4 chưa deploy |
-| **Task hiện tại** | **Task 4.2 — `complete` (implementation/local)** | 37Terraform plan tests, Go race/vet/build8ZIP và PS offline PASS; PR #77 CI #183 PASS, chờ review |
+| **Task hiện tại** | **Task 4.2 — `complete` (implementation/local, review fix)** | Lost-response cleanup đã sửa; tám lifecycle regressions và PS offline PASS; fix branch từ main501c049 sau PR #77 merge |
 | **Task tiếp theo (Next Up)** | **Task 5.1 (Phase 5)** | Next.js Google auth và Doodle UI sau Phase4 |
 | **Trạng thái AWS Cloud** | **Core đã triển khai ngày 2026-11-04** | Account654822777701, ap-southeast-1; bootstrap10 + core42 tài nguyên mới; pin deployment policy sau apply, không destroy |
 | **13 Bộ Skills & `AGENTS.md`** | **Đã kiểm tra file/config** | Đủ 13 file skill đại diện; 314 thư mục cấp đầu có `SKILL.md`. Có cấu hình trỏ `~/.agents/skills`; không suy ra mọi host đều tự nạp |
@@ -29,7 +29,7 @@
 | **Phase 3** | **Task 3.1** | Go Lambda `click-aggregator` (`TransactWriteItems`, `CancellationReasons`, `ReportBatchItemFailures`) + Tests | `feat/phase-03-task-01-click-aggregator-lambda` | complete (đã merge main) | [PR #74](https://github.com/TrieuNguyenPhu/shorten-link/pull/74) | |
 | **Phase 3** | **Task 3.2** | Terraform Module `event_pipeline` (nhận bus từ Task 2.2, tạo rule, SQS `ClickQueue` + `ClickDLQ`, ESM) | `feat/phase-03-task-02-terraform-event-pipeline` | complete (đã merge main6dee1ca) | [PR #75](https://github.com/TrieuNguyenPhu/shorten-link/pull/75) | |
 | **Phase 4** | **Task 4.1** | Go Lambdas `ws-connect`, `ws-disconnect`, `PostToConnection` Pusher (`410 Gone`) & `moderate-check` + ASL | `feat/phase-04-task-01-websocket-and-moderation-lambdas` | complete (đã merge mainf6e3769) | [PR #76](https://github.com/TrieuNguyenPhu/shorten-link/pull/76) |
-| **Phase 4** | **Task 4.2** | Terraform Modules `websocket_api` (`$connect`, `$disconnect`, stage `prod`) & `moderation_sfn` | `feat/phase-04-task-02-terraform-websocket-and-sfn` | complete (implementation/local) | [PR #77](https://github.com/TrieuNguyenPhu/shorten-link/pull/77) |
+| **Phase 4** | **Task 4.2** | Terraform Modules `websocket_api` (`$connect`, `$disconnect`, stage `prod`) & `moderation_sfn` | `feat/phase-04-task-02-terraform-websocket-and-sfn` | complete (đã merge main501c049; review fix riêng) | [PR #77](https://github.com/TrieuNguyenPhu/shorten-link/pull/77) |
 | **Phase 5** | **Task 5.1** | Next.js static, Google-only qua Cognito PKCE, Landing/Login/Callback theo Doodle & Sketch UI | `feat/phase-05-task-01-nextjs-auth-and-pages` | ⏳ Pending (auth/UI); scaffold đã kiểm | [PR #70 — scaffold/static export](https://github.com/TrieuNguyenPhu/shorten-link/pull/70) |
 | **Phase 5** | **Task 5.2** | Dashboard & My Links Doodle & Sketch, API thật & Native WebSocket Hook (`useRealtimeClicks`) | `feat/phase-05-task-02-dashboard-api-and-websocket` | ⏳ Pending | — |
 | **Phase 5** | **Task 5.3** | Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + URL Rewrite) | `feat/phase-05-task-03-terraform-s3-cloudfront-oac` | ⏳ Pending | — |
@@ -184,3 +184,11 @@
 - PR riêng Task4.2: [#77](https://github.com/TrieuNguyenPhu/shorten-link/pull/77), base mainf6e3769, code commit db716ad; tree af3e6d7 trùng local/remote. CI #183 PASS, chờ review; chưa merge.
 
 - CI [run #183](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41793539394) trên db716ad PASS cả4jobs: backend (race/vet/DynamoDB Local/HTTP-WebSocket E2E/build8ZIP/scan), terraform (37plan tests, validate/fmt/PS preflight), packaging-windows và frontend static checks. Commit chốt sau chỉ tài liệu; chưa merge/apply.
+
+
+## 17. Sửa review Phase4 / Task4.2 — 2026-11-04
+- Finding P2: StartExecution được AWS nhận nhưng mất response khiến registry rỗng, cleanup xóa link trước khi workflow kết thúc. PR #77 đã merge, sửa trên fix branch từ main501c049: đặt name/ARN và đăng ký trước request; kiểm ARN response, đối soát trạng thái và stop/poll trước cleanup. Chỉ bốn trạng thái SUCCEEDED/FAILED/TIMED_OUT/ABORTED được phép xóa; unknown/nonterminal giữ link và ARN để operator xử lý.
+- Test-first RED trên code cũ → GREEN sau sửa. PowerShell7.5 network=none PASS toàn bộ suite và tám lifecycle cases: lost-running/lost-completed/unknown/still-running/pending/poll-error/lost-stop/success. Test thực thi hàm start và finally thật, chỉ mock AWS/HTTP/disposable clients/delay.
+- Không sửa Go/Terraform/ASL hoặc quyền AWS. Không chạy apply/E2E AWS; CI toàn repo sẽ kiểm tra hồi quy cho revision mới.
+
+- Khi đồng bộ phát hiện PR #77 đã merge tại main501c049; bản sửa không thể cập nhật PR đã đóng. Tạo branch fix/phase-04-task-02-execution-cleanup từ main (tree baseline trùng PR #77), giữ đúng tám file sửa; chuẩn bị PR fix riêng.

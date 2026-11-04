@@ -4,7 +4,9 @@
 Tái hiện hoàn chỉnh hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS theo chuỗi 21 bài và repository `nghiadaulau/serverless-url-shortener-aws`, chuyển đổi sang **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js Static Export (`S3 + CloudFront OAC`)**, với mỗi Task hoàn thành được tạo một **Pull Request riêng** và luôn cập nhật trạng thái hiện tại của dự án.
 
 ## Current Phase
-Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e3769; Task4.2 có Terraform WebSocket/Step Functions, bounded IAM và E2E scenario, 37plan tests/Go checks/PS offline PASS; [PR #77](https://github.com/TrieuNguyenPhu/shorten-link/pull/77) CI #183 PASS, chờ review. AWS Phase3/4 chưa apply; Task5.1 kế tiếp sau review/merge.
+Review fix Task4.2 — complete (implementation/local): execution name/ARN được theo dõi trước StartExecution; cleanup chỉ xóa khi xác nhận terminal. Tám lifecycle regression tests và PS offline PASS; PR #77 đã merge main501c049; chuẩn bị PR fix riêng từ main.
+
+Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e3769; Task4.2 có Terraform WebSocket/Step Functions, bounded IAM và E2E scenario, 37plan tests/Go checks/PS offline PASS; [PR #77](https://github.com/TrieuNguyenPhu/shorten-link/pull/77) CI #183 PASS, đã merge main501c049. AWS Phase3/4 chưa apply; Task5.1 kế tiếp sau review/merge.
 
 ## Phases & Tasks
 

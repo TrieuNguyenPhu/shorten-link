@@ -141,3 +141,9 @@
 - Đọc provider6.71.0 source phát hiện ValidateStateMachineDefinition khi plan và ListStateMachineVersions khi refresh; thêm regression RED→GREEN. SAR xác minh Validate không có resource scope, statement* chỉRequestedRegion; ListVersions chỉexactmachine. Không coi mock-provider plan là AWS permissions proof.
 - Autopilot uvx/pip unavailable; dùng SAR fallback và source provider chính thức. ScenarioRealtime validate config/missingtoken offline, thật sẽ kiểm STS/GetApi owner trước khi gửi bearer, đợi GSI/subscriber và execution history; không sửa hạ tầng qua CLI.
 - Runtime logging Lambda/X-Ray giữ module chung; WebSocket account-level logging và SFN CloudWatch execution logging/trace đểPhase6, tránh cấp thêm service-role permissions ngoài contract hai nghiệp vụ ởPhase4.
+
+
+## 2026-11-04 — Sửa lost-response cleanup Task4.2
+- StartExecution không truyền name dùng UUID do AWS tạo nên response bị mất thì không biết execution ARN. Tạo tên e2e-code-GUID trước request cho phép suy ra ARN, đăng ký trước khi gửi và giữ CLI retries idempotent theo name/input của STANDARD.
+- Không xem lỗi transport là bằng chứng request bị từ chối. Cleanup Describe trước; chỉ stop RUNNING, rồi Describe để xác nhận terminal. Stop bị mất response vẫn có thể đối soát ABORTED. Execution chưa tồn tại/không đọc được/still RUNNING/PENDING_REDRIVE đều giữ META và in ARN, không suy diễn an toàn để xóa.
+- Regression tests chạy hàm Start-RealtimeModeration và finally lấy trực tiếp từ AST nguồn để không khởi động luồng AWS/HTTP thật; mock tại dependency boundary. Tám trường hợp bao gồm start mất response, workflow đã xong, không rõ trạng thái, stop bị từ chối/mất response, poll lỗi, trạng thái chưa kết thúc và success.
