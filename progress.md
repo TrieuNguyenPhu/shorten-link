@@ -47,11 +47,27 @@
 - Task 1.1 complete: RED do GenerateShortCode/NormalizeURL/FormatCreatedAt/Load chưa tồn tại; GREEN toàn bộ unit tests. Windows test/vet PASS; WSL Go1.26.5 + GCC test -race -v và vet PASS. Coverage config 100%, domain 88.2%. Formatting/diff check PASS; review độc lập không có finding.
 - Lỗi môi trường: Windows -race thiếu CGO/C compiler; đã cài GCC/libc6-dev trong WSL Ubuntu bằng root và chạy đúng toolchain pin. Không thay cấu hình AWS.
 - PR Task 1.1: [#66](https://github.com/TrieuNguyenPhu/shorten-link/pull/66), base Phase 0 (#65); chờ review/merge.
+- Task 1.2 in_progress: branch từ main rồi fast-forward Task1.1, PR base Task1.1.
+- Task1.2 RED: các API logging/EMF/X-Ray và buildAll chưa tồn tại. Lượt X-Ray integration đầu panic vì fixture stack trả nil request; đã đối chiếu dependency và sửa fixture thành smithyhttp.NewStackRequest (SDK yêu cầu request thực), thêm assertion trace propagation header.
+- Packaging Windows PASS: build ELF arm64 tĩnh, ZIP bootstrap 0755, giữ artifact cũ khi compiler fail, wrapper PowerShell từ thư mục khác có dấu cách, exit nonzero khi build lỗi.
+- Dependency: X-Ray kéo SDK Go v1 gián tiếp (deprecated); ứng dụng chỉ dùng SDK v2. Nâng SDK v1 lên bản cuối 1.55.8 và các transitive cũ trước vulnerability scan.
+- Vulnerability scan Go1.26.5 FAIL: 10 findings stdlib, bản vá cao nhất Go1.26.10; còn cảnh báo import/module chưa có call path. Xác minh https://go.dev/dl/?mode=json trả stable go1.26.10 và go1.27.3; chọn patch Go1.26.10 để thay đổi nhỏ nhất. Đồng bộ minimum/toolchain, CI và fixture; chạy lại toàn bộ kiểm tra sau nâng cấp.
+- Sau nâng Go, scan/race khởi động khi tidy chưa xong nên báo go.mod cần tidy; đã chờ tidy hoàn tất rồi chạy lại, không tính các lượt lỗi setup là kết quả kiểm thử. Go mod tidy bỏ directive toolchain trùng minimum; go 1.26.10 và CI pin1.26.10 giữ yêu cầu bản vá. `go mod verify` PASS.
 - Sửa review Task1.1: nâng minimum/CI từ Go1.26.5 lên Go1.26.10 sau khi scan Phase1 phát hiện stdlib vulnerabilities; PR #66 được cập nhật cùng branch trước khi merge.
+- Task1.2 complete / Phase1 complete: Windows Go1.26.10 test ./... và vet ./... PASS; WSL Go1.26.10 test -race ./... và vet ./... PASS cả4 packages. Packaging scripts thực/ELF/ZIP0755 và failure retention đều PASS. go mod verify, formatting, diff check PASS. Review độc lập không finding code.
+- Scan cuối Go1.26.10: exit0, 0 symbol/package vulnerabilities; còn 2 module-only S3 Crypto của SDKv1 gián tiếp (GO-2022-0646, GO-2022-0635) không được app import/call. Đã ghi README/findings/status và thêm scan vào CI.
+- Không gọi AWS, Terraform, E2E business hoặc sửa frontend untracked; Task2.1 tiếp theo. PR riêng Task1.2: [#67](https://github.com/TrieuNguyenPhu/shorten-link/pull/67), base nhánh Task1.1 (#66).
+- PR #66 sau nâng Go1.26.10: CI backend PASS (29s). PR #67 chờ CI cho revision mới.
+
 
 ## Session 2026-11-04 — Sửa final review Phase 1 / Task 1.1
 - Nhánh `fix/phase-01-task-01-final-review` tạo từ origin/main c99bd5e, phục hồi commits domain/config/Go CI của Task 1.1; các PR gốc đã merged vào nhánh phụ nên phải có PR tích hợp mới.
 - Regression test IPv4 RED trước implementation; GREEN sau sửa validation. Go 1.26.10/Linux: test-race-count1-cover, vet, mod verify, gofmt và diff-check PASS; 2 packages config/domain, coverage 100%/88.9%.
 - Đã kiểm tra diff: không có handler placeholder, AWS call, Terraform apply hoặc secret. Đã xác nhận kết nối GitHub/quyền ghi; tiếp tục xuất bản PR main, rồi Task 1.2 và static export riêng.
 
-- PR tích hợp Task 1.1 vào main: [#68](https://github.com/TrieuNguyenPhu/shorten-link/pull/68), chờ CI/merge.
+- PR tích hợp Task 1.1 vào main: [#68](https://github.com/TrieuNguyenPhu/shorten-link/pull/68), đã qua CI và merge main tại `4725d97`.
+
+## Session 2026-11-04 — Tích hợp Phase 1 / Task 1.2
+- Nhánh từ origin/main sau #68; giữ nguyên IPv4 regression. Phục hồi middleware/packaging/CI và hợp nhất tài liệu, không đưa frontend vào task này.
+- Test -race -count=1 -cover cả 4 packages, vet, mod verify, gofmt và diff-check PASS trên Go1.26.10/Linux. Packaging/compiler/Bash wrapper thật PASS.
+- govulncheck@v1.9.0 verbose exit0: 0 symbol/package, 4 module-only advisories như PROJECT_STATUS. Không xác minh trace export AWS và không chạy apply.

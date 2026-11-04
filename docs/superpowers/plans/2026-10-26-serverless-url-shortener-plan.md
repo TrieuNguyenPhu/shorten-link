@@ -106,10 +106,10 @@
     - `middleware.EmitCountMetric(w io.Writer, namespace, service, metricName string, value float64)` (chuẩn CloudWatch Embedded Metric Format JSON)
     - `middleware.InstrumentAWSConfig(cfg *aws.Config)`
 - **Steps:**
-  - [ ] **Step 1:** Viết unit tests trong `backend/internal/middleware/middleware_test.go` kiểm tra định dạng JSON của `slog` (có `service`, `requestId`, `level`, `msg`) và cấu trúc JSON `_aws.CloudWatchMetrics` của EMF (`Namespace: "UrlShortener"`, metrics `LinkResolved` / `LinkNotFound`).
-  - [ ] **Step 2:** Xác minh support/compatibility instrumentation Go rồi triển khai `logger.go`, `emf.go`, `xray.go` và test middleware. [X-Ray Go SDK](https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-go.html) đã vào maintenance từ 25/02/2026; đối chiếu [timeline chính thức](https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-daemon-timeline.html) khi chọn instrumentation có export X-Ray. Không giả định tương đương đầy đủ Powertools Node hay mở rộng hạ tầng OTel ngoài phạm vi.
-  - [ ] **Step 3:** Viết script biên dịch chéo Go sang `GOOS=linux GOARCH=arm64 CGO_ENABLED=0` tạo file `bootstrap` và nén thành `<handler>.zip` có quyền thực thi chuẩn Linux (`0755`).
-  - [ ] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và tạo Pull Request riêng cho Task 1.2.
+  - [x] **Step 1:** Viết unit tests trong `backend/internal/middleware/middleware_test.go` kiểm tra định dạng JSON của `slog` (có `service`, `requestId`, `level`, `msg`) và cấu trúc JSON `_aws.CloudWatchMetrics` của EMF (`Namespace: "UrlShortener"`, metrics `LinkResolved` / `LinkNotFound`).
+  - [x] **Step 2:** Xác minh support/compatibility instrumentation Go rồi triển khai `logger.go`, `emf.go`, `xray.go` và test middleware. [X-Ray Go SDK](https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-go.html) đã vào maintenance từ 25/02/2026; đối chiếu [timeline chính thức](https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-daemon-timeline.html) khi chọn instrumentation có export X-Ray. Không giả định tương đương đầy đủ Powertools Node hay mở rộng hạ tầng OTel ngoài phạm vi.
+  - [x] **Step 3:** Viết script biên dịch chéo Go sang `GOOS=linux GOARCH=arm64 CGO_ENABLED=0` tạo file `bootstrap` và nén thành `<handler>.zip` có quyền thực thi chuẩn Linux (`0755`).
+  - [x] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và tạo Pull Request riêng cho Task 1.2.
 
 ---
 
