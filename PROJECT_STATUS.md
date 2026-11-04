@@ -1,6 +1,6 @@
 # PROJECT_STATUS.md — Trạng Thái Hiện Tại Của Dự Án
 
-> **Cập nhật lần cuối:** 2026-10-27 (**Phase 0 / Task 0.1 hoàn thành về đặc tả; PR #65 chờ review/merge**)
+> **Cập nhật lần cuối:** 2026-11-04 (**Task 1.1 final review complete local; chờ tích hợp GitHub**)
 > **Quy tắc bắt buộc:** File này luôn được cập nhật ngay sau khi hoàn thành mỗi Task trước khi mở Pull Request tương ứng.
 
 ---
@@ -9,9 +9,9 @@
 
 | Hạng mục | Trạng thái | Chi tiết |
 | --- | --- | --- |
-| **Giai đoạn hiện tại (Current Phase)** | **Phase 0 — `complete`** | Đã audit 21 bài và source pinned SHA, chốt hợp đồng lỗi, xác thực Google-only và UI Doodle & Sketch; PR #65 còn chờ review/merge |
-| **Task hiện tại** | **Task 0.1 — `complete`** | Hoàn thiện Reference Audit, Architecture & Master Plan sau review; không triển khai AWS trong phiên này |
-| **Task tiếp theo (Next Up)** | **Task 1.1 (Phase 1)** | Khởi tạo cấu trúc Monorepo, `Makefile`, Go module (`backend/`), Domain Models, Base62 Generator & URL Validator kèm unit tests |
+| **Giai đoạn hiện tại (Current Phase)** | **Phase 1 — `in_progress`** | Task 1.1 hoàn tất nền tảng domain/config/Go CI; Task 1.2 tiếp theo |
+| **Task hiện tại** | **Task 1.1 — `complete` local** | Đã sửa IPv4 và regression tests; nhánh fix/phase-01-task-01-final-review chờ push/PR vào main |
+| **Task tiếp theo (Next Up)** | **Task 1.2 (Phase 1)** | Structured logs, EMF, X-Ray và script build ZIP arm64 |
 | **Trạng thái AWS Cloud** | **Đã dọn theo xác nhận người dùng** | Người dùng xác nhận ngày 2026-10-26 đã xóa toàn bộ tài nguyên triển khai trước đó; phiên hoàn thiện Phase 0 không kiểm kê AWS hay xác nhận hóa đơn |
 | **13 Bộ Skills & `AGENTS.md`** | **Đã kiểm tra file/config** | Đủ 13 file skill đại diện; 314 thư mục cấp đầu có `SKILL.md`. Có cấu hình trỏ `~/.agents/skills`; không suy ra mọi host đều tự nạp |
 
@@ -21,8 +21,8 @@
 
 | Phase | Task | Nội dung công việc | Nhánh (Branch) | Trạng thái | Pull Request |
 | --- | --- | --- | --- | --- | --- |
-| **Phase 0** | **Task 0.1** | Xác minh setup skills/`AGENTS.md`, hoàn thiện Reference Audit, Architecture & Master Plan | `chore/phase-00-reset-and-architecture-plan` | **complete (PR chờ merge)** | [PR #65](https://github.com/TrieuNguyenPhu/shorten-link/pull/65) |
-| **Phase 1** | **Task 1.1** | Monorepo, `Makefile`, Go module, Domain Models, Base62 Generator & URL Validator + Unit Tests, CI nền | `feat/phase-01-task-01-monorepo-and-domain` | ⏳ Pending | — |
+| **Phase 0** | **Task 0.1** | Xác minh setup skills/`AGENTS.md`, hoàn thiện Reference Audit, Architecture & Master Plan | `chore/phase-00-reset-and-architecture-plan` | **complete (PR #65 đã merge main ngày 2026-11-04)** | [PR #65](https://github.com/TrieuNguyenPhu/shorten-link/pull/65) |
+| **Phase 1** | **Task 1.1** | Monorepo, `Makefile`, Go module, Domain Models, Base62 Generator & URL Validator + Unit Tests, CI nền | `feat/phase-01-task-01-monorepo-and-domain` | complete | [PR #66](https://github.com/TrieuNguyenPhu/shorten-link/pull/66) |
 | **Phase 1** | **Task 1.2** | Observability Middleware (`slog` JSON, CloudWatch EMF, X-Ray) & Script đóng gói Lambda `arm64` ZIP | `feat/phase-01-task-02-observability-and-packaging` | ⏳ Pending | — |
 | **Phase 2** | **Task 2.1** | DynamoDB Repository, Link Service, EventBridge publisher, local HTTP harness & 4 HTTP Lambdas + Tests | `feat/phase-02-task-01-core-crud-lambdas` | ⏳ Pending | — |
 | **Phase 2** | **Task 2.2** | Terraform Bootstrap (S3 state/lockfile, OIDC) & Core Modules, Cognito Google-only, custom event bus | `feat/phase-02-task-02-terraform-core-infra` | ⏳ Pending | — |
@@ -52,3 +52,16 @@
 - Kiểm tra Phase 0: `git diff --check`, liên kết Markdown nội bộ, JSON examples, số bài và file nguồn. Không chạy `go test`, `pnpm build` hay `terraform validate` vì các dự án thực thi chỉ bắt đầu từ Phase 1–2.
 - E2E Google → Cognito → CloudFront/API, resource inventory và chi phí AWS chưa xác minh; Google OAuth Web client/secret là đầu vào bên ngoài cần chuẩn bị ở Task 2.2, không có secret trong repository.
 - Thư mục `frontend/` xuất hiện dưới dạng file **chưa được Git theo dõi** trong lúc hoàn thiện tài liệu; đây là scaffold Next.js chưa thuộc Task 0.1/PR #65. Giữ nguyên các file đó, chưa xác nhận build hoặc tính năng.
+
+## 5. Bằng chứng Phase 1 / Task 1.1
+- Go 1.26.5: test/vet trên Windows PASS; `GOTOOLCHAIN=go1.26.5 go -C backend test -race -v ./...` và vet trên WSL Ubuntu/GCC PASS.
+- `gofmt -l backend` không có file; `git diff --check` PASS. Review độc lập domain/config/CI không có finding cần sửa.
+- Test-first đã xác nhận RED do các API chưa tồn tại, sau đó GREEN. Coverage config 100%, domain 88.2%; không suy ra bảo đảm nghiệp vụ chưa triển khai.
+- PR phụ thuộc #65; frontend untracked được giữ nguyên. Chưa gọi AWS hoặc chạy Terraform/pnpm.
+- Cập nhật review Task1.1: minimum Go/CI chuyển sang1.26.10 để khắc phục stdlib vulnerabilities phát hiện trong Phase1; bằng chứng1.26.5 bên trên là lịch sử.
+
+## 6. Sửa final review Task 1.1 — 2026-11-04
+- PR #65 đã squash vào main tại `c99bd5e`; #66 đã merge vào nhánh Phase 0 sau đó, nên main chưa nhận Task 1.1. Nhánh sửa mới tạo từ origin/main, phục hồi đúng ba commit Task 1.1; không gộp Task 1.2/frontend.
+- RED: regression test từ chối `127.0.0.999`, `256.1.2.3`, IPv4 sai có trailing dot và năm octet thất bại trước sửa. GREEN sau khi không cho địa chỉ IPv4 dạng số sai rơi vào nhánh DNS.
+- Linux / Go 1.26.10: `go -C backend test -race -count=1 -cover ./...`, `go -C backend vet ./...`, `go -C backend mod verify`, `gofmt -l backend` và `git diff --check` PASS; config coverage 100%, domain 88.9%.
+- Đã xác nhận kết nối GitHub và quyền ghi repository; đang tạo PR tích hợp vào main, chưa khẳng định main đã có code. Phase 1 còn in_progress đến khi tích hợp các task còn lại; Phase 2 chưa bắt đầu.

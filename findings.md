@@ -44,3 +44,15 @@
 - Kiểm tra filesystem ngày 2026-10-26: 314 thư mục cấp đầu có `SKILL.md`, 376 file `SKILL.md` nếu đếm đệ quy (bao gồm bản lồng/trùng); không cộng cả hai số thành skills độc lập.
 - Đủ file đại diện của 13 nhóm: `using-superpowers`, `ponytail`, `planning-with-files`, `caveman`, `differential-review`, `react-best-practices`, `frontend-design`, `gsd-help`, `understand`, `open-code-review`, `ui-ux-pro-max`, `taste-skill`, `vibe-to-agentic-framework`.
 - `.agents/skills.json` và `~/.gemini/config/skills.json` đều có entry `~/.agents/skills`. Việc file/config tồn tại không chứng minh mọi host tự nạp tất cả skills, hoặc nguồn gốc/phiên bản của từng bản cài đã được kiểm toán. Không cài lại khi hoàn thiện Phase 0.
+
+## Phase 1 — Quyết định triển khai 2026-10-27
+- Phạm vi Task 1.1: domain/config + test, Makefile, Go CI, tài liệu local; Task 1.2: logging/EMF/X-Ray và hai entrypoint build dùng Go ZIP helper. Chưa có caller nghiệp vụ; Phase 2 sẽ dùng các API này. Không thêm handler placeholder, Terraform hoặc sửa frontend untracked.
+- Pre-flight: Task 2.1 tiêu thụ domain/config/middleware; giữ EVENT_BUS theo đặc tả, WS_ENDPOINT là HTTPS Management API, PublicRedirectBaseURL tùy chọn để handler có thể fallback domainName. TABLE_NAME bắt buộc; config chung không bắt mọi Lambda khai báo các endpoint không dùng.
+- Ruling Git: tạo từng branch từ origin/main rồi fast-forward baseline phụ thuộc; PR 1.1 base nhánh Phase 0, PR 1.2 base nhánh 1.1. PR #65 đang OPEN; chưa merge main, tránh đưa lại toàn bộ reset Phase 0 vào diff task. Retarget sau khi upstream merge.
+- Go local 1.26.5; pin toolchain 1.26.5 (không tuyên bố mới nhất), CI Linux chạy race. Windows chưa có gcc trong PATH, có WSL Ubuntu để kiểm chứng race.
+- AWS xác nhận X-Ray SDK/daemon maintenance từ 25/02/2026, chỉ cập nhật bảo mật; lựa chọn instrumentation sẽ được ghi rõ ở Task 1.2. Nguồn: https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-daemon-timeline.html
+- Bản cuối Task1.1 dùng Go1.26.10 thay pin1.26.5 ban đầu; sửa cùng PR #66 để baseline của Task1.2 cũng yêu cầu bản vá.
+
+## Final review Task 1.1 — 2026-11-04
+- Squash merge PR cha không tự nhận các commit được merge vào nhánh cha sau thời điểm đó. API GitHub xác nhận #65/#66/#67 đều merged, nhưng git tree main c99bd5e chỉ có Phase 0. Phục hồi theo từng task trên các nhánh từ main, không dùng merge-base với lịch sử cũ để đưa lại toàn bộ reset vào PR.
+- `netip.ParseAddr` thất bại không có nghĩa host là DNS hợp lệ: IPv4 sai chỉ chứa chữ số/dấu chấm phải bị từ chối. Giữ hỗ trợ canonical IPv4 có trailing dot và DNS có nhãn chữ số; regression test trước sửa RED, sau sửa GREEN.
