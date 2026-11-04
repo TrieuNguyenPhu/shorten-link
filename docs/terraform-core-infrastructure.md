@@ -72,6 +72,7 @@ Giới hạn ID là bước vận hành bắt buộc trước CD; mock tests xá
 ```sh
 uvx iam-policy-autopilot@latest generate-policies \
   /home/trieunguyen/src/shorten-link/backend/internal/repository/dynamodb.go \
+  /home/trieunguyen/src/shorten-link/backend/internal/repository/aggregator.go \
   /home/trieunguyen/src/shorten-link/backend/internal/events/eventbridge.go \
   --region ap-southeast-1 --service-hints dynamodb events \
   --tf-dir /home/trieunguyen/src/shorten-link/infrastructure/terraform/environments/dev --pretty
@@ -135,3 +136,8 @@ Theo yêu cầu apply rõ ràng của người dùng, account654822777701/ap-sou
 AWS smoke đã xác minh JWT negatives, CRUD/list cursor qua operator Lambda invokes, HTTP301/404, publisher ack và redirect Cognito→Google; đã xóa cả2link thử. Đây chưa phải Core E2E với Google access tokens thật. Bootstrap state backup riêng tại /home/trieunguyen/.local/state/shorten-link/bootstrap-terraform.tfstate, quyền0600; inputs/state/plan không commit.
 
 Cognito tự thêm username mapping và Google endpoint metadata khi read-back. Module ignore đúng các entries tự sinh, giữ client_id/client_secret/authorize_scopes và email/name dưới quản lý Terraform; [source provider6.71.0](https://github.com/hashicorp/terraform-provider-aws/blob/v6.71.0/internal/service/cognitoidp/identity_provider.go) đọc toàn bộ maps. Final bootstrap/core plan đều detailed-exitcode0. IAM Access Analyzer trên policy đã pin không có errors/security warnings. CI170 của PR#73 PASS cả4jobs trước commit chốt evidence/default handling.
+
+
+## Phase3: event pipeline
+
+Task3.2 bổ sung [event pipeline](./terraform-event-pipeline.md): reuse custom bus, rule/SQS/DLQ, aggregator và ESM. Bootstrap boundary/role allowlist cập nhật năm handler, managed policy pipeline tách để tránh quota inline; operator deploy ESM lần đầu rồi pin `click_event_source_mapping_ids` trước CD. Các mô tả bốn Lambda/chưa có queue trong phần Phase2 bên trên là phạm vi lịch sử Phase2. Pipeline implementation đã có nhưng chưa apply trong Task3.2; AWS Scenario Pipeline vẫn pending.

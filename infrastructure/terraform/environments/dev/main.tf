@@ -58,3 +58,15 @@ module "http_api" {
     function_name = fn.function_name, alias_invoke_arn = fn.alias_invoke_arn
   } }
 }
+
+module "event_pipeline" {
+  source               = "../../modules/event_pipeline"
+  name_prefix          = var.name_prefix
+  event_bus_name       = module.event_bus.name
+  event_bus_arn        = module.event_bus.arn
+  table_name           = module.table.name
+  table_arn            = module.table.arn
+  runtime_boundary_arn = var.runtime_boundary_arn
+  aggregator_filename  = abspath("${path.root}/${var.lambda_package_directory}/click-aggregator.zip")
+  log_retention_days   = var.log_retention_days
+}

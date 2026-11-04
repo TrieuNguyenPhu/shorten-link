@@ -1,6 +1,6 @@
 # PROJECT_STATUS.md — Trạng Thái Hiện Tại Của Dự Án
 
-> **Cập nhật lần cuối:** 2026-11-04 (**Phase 3 / Task 3.1 implementation complete**)
+> **Cập nhật lần cuối:** 2026-11-04 (**Phase 3 implementation/local complete; Task3.2 PR #75 chờ review; CI #177 PASS**)
 > **Quy tắc bắt buộc:** File này luôn được cập nhật ngay sau khi hoàn thành mỗi Task trước khi mở Pull Request tương ứng.
 
 ---
@@ -9,9 +9,9 @@
 
 | Hạng mục | Trạng thái | Chi tiết |
 | --- | --- | --- |
-| **Giai đoạn hiện tại (Current Phase)** | **Phase 3 — `in_progress`** | Task 3.1 implementation/local complete; Task 3.2 pending; PR #73 đã merge main e1e8bed |
-| **Task hiện tại** | **Task 3.1 — `complete` (implementation/local)** | Unit/race/vet/integration/HTTP analytics E2E/build5ZIP PASS; PR #74 chờ review; CI #174 PASS |
-| **Task tiếp theo (Next Up)** | **Task 3.2 (Phase 3)** | Terraform event pipeline từ main sau Task 3.1 merge |
+| **Giai đoạn hiện tại (Current Phase)** | **Phase 3 — `complete` (implementation/local)** | Task3.1/PR #74 đã merge; Task3.2 implementation/local complete, AWS pipeline chưa deploy |
+| **Task hiện tại** | **Task 3.2 — `complete` (implementation/local)** | 27Terraform plan tests, Go race/vet/build5ZIP và PS offline regressions PASS; PR #75 chờ review; CI #177 PASS |
+| **Task tiếp theo (Next Up)** | **Task 4.1 (Phase 4)** | WebSocket và moderation sau Phase3 |
 | **Trạng thái AWS Cloud** | **Core đã triển khai ngày 2026-11-04** | Account654822777701, ap-southeast-1; bootstrap10 + core42 tài nguyên mới; pin deployment policy sau apply, không destroy |
 | **13 Bộ Skills & `AGENTS.md`** | **Đã kiểm tra file/config** | Đủ 13 file skill đại diện; 314 thư mục cấp đầu có `SKILL.md`. Có cấu hình trỏ `~/.agents/skills`; không suy ra mọi host đều tự nạp |
 
@@ -26,8 +26,8 @@
 | **Phase 1** | **Task 1.2** | Observability Middleware (`slog` JSON, CloudWatch EMF, X-Ray) & Script đóng gói Lambda `arm64` ZIP | `fix/phase-01-task-02-main-integration` | complete | [PR #69 — đã merge main](https://github.com/TrieuNguyenPhu/shorten-link/pull/69); gốc #67 |
 | **Phase 2** | **Task 2.1** | DynamoDB Repository, Link Service, EventBridge publisher, local HTTP harness & 4 HTTP Lambdas + Tests | `feat/phase-02-task-01-core-crud-lambdas` | complete (đã merge main) | [PR #71](https://github.com/TrieuNguyenPhu/shorten-link/pull/71) |
 | **Phase 2** | **Task 2.2** | Terraform Bootstrap (S3 state/lockfile, OIDC) & Core Modules, Cognito Google-only, custom event bus | `feat/phase-02-task-02-terraform-core-infra` | complete (đã merge main) | [PR #72](https://github.com/TrieuNguyenPhu/shorten-link/pull/72) |
-| **Phase 3** | **Task 3.1** | Go Lambda `click-aggregator` (`TransactWriteItems`, `CancellationReasons`, `ReportBatchItemFailures`) + Tests | `feat/phase-03-task-01-click-aggregator-lambda` | complete (implementation/local) | [PR #74](https://github.com/TrieuNguyenPhu/shorten-link/pull/74) | |
-| **Phase 3** | **Task 3.2** | Terraform Module `event_pipeline` (nhận bus từ Task 2.2, tạo rule, SQS `ClickQueue` + `ClickDLQ`, ESM) | `feat/phase-03-task-02-terraform-event-pipeline` | ⏳ Pending | — |
+| **Phase 3** | **Task 3.1** | Go Lambda `click-aggregator` (`TransactWriteItems`, `CancellationReasons`, `ReportBatchItemFailures`) + Tests | `feat/phase-03-task-01-click-aggregator-lambda` | complete (đã merge main) | [PR #74](https://github.com/TrieuNguyenPhu/shorten-link/pull/74) | |
+| **Phase 3** | **Task 3.2** | Terraform Module `event_pipeline` (nhận bus từ Task 2.2, tạo rule, SQS `ClickQueue` + `ClickDLQ`, ESM) | `feat/phase-03-task-02-terraform-event-pipeline` | complete (implementation/local) | [PR #75](https://github.com/TrieuNguyenPhu/shorten-link/pull/75) | |
 | **Phase 4** | **Task 4.1** | Go Lambdas `ws-connect`, `ws-disconnect`, `PostToConnection` Pusher (`410 Gone`) & `moderate-check` + ASL | `feat/phase-04-task-01-websocket-and-moderation-lambdas` | ⏳ Pending | — |
 | **Phase 4** | **Task 4.2** | Terraform Modules `websocket_api` (`$connect`, `$disconnect`, stage `prod`) & `moderation_sfn` | `feat/phase-04-task-02-terraform-websocket-and-sfn` | ⏳ Pending | — |
 | **Phase 5** | **Task 5.1** | Next.js static, Google-only qua Cognito PKCE, Landing/Login/Callback theo Doodle & Sketch UI | `feat/phase-05-task-01-nextjs-auth-and-pages` | ⏳ Pending (auth/UI); scaffold đã kiểm | [PR #70 — scaffold/static export](https://github.com/TrieuNguyenPhu/shorten-link/pull/70) |
@@ -148,3 +148,13 @@
 - PR riêng Task3.1: [#74](https://github.com/TrieuNguyenPhu/shorten-link/pull/74), base main e1e8bed, commit fbd9ab1; chưa merge. Xuất bản bằng GitHub connector vì host thiếu Git author/gh/credential helper; remote tree ee08d52 trùng index đã kiểm thử.
 
 - CI [run #174](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41784113801) trên commit587dc7f PASS cả bốn job: backend (race/vet/transaction integration/HTTP analytics E2E/build5ZIP/scan), Terraform, packaging-windows và frontend. Commit chốt sau chỉ sửa tài liệu/README, không đổi implementation.
+
+
+## 14. Phase3 / Task3.2 — 2026-11-04
+- Main113d969 sau PR#74 đã merge; nhánh riêng feat/phase-03-task-02-terraform-event-pipeline. Module nhận existing custom bus, tạo rule/envelope target/SQS standard30s/maxReceive3/DLQ14d/SSE-SQS/TLS/source policy/redrive allow và ESM batch10/partial failures/live aggregator alias. Aggregator dùng module Lambda chung; root outputs thêm queue/rule/ESM và năm role/alias.
+- Bootstrap boundary bổ sung UpdateItem/poll ClickQueue và năm handler. Managed policy pipeline tách khỏi inline do regression11256>10240; IAM deployment scope exact rule/queues, ESM operator provision lần đầu rồi pin UUID + FunctionArn live, bảo vệ ownership tags. Chi tiết/ruling tại docs/terraform-event-pipeline.md; không thay tài nguyên AWS trong phiên.
+- Terraform1.17.1/provider6.71.0: fmt-check/init-backend=false-lockfile-readonly/validate/test PASS cả hai root,14+13=27plan/mock tests. Go1.26.10 race/vet/build5ZIP PASS. PowerShell7.5 container --network none parser/preflight Core/OIDC/Pipeline/deletion/JSON shape regression PASS. Không có bằng chứng AWS pipeline delivery/DLQ thật.
+- Review độc lập Terraform không finding; PS JSON scalar/array finding đã sửa và scoped re-review PASS. IAM Autopilot unavailable (uvx exit127); dùng SAR4services kiểm action/resource/condition, không upload policy/call account. CI mở rộng tự chạy tests mới; runbook Pipeline nêu rõ exact account/output validation, bounded polls và cleanup test-only.
+- Phase3 complete về implementation/local, AWS rule/queues/aggregator/ESM chưa apply; Scenario Pipeline thật pending. Google Core E2E/OIDC trust matrix còn pending như Phase2. Task4.1 bắt đầu sau review/merge Task3.2; không tự merge hoặc triển khai AWS.
+
+- PR riêng Task3.2: [#75](https://github.com/TrieuNguyenPhu/shorten-link/pull/75), base main113d969, implementation commit a2f926f; chưa merge. Xuất bản bằng GitHub connector, tree eed7829 trùng index đã kiểm; checkout giữ để sửa review. CI [#177](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41786916663) trên a2f926f PASS cả bốn job; commit chốt sau chỉ cập nhật tài liệu.

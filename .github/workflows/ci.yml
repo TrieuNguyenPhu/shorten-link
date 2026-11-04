@@ -100,6 +100,6 @@ jobs:
             terraform -chdir="$root" validate -no-color
             terraform -chdir="$root" test -no-color
           done
-      - name: Check AWS E2E script syntax and reject an untrusted endpoint locally
+      - name: Check Core, OIDC and Pipeline E2E syntax and offline preflight
         shell: pwsh
         run: ./tests/e2e/aws-flow.test.ps1

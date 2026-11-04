@@ -5,6 +5,8 @@ $tokens = $null
 $errors = $null
 [void][Management.Automation.Language.Parser]::ParseFile($scriptPath, [ref]$tokens, [ref]$errors)
 if ($errors.Count -gt 0) { throw ($errors | Out-String) }
+[void][Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'pipeline.ps1'), [ref]$tokens, [ref]$errors)
+if ($errors.Count -gt 0) { throw ($errors | Out-String) }
 $temporary = Join-Path ([IO.Path]::GetTempPath()) ("url-shortener-e2e-" + [guid]::NewGuid().ToString('N') + '.json')
 try {
     @{ http_api_endpoint = @{ value = 'https://example.org/' } } | ConvertTo-Json | Set-Content -LiteralPath $temporary
@@ -46,3 +48,53 @@ foreach ($status in @(301, 500)) {
     if (-not $failed -or $script:readCount -ne $expectedReads) { throw 'Deletion check must bound retries and surface non-consistency errors immediately.' }
 }
 Write-Host 'Deletion consistency, retry budget and error isolation PASS.'
+
+$pipelineTemporary = Join-Path ([IO.Path]::GetTempPath()) ("url-shortener-pipeline-" + [guid]::NewGuid().ToString('N') + '.json')
+$originalAccessToken = $env:E2E_ACCESS_TOKEN_A
+try {
+    @{ http_api_endpoint = @{ value = 'https://example.org/' } } | ConvertTo-Json | Set-Content -LiteralPath $pipelineTemporary
+    $rejected = $false
+    try { & $scriptPath -Scenario Pipeline -OutputsPath $pipelineTemporary }
+    catch { $rejected = $_.Exception.Message -eq 'Pipeline requires matching AWS API, table, bus, queue, alias and ESM outputs.' }
+    if (-not $rejected) { throw 'Pipeline must validate resource outputs before tokens or AWS calls.' }
+    $config = @{
+        http_api_endpoint = @{ value = 'https://api123.execute-api.ap-southeast-1.amazonaws.com' }
+        table_name = @{ value = 'url-shortener' }
+        table_arn = @{ value = 'arn:aws:dynamodb:ap-southeast-1:111111111111:table/url-shortener' }
+        event_bus_name = @{ value = 'url-shortener-events' }
+        event_bus_arn = @{ value = 'arn:aws:events:ap-southeast-1:111111111111:event-bus/url-shortener-events' }
+        click_queue_arn = @{ value = 'arn:aws:sqs:ap-southeast-1:111111111111:url-shortener-dev-ClickQueue' }
+        click_queue_url = @{ value = 'https://sqs.ap-southeast-1.amazonaws.com/111111111111/url-shortener-dev-ClickQueue' }
+        click_dlq_arn = @{ value = 'arn:aws:sqs:ap-southeast-1:111111111111:url-shortener-dev-ClickDLQ' }
+        click_dlq_url = @{ value = 'https://sqs.ap-southeast-1.amazonaws.com/111111111111/url-shortener-dev-ClickDLQ' }
+        click_rule_arn = @{ value = 'arn:aws:events:ap-southeast-1:111111111111:rule/url-shortener-events/url-shortener-dev-link-clicked' }
+        click_event_source_mapping_id = @{ value = '12345678-1234-1234-1234-123456789012' }
+        lambda_aliases = @{ value = @{ 'click-aggregator' = 'arn:aws:lambda:ap-southeast-1:111111111111:function:url-shortener-dev-click-aggregator:live' } }
+        cognito_issuer = @{ value = 'https://cognito-idp.ap-southeast-1.amazonaws.com/ap-southeast-1_test' }
+        cognito_client_id = @{ value = 'test-client' }
+    }
+    $config | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $pipelineTemporary
+    $env:E2E_ACCESS_TOKEN_A = ''
+    $rejected = $false
+    try { & $scriptPath -Scenario Pipeline -OutputsPath $pipelineTemporary }
+    catch { $rejected = $_.Exception.Message -eq 'Missing required environment input: E2E_ACCESS_TOKEN_A' }
+    if (-not $rejected) { throw 'Valid Pipeline outputs must fail closed before AWS when the token is missing.' }
+    $config.click_dlq_arn.value = 'arn:aws:sqs:us-east-1:222222222222:other-ClickDLQ'
+    $config | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $pipelineTemporary
+    $rejected = $false
+    try { & $scriptPath -Scenario Pipeline -OutputsPath $pipelineTemporary }
+    catch { $rejected = $_.Exception.Message -eq 'Pipeline requires matching AWS API, table, bus, queue, alias and ESM outputs.' }
+    if (-not $rejected) { throw 'Pipeline must reject cross-account/region resource mismatches before AWS calls.' }
+} finally {
+    $env:E2E_ACCESS_TOKEN_A = $originalAccessToken
+    Remove-Item -LiteralPath $pipelineTemporary -Force
+}
+Write-Host 'Pipeline output and missing-token preflight PASS; no AWS requests sent.'
+
+. (Join-Path $PSScriptRoot 'pipeline.ps1')
+foreach ($body in @('42','true','null','[1,2]','[{"id":"wanted"}]','{"id":["wanted"]}','{"id":"other"}','{}','{')) {
+    if ($null -ne (Read-PipelineEnvelope -Body $body -EventID 'wanted')) { throw 'Unrelated/non-object DLQ JSON must stay unmatched for visibility restoration.' }
+}
+$matched = Read-PipelineEnvelope -Body '{"id":"wanted","detail":{"code":"Abc1234"}}' -EventID 'wanted'
+if ($null -eq $matched -or $matched.detail.code -ne 'Abc1234') { throw 'The matching DLQ envelope must remain available for validation and cleanup.' }
+Write-Host 'Pipeline DLQ JSON shape/matching regression PASS; no AWS requests sent.'

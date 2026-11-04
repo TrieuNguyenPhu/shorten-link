@@ -46,13 +46,17 @@ locals {
   base_arn          = "arn:${local.partition}"
   table_arn         = "${local.base_arn}:dynamodb:${var.aws_region}:${var.aws_account_id}:table/${var.table_name}"
   bus_arn           = "${local.base_arn}:events:${var.aws_region}:${var.aws_account_id}:event-bus/${var.event_bus_name}"
-  handlers          = ["create-link", "resolve-link", "list-links", "delete-link"]
+  handlers          = ["create-link", "resolve-link", "list-links", "delete-link", "click-aggregator"]
   role_arns         = [for handler in local.handlers : "${local.base_arn}:iam::${var.aws_account_id}:role/url-shortener/dev/${var.name_prefix}-${handler}"]
   function_arns = flatten([for handler in local.handlers : [
     "${local.base_arn}:lambda:${var.aws_region}:${var.aws_account_id}:function:${var.name_prefix}-${handler}",
     "${local.base_arn}:lambda:${var.aws_region}:${var.aws_account_id}:function:${var.name_prefix}-${handler}:*"
   ]])
-  log_arns = ["${local.base_arn}:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${var.name_prefix}-*", "${local.base_arn}:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/apigateway/${var.name_prefix}*"]
+  click_queue_arns     = [for name in ["ClickQueue", "ClickDLQ"] : "${local.base_arn}:sqs:${var.aws_region}:${var.aws_account_id}:${var.name_prefix}-${name}"]
+  click_rule_arn       = "${local.base_arn}:events:${var.aws_region}:${var.aws_account_id}:rule/${var.event_bus_name}/${var.name_prefix}-link-clicked"
+  click_mapping_arns   = [for id in sort(tolist(var.click_event_source_mapping_ids)) : "${local.base_arn}:lambda:${var.aws_region}:${var.aws_account_id}:event-source-mapping:${id}"]
+  aggregator_alias_arn = "${local.base_arn}:lambda:${var.aws_region}:${var.aws_account_id}:function:${var.name_prefix}-click-aggregator:live"
+  log_arns             = ["${local.base_arn}:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${var.name_prefix}-*", "${local.base_arn}:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/apigateway/${var.name_prefix}*"]
 }
 data "aws_partition" "current" {}
 resource "aws_iam_policy" "runtime_boundary" {
@@ -61,9 +65,10 @@ resource "aws_iam_policy" "runtime_boundary" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
-      { Effect = "Allow", Action = ["dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:DeleteItem"], Resource = [local.table_arn] },
+      { Effect = "Allow", Action = ["dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:DeleteItem", "dynamodb:UpdateItem"], Resource = [local.table_arn] },
       { Effect = "Allow", Action = ["dynamodb:Query"], Resource = ["${local.table_arn}/index/GSI1"] },
       { Effect = "Allow", Action = ["events:PutEvents"], Resource = [local.bus_arn] },
+      { Effect = "Allow", Action = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"], Resource = [local.click_queue_arns[0]] },
       { Effect = "Allow", Action = ["logs:CreateLogStream", "logs:PutLogEvents"], Resource = ["${local.base_arn}:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${var.name_prefix}-*:*"] },
       { Effect = "Allow", Action = ["xray:PutTraceSegments", "xray:PutTelemetryRecords"], Resource = ["*"] }
     ]
