@@ -36,3 +36,29 @@ jobs:
           cache: false
       - name: Verify Windows packaging and PowerShell entrypoint
         run: go -C backend test ./tools/build-lambdas
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26.13.0'
+      - name: Install pinned pnpm
+        run: npm install --global pnpm@10.33.2
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Build static export
+        run: pnpm build
+      - name: Verify exported HTML and assets
+        run: pnpm test
+      - name: Audit production dependencies
+        run: pnpm audit --prod
