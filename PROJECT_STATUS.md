@@ -1,6 +1,6 @@
 # PROJECT_STATUS.md — Trạng Thái Hiện Tại Của Dự Án
 
-> **Cập nhật lần cuối:** 2026-11-04 (**Phase 3 implementation/local complete; Task3.2 PR #75 chờ review; CI #177 PASS**)
+> **Cập nhật lần cuối:** 2026-11-04 (**Phase 4 in_progress; Task4.1 implementation/local complete; chuẩn bị PR riêng**)
 > **Quy tắc bắt buộc:** File này luôn được cập nhật ngay sau khi hoàn thành mỗi Task trước khi mở Pull Request tương ứng.
 
 ---
@@ -9,9 +9,9 @@
 
 | Hạng mục | Trạng thái | Chi tiết |
 | --- | --- | --- |
-| **Giai đoạn hiện tại (Current Phase)** | **Phase 3 — `complete` (implementation/local)** | Task3.1/PR #74 đã merge; Task3.2 implementation/local complete, AWS pipeline chưa deploy |
-| **Task hiện tại** | **Task 3.2 — `complete` (implementation/local)** | 27Terraform plan tests, Go race/vet/build5ZIP và PS offline regressions PASS; PR #75 chờ review; CI #177 PASS |
-| **Task tiếp theo (Next Up)** | **Task 4.1 (Phase 4)** | WebSocket và moderation sau Phase3 |
+| **Giai đoạn hiện tại (Current Phase)** | **Phase 4 — `in_progress`** | Task4.1 WebSocket và moderation; AWS pipeline chưa deploy |
+| **Task hiện tại** | **Task 4.1 — `complete` (implementation/local)** | Go race/vet, DynamoDB Local/HTTP-WebSocket E2E, ASL contract và build8ZIP PASS; chuẩn bị PR riêng |
+| **Task tiếp theo (Next Up)** | **Task 4.2 (Phase 4)** | Terraform WebSocket API và Step Functions sau review/merge Task4.1 |
 | **Trạng thái AWS Cloud** | **Core đã triển khai ngày 2026-11-04** | Account654822777701, ap-southeast-1; bootstrap10 + core42 tài nguyên mới; pin deployment policy sau apply, không destroy |
 | **13 Bộ Skills & `AGENTS.md`** | **Đã kiểm tra file/config** | Đủ 13 file skill đại diện; 314 thư mục cấp đầu có `SKILL.md`. Có cấu hình trỏ `~/.agents/skills`; không suy ra mọi host đều tự nạp |
 
@@ -27,8 +27,8 @@
 | **Phase 2** | **Task 2.1** | DynamoDB Repository, Link Service, EventBridge publisher, local HTTP harness & 4 HTTP Lambdas + Tests | `feat/phase-02-task-01-core-crud-lambdas` | complete (đã merge main) | [PR #71](https://github.com/TrieuNguyenPhu/shorten-link/pull/71) |
 | **Phase 2** | **Task 2.2** | Terraform Bootstrap (S3 state/lockfile, OIDC) & Core Modules, Cognito Google-only, custom event bus | `feat/phase-02-task-02-terraform-core-infra` | complete (đã merge main) | [PR #72](https://github.com/TrieuNguyenPhu/shorten-link/pull/72) |
 | **Phase 3** | **Task 3.1** | Go Lambda `click-aggregator` (`TransactWriteItems`, `CancellationReasons`, `ReportBatchItemFailures`) + Tests | `feat/phase-03-task-01-click-aggregator-lambda` | complete (đã merge main) | [PR #74](https://github.com/TrieuNguyenPhu/shorten-link/pull/74) | |
-| **Phase 3** | **Task 3.2** | Terraform Module `event_pipeline` (nhận bus từ Task 2.2, tạo rule, SQS `ClickQueue` + `ClickDLQ`, ESM) | `feat/phase-03-task-02-terraform-event-pipeline` | complete (implementation/local) | [PR #75](https://github.com/TrieuNguyenPhu/shorten-link/pull/75) | |
-| **Phase 4** | **Task 4.1** | Go Lambdas `ws-connect`, `ws-disconnect`, `PostToConnection` Pusher (`410 Gone`) & `moderate-check` + ASL | `feat/phase-04-task-01-websocket-and-moderation-lambdas` | ⏳ Pending | — |
+| **Phase 3** | **Task 3.2** | Terraform Module `event_pipeline` (nhận bus từ Task 2.2, tạo rule, SQS `ClickQueue` + `ClickDLQ`, ESM) | `feat/phase-03-task-02-terraform-event-pipeline` | complete (đã merge main6dee1ca) | [PR #75](https://github.com/TrieuNguyenPhu/shorten-link/pull/75) | |
+| **Phase 4** | **Task 4.1** | Go Lambdas `ws-connect`, `ws-disconnect`, `PostToConnection` Pusher (`410 Gone`) & `moderate-check` + ASL | `feat/phase-04-task-01-websocket-and-moderation-lambdas` | complete (implementation/local) | — |
 | **Phase 4** | **Task 4.2** | Terraform Modules `websocket_api` (`$connect`, `$disconnect`, stage `prod`) & `moderation_sfn` | `feat/phase-04-task-02-terraform-websocket-and-sfn` | ⏳ Pending | — |
 | **Phase 5** | **Task 5.1** | Next.js static, Google-only qua Cognito PKCE, Landing/Login/Callback theo Doodle & Sketch UI | `feat/phase-05-task-01-nextjs-auth-and-pages` | ⏳ Pending (auth/UI); scaffold đã kiểm | [PR #70 — scaffold/static export](https://github.com/TrieuNguyenPhu/shorten-link/pull/70) |
 | **Phase 5** | **Task 5.2** | Dashboard & My Links Doodle & Sketch, API thật & Native WebSocket Hook (`useRealtimeClicks`) | `feat/phase-05-task-02-dashboard-api-and-websocket` | ⏳ Pending | — |
@@ -158,3 +158,12 @@
 - Phase3 complete về implementation/local, AWS rule/queues/aggregator/ESM chưa apply; Scenario Pipeline thật pending. Google Core E2E/OIDC trust matrix còn pending như Phase2. Task4.1 bắt đầu sau review/merge Task3.2; không tự merge hoặc triển khai AWS.
 
 - PR riêng Task3.2: [#75](https://github.com/TrieuNguyenPhu/shorten-link/pull/75), base main113d969, implementation commit a2f926f; chưa merge. Xuất bản bằng GitHub connector, tree eed7829 trùng index đã kiểm; checkout giữ để sửa review. CI [#177](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41786916663) trên a2f926f PASS cả bốn job; commit chốt sau chỉ cập nhật tài liệu.
+
+
+## 15. Phase4 / Task4.1 — 2026-11-04
+- Nhánh riêng từ main6dee1ca sau PR#75 merge. Có đủ8Lambda thật, thêm SDK Management API v1.41.3; không nâng dependency khác.
+- Test-first RED API missing → GREEN. Go1.26.10 `test -race -count=1 -cover ./...`, `vet ./...`, `mod verify` PASS; regression pusher thật qua aggregator (Get/Query/Post/cleanup lỗi đều ack sau commit) chạy race PASS.
+- DynamoDB Local3.3.0 integration `-race -tags=integration -count=1` cả repository và tools/local-http PASS: CRUD/analytics cũ, connect/disconnect/TTL, query>1MB, push SigV4 ở stage/prod,410cleanup,403isolation và duplicate không push lại. HTTP fixtures thay thế EventBridge/Management API tại ranh giới, không chứng minh handshake/IAM/ESM AWS.
+- Build8ZIP thật PASS; từng ZIP chỉ bootstrap0755, ELF64 AArch64, không interpreter. `govulncheck@v1.9.0 -show verbose` exit0,0symbol/package vulnerabilities,4module-only advisories cũ.
+- ASL contract tests PASS cho Lambda output trực tiếp, Retry/Catch/Fail và status updates; chưa thực thi Step Functions. Runbook manual safe/reject/retry/Fail công bố giới hạn upsert, không nối create/redirect.
+- Rà soát thủ công diff/security: owner conditions và transaction cancellation classification cũ giữ nguyên; notifier chỉ sau ClickApplied, chỉ410cleanup, không thêm secret/state/tfvars/artifact. Task4.2/Terraform và AWS execution history còn pending; không apply/load test.

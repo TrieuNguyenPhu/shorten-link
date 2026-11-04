@@ -8,6 +8,7 @@ import (
 	"time"
 
 	appconfig "github.com/TrieuNguyenPhu/shorten-link/backend/internal/config"
+	appevents "github.com/TrieuNguyenPhu/shorten-link/backend/internal/events"
 	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/middleware"
 	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/repository"
 	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/service"
@@ -15,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/retry"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/apigatewaymanagementapi"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
@@ -31,8 +33,14 @@ func newHandler(ctx context.Context) (*service.AggregatorService, error) {
 	}
 	middleware.InstrumentAWSConfig(&sdk)
 	repo := repository.New(dynamodb.NewFromConfig(sdk), cfg.TableName)
-	// WebSocket delivery is wired in Phase 4; no synthetic notifier in production.
-	return service.NewAggregator(repo, nil, middleware.NewLogger("click-aggregator"), os.Stdout), nil
+	logger := middleware.NewLogger("click-aggregator")
+	var notifier service.ClickNotifier
+	// Keep existing deployments usable until Task 4.2 supplies the management URL.
+	if cfg.WSEndpoint != "" {
+		client := apigatewaymanagementapi.NewFromConfig(sdk, func(o *apigatewaymanagementapi.Options) { o.BaseEndpoint = aws.String(cfg.WSEndpoint) })
+		notifier = appevents.NewWSPusher(repo, client, logger)
+	}
+	return service.NewAggregator(repo, notifier, logger, os.Stdout), nil
 }
 
 func main() {

@@ -8,6 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.33.13
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.13
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.21.17
+	github.com/aws/aws-sdk-go-v2/service/apigatewaymanagementapi v1.41.3
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.72.3
 	github.com/aws/aws-sdk-go-v2/service/eventbridge v1.55.7
 	github.com/aws/aws-xray-sdk-go v1.8.5

@@ -121,3 +121,13 @@
 - uvx Autopilot vẫn thiếu (exit127), fallback SAR JSON chính thức DynamoDB/Lambda/SQS/EventBridge. Get/Update/Delete ESM hỗ trợ FunctionArn; tag/list tag scope UUID riêng. SSE-SQS được AWS example xác nhận tương thích EventBridge, không nhầm với AWS managed KMS key.
 - Task3.2 thêm Scenario Pipeline thật theo ma trận master plan; chỉ parser/preflight offline được chạy. Script đọc config/account trước side effects, HTTP redirect→consistent counter, PutEvents poison→DLQ, đối chiếu event ID và cleanup code/receipt của test; không purge/redrive/tắt mapping. ApproximateReceiveCount ở DLQ được ghi như quan sát, không coi là số lần source consumer nhận.
 - Review phát hiện JSON scalar/array ở DLQ làm ContainsKey throw; regression RED→GREEN bằng Read-PipelineEnvelope/NoEnumerate/IDictionary/id string. Container PS7.5 --network none PASS, scoped re-review xác nhận đã sửa. Các ràng buộc quan trọng và giới hạn AWS pending được giữ trong docs/terraform-event-pipeline.md.
+
+
+## 2026-11-04 — Phase4 / Task4.1
+- API Gateway WebSocket dùng events.APIGatewayWebsocketProxyRequest (requestContext.connectionId), không dùng HTTP API v2 envelope. `$disconnect` không cần query code. Schema CONN/META và WSCODE GSI giữ nguyên, TTL tính bằng processing time+7200.
+- Pusher đọc count consistent, stream mọi GSI page bằng callback để tránh giữ toàn bộ subscribers trong RAM. Query projection PK không bỏ giới hạn1MB evaluated items; test dùng6item*220KB buộc pagination thực tế. GSI vẫn eventual consistency.
+- AWS SDK v2 Management API v1.41.3 giữ nguyên dependency graph hiện có; BaseEndpoint phải là HTTP(S) management URL có stage, SDK nối @connections và ký SigV4. Runtime test và E2E fixture đã kiểm path, auth header, payload và typed GoneException từ HTTP410.
+- Giữ budget notifier200ms có sẵn: broadcast lớn/cold request có thể không hoàn tất, không có durable delivery. Get/Query/Post/cleanup failures đều log và cô lập sau commit; chỉ410xóa connection. Errors không làm đếm lại click; duplicate/deleted không push.
+- ASL dùng trực tiếp ModerateCheckArn nên kết quả không có Payload envelope. CheckSafety trả code/target/safe và không fetch URL; substring malware/phishing/evil giữ nguyên case-insensitive như nguồn. Validation input thiếu trả lỗi để Catch/Fail, không ngầm duyệt link.
+- ASL updateItem không condition theo đặc tả nên có thể upsert META không hợp lệ; runbook bắt buộc tạo/kiểm META trước, không xóa song song. Retry3lần nghĩa là tối đa4invocations, chờ1/2/4giây; execution history thật chờ Task4.2 và AWS authorization.
+- Host hiện không có các workflow skills planning-with-files/ponytail/TDD/verification-before-completion; không coi audit cũ là bằng chứng hiện diện. Dùng aws-serverless và quy trình AGENTS/test-first trực tiếp.

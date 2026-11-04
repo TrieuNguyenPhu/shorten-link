@@ -1,0 +1,54 @@
+{
+  "Comment": "Manual URL moderation: keyword check followed by a metadata status update.",
+  "StartAt": "CheckSafety",
+  "States": {
+    "CheckSafety": {
+      "Type": "Task",
+      "Resource": "${ModerateCheckArn}",
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.TooManyRequestsException", "States.TaskFailed"],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [{"ErrorEquals": ["States.ALL"], "Next": "MarkError"}],
+      "Next": "IsSafe"
+    },
+    "IsSafe": {
+      "Type": "Choice",
+      "Choices": [{"Variable": "$.safe", "BooleanEquals": true, "Next": "Activate"}],
+      "Default": "Reject"
+    },
+    "Activate": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${TableName}",
+        "Key": {"PK": {"S.$": "States.Format('LINK#{}', $.code)"}, "SK": {"S": "META"}},
+        "UpdateExpression": "SET #s = :active",
+        "ExpressionAttributeNames": {"#s": "status"},
+        "ExpressionAttributeValues": {":active": {"S": "active"}}
+      },
+      "End": true
+    },
+    "Reject": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${TableName}",
+        "Key": {"PK": {"S.$": "States.Format('LINK#{}', $.code)"}, "SK": {"S": "META"}},
+        "UpdateExpression": "SET #s = :rejected",
+        "ExpressionAttributeNames": {"#s": "status"},
+        "ExpressionAttributeValues": {":rejected": {"S": "rejected"}}
+      },
+      "End": true
+    },
+    "MarkError": {
+      "Type": "Fail",
+      "Error": "ModerationFailed",
+      "Cause": "Safety check failed after retries"
+    }
+  }
+}

@@ -29,8 +29,14 @@ type WSConnection struct {
 }
 
 type ModerationCheck struct {
-	Code string `json:"code"`
-	Safe bool   `json:"safe"`
+	Code   string `json:"code"`
+	Target string `json:"target"`
+	Safe   bool   `json:"safe"`
+}
+
+type ModerationInput struct {
+	Code   string `json:"code"`
+	Target string `json:"target"`
 }
 
 func FormatCreatedAt(at time.Time) string {

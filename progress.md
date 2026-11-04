@@ -142,3 +142,13 @@
 - PR riêng Task3.2: [#75](https://github.com/TrieuNguyenPhu/shorten-link/pull/75), main113d969→a2f926f, tree eed7829 đã đối chiếu local/remote. GitHub connector dùng thay host thiếu Git author/gh/HTTPS helper; không merge. CI #177 đang chạy; commit chốt chỉ thêm URL/evidence tài liệu.
 
 - CI [run #177](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41786916663) trên a2f926f PASS backend (race/vet/DynamoDB Local integration/HTTP analytics E2E/build5ZIP/scan), terraform (27plan tests + PS parser/preflight/regressions), packaging-windows và frontend. Commit cuối chỉ tài liệu; không apply AWS hoặc merge PR.
+
+
+## Session 2026-11-04 — Phase 4 / Task 4.1
+- Người dùng yêu cầu bắt đầu Phase4; fetch xác nhận PR#75 đã merge main6dee1ca. Nhánh riêng feat/phase-04-task-01-websocket-and-moderation-lambdas từ origin/main; Task4.1 in_progress, Task4.2 pending.
+- Đã đọc bốn file trạng thái, master plan/spec và aws-serverless. Host hiện không tìm thấy planning-with-files/ponytail/TDD/verification-before-completion; áp dụng test-first và quy trình AGENTS trực tiếp. Không cài thêm skill, không apply AWS.
+
+- Task4.1 implementation/local complete: RED thiếu APIs service/repository/pusher/runtime/handler, GREEN sau implementation. Go1.26.10 race-count1-cover toàn backend, vet/mod verify PASS; regression pusher thật qua aggregator cho Get/Query/Post/cleanup failures chạy race PASS.
+- DynamoDB Local3.3.0 race integration/HTTP E2E PASS: subscription TTL, pagination>1MB, push SDK ký SigV4,410cleanup,403không cleanup/không retry click, duplicate không push và disconnect lặp. Chỉ protocol fixtures cho EventBridge/Management API; không tuyên bố AWS handshake/delivery.
+- Build8ZIP PASS, kiểm bootstrap root0755/ELF64 AArch64/static. govulncheckverbose exit0,0symbol/package và4module-only advisories cũ. ASL contract tests PASS; runbook manual safe/reject/retry/Fail công bố input/precondition/upsert. CI mở rộng build8ZIP và WebSocket E2E.
+- Rà soát thủ công diff/security không có finding cần sửa; không dùng subagent trong task này. Không apply/call AWS/load test. Chuẩn bị PR riêng Task4.1; Task4.2 pending sau review/merge để tuân thủ branch từ main.

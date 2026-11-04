@@ -250,13 +250,13 @@
   - Create: `statemachine/moderation.asl.json`
   - Modify: `PROJECT_STATUS.md`, `task_plan.md`, `progress.md`, `findings.md`
 - **Steps:**
-  - [ ] **Step 1:** Viết unit tests cho:
+  - [x] **Step 1:** Viết unit tests cho:
     - `$connect` thiếu `?code=` → trả `400`; có `code` → lưu `PK=CONN#<id>, SK=META, code, GSI1PK=WSCODE#<code>, GSI1SK=CONN#<id>, ttl=now+7200` và trả `200`.
     - `$disconnect` → xóa `PK=CONN#<id>, SK=META` và trả `200`.
     - Pusher đọc META ConsistentRead, paginate GSI WSCODE mọi trang, gửi `{code, clicks}`; 410 cleanup, non410/Get/Query/cleanup lỗi đều được log và cô lập sau commit; public connect không có owner auth.
     - `moderate-check` → kiểm tra danh sách từ khóa cấm (`malware`, `phishing`, `evil`), trả `{code, target, safe}`.
-  - [ ] **Step 2:** Triển khai Go/ASL giữ Retry/Catch/updateItem gốc theo kiến trúc5.3; thêm runbook manual input `{code,target}`, safe/reject/retry/Fail, tạo META hợp lệ trước và không xóa song song vì ASL có thể upsert. Không nối moderation vào create/redirect.
-  - [ ] **Step 3:** Chạy Go race/vet, build 8 binaries và mở rộng CI; execution history Step Functions thật nằm trong AWS E2E khi được phép.
+  - [x] **Step 2:** Triển khai Go/ASL giữ Retry/Catch/updateItem gốc theo kiến trúc5.3; thêm runbook manual input `{code,target}`, safe/reject/retry/Fail, tạo META hợp lệ trước và không xóa song song vì ASL có thể upsert. Không nối moderation vào create/redirect.
+  - [x] **Step 3:** Chạy Go race/vet, build 8 binaries và mở rộng CI; execution history Step Functions thật nằm trong AWS E2E khi được phép.
   - [ ] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 4.1.
 
 #### Task 4.2: Terraform Modules `websocket_api` & `moderation_sfn`
