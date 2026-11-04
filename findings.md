@@ -66,3 +66,9 @@
 ## Tích hợp Task 1.2 — 2026-11-04
 - PR #68 đã đưa Task 1.1 và regression IPv4 lên main. Phục hồi Task 1.2 từ source cũ nhưng giữ nguyên bản sửa domain; các xung đột chỉ nằm trong tài liệu trạng thái và đã hợp nhất lịch sử theo ngày.
 - Scan hiện tại có 4 module-only advisories, tăng so với 2 cảnh báo ngày 27/10 do thêm GO-2026-6866/6860 trong x/net; không có symbol/package bị ảnh hưởng. Duy trì bằng chứng hiện tại riêng với nhật ký cũ.
+
+## Static export final review — 2026-11-04
+- Next build hiển thị route prerendered không đồng nghĩa artifact static export: scaffold cũ build exit0 nhưng không có out/. Regression tests chạy trên scaffold thật trong thư mục tạm đã xác nhận RED trước sửa.
+- Dùng hướng dẫn bundled của next16.4.3 để bật export/trailingSlash/unoptimized. Artifact tests kiểm HTML/404 và các file CSS/JS/images được tham chiếu; không chỉ assert giá trị config. Build trước khi chạy pnpm test.
+- CLI local mặc định pnpm12 khác packageManager10.33.2; dùng corepack pnpm@10.33.2 để kiểm nhất quán, CI cài đúng pnpm10.33.2. Không thay dependency/lockfile để né lỗi môi trường.
+- #68 và #69 đều qua CI trước khi squash vào main; main hiện có đầy đủ code Phase 1. Static frontend sửa theo PR riêng; không tuyên bố auth/dashboard/Doodle UI đã hoàn tất.

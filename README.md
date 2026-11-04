@@ -2,7 +2,7 @@
 
 Đặc tả và kế hoạch tái triển khai hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS bằng **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js App Router (`output: "export"`)** trên **Amazon S3 (Private) + CloudFront Origin Access Control (OAC)**.
 
-Phase 1 cung cấp nền tảng Go chạy local; HTTP handlers, frontend và Terraform thuộc các phase sau. AWS cũ đã được xóa theo xác nhận người dùng; phiên này không triển khai AWS.
+Phase 1 cung cấp nền tảng Go chạy local và đã vào main qua PR #68/#69. Scaffold frontend có static export và kiểm tra artifact; Google login, Doodle UI, dashboard, HTTP handlers và Terraform thuộc các phase sau. AWS cũ đã được xóa theo xác nhận người dùng; phiên này không triển khai AWS.
 
 Dự án bám sát kiến trúc hướng sự kiện, thiết kế bảng đơn DynamoDB và luồng xử lý của:
 - **Chuỗi 21 bài viết:** [Serverless Thực Chiến Trên AWS](https://kkloudtarus.net/blog/series/serverless-on-aws-event-driven)
@@ -91,3 +91,18 @@ bash scripts/build-lambdas.sh
 Hai wrapper dùng chung `backend/tools/build-lambdas`, tìm các `backend/cmd/<handler>/main.go` hiện có, build `GOOS=linux GOARCH=arm64 CGO_ENABLED=0` với `lambda.norpc`, tạo `backend/dist/<handler>.zip`. Mỗi ZIP chứa đúng file gốc `bootstrap` với quyền Unix `0755`, dùng được cho `provided.al2023`/`arm64`; không cần cài zip/Python riêng. Artifact cũ được giữ nếu handler build lỗi.
 
 Phase 1 chưa có handler nghiệp vụ (Phase 2–4 sẽ tạo đủ 8 Lambda), nên lệnh build hiện trả lỗi rõ ràng khi không có handler. Test dùng một chương trình Go tối thiểu trong thư mục tạm để kiểm ELF/ZIP và wrapper thực trên Windows/Linux; fixture này không phải Lambda nghiệp vụ và không chứng minh E2E AWS. Không dùng placeholder handler để tạo artifact triển khai giả.
+
+## 6. Kiểm tra scaffold frontend tĩnh
+
+Dùng Node26.13.0 và pnpm10.33.2 theo CI; có thể gọi đúng phiên bản pnpm qua Corepack:
+
+```sh
+corepack pnpm@10.33.2 --dir frontend install --frozen-lockfile
+corepack pnpm@10.33.2 --dir frontend lint
+corepack pnpm@10.33.2 --dir frontend typecheck
+corepack pnpm@10.33.2 --dir frontend build
+corepack pnpm@10.33.2 --dir frontend test
+corepack pnpm@10.33.2 --dir frontend audit --prod
+```
+
+Build tạo `frontend/out/` để phục vụ bằng static hosting; không dùng `next start`. Chạy build trước test vì test kiểm artifact HTML/404 và asset thật. `make check` hiện chỉ kiểm backend; CI chạy cả backend và frontend. Frontend vẫn là scaffold: Google auth, giao diện Doodle, dashboard và API thật triển khai ở Phase 5.

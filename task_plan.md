@@ -4,7 +4,7 @@
 Tái hiện hoàn chỉnh hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS theo chuỗi 21 bài và repository `nghiadaulau/serverless-url-shortener-aws`, chuyển đổi sang **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js Static Export (`S3 + CloudFront OAC`)**, với mỗi Task hoàn thành được tạo một **Pull Request riêng** và luôn cập nhật trạng thái hiện tại của dự án.
 
 ## Current Phase
-Phase 1 — in_progress. Task 1.1 đã merge main qua PR #68; Task 1.2 đã kiểm thử local, chờ CI/merge. Static export sửa riêng trước Phase 2.
+Phase 1 — complete. Task 1.1/1.2 đã merge main qua PR #68/#69; IPv4 và static export đã sửa/kiểm thử. Kế tiếp Phase 2 / Task 2.1, chưa bắt đầu.
 
 ## Phases & Tasks
 
@@ -13,10 +13,10 @@ Phase 1 — in_progress. Task 1.1 đã merge main qua PR #68; Task 1.2 đã ki�
 - **Status:** complete (PR #65 đã merge main; chưa triển khai ứng dụng)
 
 ### Phase 1: Monorepo & Local Foundation
-- **Task hiện tại:** Task 1.2 — complete local (chờ CI/merge main)
+- **Task hiện tại:** Task 1.1/1.2 — complete và đã vào main; final review đã sửa/kiểm thử
 - [x] **Task 1.1:** Khởi tạo cấu trúc Monorepo, `Makefile`, Go module (`backend/`), Domain Models, Base62 Generator (`crypto/rand`) & URL Validator kèm unit tests và CI nền.
 - [x] **Task 1.2:** Xây dựng Observability Middleware (`slog` JSON, CloudWatch EMF metrics, X-Ray wrapper) & script đóng gói Lambda `bootstrap` ZIP (`arm64`) kèm tests.
-- **Status:** in_progress (tích hợp Task 1.2 và sửa static export)
+- **Status:** complete (Task 1.1/1.2 đã vào main; final review đã sửa/kiểm thử)
 
 ### Phase 2: Core URL Shortener (DynamoDB, Cognito JWT & 4 HTTP Handlers)
 - [ ] **Task 2.1:** Triển khai DynamoDB Repository, Link Service, EventBridge publisher, local HTTP harness & 4 Go HTTP Lambda Handlers kèm unit/integration tests (multi-tenant, anti-IDOR, collision retry, 301, lỗi publish).
@@ -34,7 +34,7 @@ Phase 1 — in_progress. Task 1.1 đã merge main qua PR #68; Task 1.2 đã ki�
 - **Status:** pending
 
 ### Phase 5: Frontend Next.js Dashboard & S3 + CloudFront OAC Hosting
-- [ ] **Task 5.1:** Khởi tạo Next.js App Router (`output: "export"`), nút Google qua Cognito PKCE & các trang Landing (`/`), Login (`/login`), Callback (`/auth/callback`) theo Hand-Drawn / Doodle & Sketch UI.
+- [ ] **Task 5.1:** Scaffold static export/CI đã có; Google auth và UI chưa triển khai. Khởi tạo Next.js App Router (`output: "export"`), nút Google qua Cognito PKCE & các trang Landing (`/`), Login (`/login`), Callback (`/auth/callback`) theo Hand-Drawn / Doodle & Sketch UI.
 - [ ] **Task 5.2:** Xây dựng Dashboard (`/dashboard`), My Links (`/links`) cùng phong cách Doodle & Sketch, tích hợp HTTP API thật & Native WebSocket Hook (`useRealtimeClicks`).
 - [ ] **Task 5.3:** Xây dựng Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + CloudFront Function URL rewrite).
 - **Status:** pending

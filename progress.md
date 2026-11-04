@@ -72,4 +72,12 @@
 - Test -race -count=1 -cover cả 4 packages, vet, mod verify, gofmt và diff-check PASS trên Go1.26.10/Linux. Packaging/compiler/Bash wrapper thật PASS.
 - govulncheck@v1.9.0 verbose exit0: 0 symbol/package, 4 module-only advisories như PROJECT_STATUS. Không xác minh trace export AWS và không chạy apply.
 
-- PR tích hợp Task 1.2 vào main: [#69](https://github.com/TrieuNguyenPhu/shorten-link/pull/69), chờ CI/merge.
+- PR tích hợp Task 1.2 vào main: [#69](https://github.com/TrieuNguyenPhu/shorten-link/pull/69), CI Linux/Windows PASS và đã merge main tại `4648f93`.
+
+## Session 2026-11-04 — Sửa static export và hoàn tất final review
+- #68 merged main tại 4725d97 sau CI run41756130712 PASS. #69 merged main tại 4648f93 sau CI run41756480731 PASS cả backend và packaging-windows. Các task đã được tích hợp lại theo từng PR riêng, không force-push main.
+- Nhánh frontend từ main sau #69; phục hồi riêng scaffold4a5c28a, bật output export/trailingSlash/unoptimized, bỏ start server, thêm typecheck/artifact tests và CI frontend; chuẩn hóa LF.
+- RED: bản sao scaffold cũ build thành công nhưng hai artifact tests thiếu out/index.html. GREEN: install frozen/lint/typecheck/build/test/audit-prod PASS trên Node26.13.0 và pnpm10.33.2; 2 tests kiểm HTML/404/assets không cần image server.
+- Diff-check toàn bộ và liên kết tài liệu được kiểm sau cập nhật. Không chạy Terraform/AWS hoặc tuyên bố E2E nghiệp vụ. Phase 1 complete; Task2.1 chưa bắt đầu.
+
+- PR frontend riêng: [#70](https://github.com/TrieuNguyenPhu/shorten-link/pull/70), base main sau #69; trạng thái CI/merge theo GitHub.
