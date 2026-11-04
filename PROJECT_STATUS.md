@@ -10,7 +10,7 @@
 | Hạng mục | Trạng thái | Chi tiết |
 | --- | --- | --- |
 | **Giai đoạn hiện tại (Current Phase)** | **Phase 2 — `complete` (implementation)** | Task 2.1 đã merge #71; Task 2.2 kiểm tra local PASS, chờ review/merge; AWS E2E pending |
-| **Task hiện tại** | **Task 2.2 — `complete` (local)** | Bootstrap/core modules, 16 plan tests và PowerShell preflight PASS; chờ PR/review |
+| **Task hiện tại** | **Task 2.2 — `complete` (local)** | Bootstrap/core modules, 16 plan tests và PowerShell preflight PASS; chờ review/merge |
 | **Task tiếp theo (Next Up)** | **Task 3.1 (Phase 3)** | Click aggregator sau Phase 2 |
 | **Trạng thái AWS Cloud** | **Đã dọn theo xác nhận người dùng** | Người dùng xác nhận ngày 2026-10-26 đã xóa toàn bộ tài nguyên triển khai trước đó; phiên hoàn thiện Phase 0 không kiểm kê AWS hay xác nhận hóa đơn |
 | **13 Bộ Skills & `AGENTS.md`** | **Đã kiểm tra file/config** | Đủ 13 file skill đại diện; 314 thư mục cấp đầu có `SKILL.md`. Có cấu hình trỏ `~/.agents/skills`; không suy ra mọi host đều tự nạp |
@@ -25,7 +25,7 @@
 | **Phase 1** | **Task 1.1** | Monorepo, `Makefile`, Go module, Domain Models, Base62 Generator & URL Validator + Unit Tests, CI nền | `fix/phase-01-task-01-final-review` | complete | [PR #68 — đã merge main](https://github.com/TrieuNguyenPhu/shorten-link/pull/68); gốc #66 |
 | **Phase 1** | **Task 1.2** | Observability Middleware (`slog` JSON, CloudWatch EMF, X-Ray) & Script đóng gói Lambda `arm64` ZIP | `fix/phase-01-task-02-main-integration` | complete | [PR #69 — đã merge main](https://github.com/TrieuNguyenPhu/shorten-link/pull/69); gốc #67 |
 | **Phase 2** | **Task 2.1** | DynamoDB Repository, Link Service, EventBridge publisher, local HTTP harness & 4 HTTP Lambdas + Tests | `feat/phase-02-task-01-core-crud-lambdas` | complete (đã merge main) | [PR #71](https://github.com/TrieuNguyenPhu/shorten-link/pull/71) |
-| **Phase 2** | **Task 2.2** | Terraform Bootstrap (S3 state/lockfile, OIDC) & Core Modules, Cognito Google-only, custom event bus | `feat/phase-02-task-02-terraform-core-infra` | complete (chờ review/merge) | Đang tạo PR |
+| **Phase 2** | **Task 2.2** | Terraform Bootstrap (S3 state/lockfile, OIDC) & Core Modules, Cognito Google-only, custom event bus | `feat/phase-02-task-02-terraform-core-infra` | complete (chờ review/merge) | [PR #72](https://github.com/TrieuNguyenPhu/shorten-link/pull/72) |
 | **Phase 3** | **Task 3.1** | Go Lambda `click-aggregator` (`TransactWriteItems`, `CancellationReasons`, `ReportBatchItemFailures`) + Tests | `feat/phase-03-task-01-click-aggregator-lambda` | ⏳ Pending | — |
 | **Phase 3** | **Task 3.2** | Terraform Module `event_pipeline` (nhận bus từ Task 2.2, tạo rule, SQS `ClickQueue` + `ClickDLQ`, ESM) | `feat/phase-03-task-02-terraform-event-pipeline` | ⏳ Pending | — |
 | **Phase 4** | **Task 4.1** | Go Lambdas `ws-connect`, `ws-disconnect`, `PostToConnection` Pusher (`410 Gone`) & `moderate-check` + ASL | `feat/phase-04-task-01-websocket-and-moderation-lambdas` | ⏳ Pending | — |
@@ -120,3 +120,5 @@
 - Host thiếu make, đã chạy trực tiếp toàn bộ command tương đương, không tuyên bố make check thành công. IAM Policy Autopilot không chạy vì uvx/pip/ensurepip thiếu; fallback SAR xác minh104 action names và resource capabilities. Không upload policy hoặc gọi account AWS.
 - Giới hạn cần xử lý khi triển khai: chuẩn bị Google Web client/secret, bảo vệ remote state/plan, exact protected environment/main trust. API Gateway v2 child/tag endpoints scope ID/path, không dựa inheritance V1; pin http_api_ids output vào bootstrap sau first approved deployment và trước CD. DescribeUserPoolDomain cần wildcard read theo RequestedRegion. Chi tiết [runbook Terraform](./docs/terraform-core-infrastructure.md).
 - CI thêm Terraform fmt/init/validate/16 plan tests và PowerShell parser/preflight; setup-terraform action pin SHA. Rà soát diff/IAM/boundary/alias/secret state và liên kết trước commit; chưa có AWS JWT/IAM/STS/X-Ray/pipeline evidence. Phase2 complete về implementation, kế tiếp Task3.1 sau review/merge Task2.2.
+
+- PR riêng Task2.2: [#72](https://github.com/TrieuNguyenPhu/shorten-link/pull/72), base main sau #71, title/body và commits tiếng Anh. Trạng thái CI hiện tại xem tại PR; chưa merge.

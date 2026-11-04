@@ -184,9 +184,11 @@
   - [x] **Step 1:** Bootstrap S3 state/versioning/AES256/public block/use_lockfile và GitHub OIDC provider/deployment role theo kiến trúc mục 6. Trust aud/sub chính xác repo/main hoặc protected environment; provider có sẵn import. Operator credentials/SSO bootstrap lần đầu khi được phép, state bootstrap độc lập; app role không sửa trust/bootstrap. Scope state object, lockfile, ListBucket và PassRole; output role ARN cho CD.
   - [x] **Step 2:** Tạo modules `dynamodb`, `cognito` User Pool + domain + Google social IdP + public app client Code/PKCE, `lambda` provided.al2023/arm64, `http_api` 4 routes/JWT/CORS/throttling và custom `event_bus` url-shortener-events. Trước IdP apply, tạo Google OAuth Web client ngoài AWS với redirect URI Cognito `/oauth2/idpresponse`; Google client ID/secret cấp bằng secret input, không commit và bảo vệ remote state. App client chỉ `Google`, cho phép OAuth scopes `openid email profile`, không bật `explicit_auth_flows` dạng password; ba route riêng tư yêu cầu scope `openid` và Cognito access token. Truyền EVENT_BUS, PUBLIC_REDIRECT_BASE_URL, bus ARN/IAM PutEvents cho resolve ngay Phase 2. Pin provider/toolchain; tags thống nhất, region mặc định ap-southeast-1, memory128/timeout5, IAM từng hàm và Logs/X-Ray. Publish version/alias live ban đầu, API integration + invoke permission dùng qualified alias ARN. Output API/Cognito/bus/role cho phase sau; analytics chỉ end-to-end sau rule Phase 3.
   - [x] **Step 3:** Chạy Terraform fmt/init-backend=false/validate/tests theo cổng kiểm tra cuối kế hoạch cho bootstrap/dev; CI mở rộng không apply AWS.
-  - [ ] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 2.2.
+  - [x] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 2.2.
 
 ---
+
+- **Kết quả 2026-11-04:** complete về implementation/local; [PR #72](https://github.com/TrieuNguyenPhu/shorten-link/pull/72) chờ review/merge. Terraform8+8 plan tests và PowerShell Core/OIDC preflight PASS; AWS apply/E2E pending.
 
 ### Phase 3 — Event-Driven Analytics (EventBridge, SQS + DLQ, ClickAggregator)
 
