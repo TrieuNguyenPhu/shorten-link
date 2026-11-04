@@ -72,3 +72,12 @@
 - Dùng hướng dẫn bundled của next16.4.3 để bật export/trailingSlash/unoptimized. Artifact tests kiểm HTML/404 và các file CSS/JS/images được tham chiếu; không chỉ assert giá trị config. Build trước khi chạy pnpm test.
 - CLI local mặc định pnpm12 khác packageManager10.33.2; dùng corepack pnpm@10.33.2 để kiểm nhất quán, CI cài đúng pnpm10.33.2. Không thay dependency/lockfile để né lỗi môi trường.
 - #68 và #69 đều qua CI trước khi squash vào main; main hiện có đầy đủ code Phase 1. Static frontend sửa theo PR riêng; không tuyên bố auth/dashboard/Doodle UI đã hoàn tất.
+
+
+## Phase 2 / Task 2.1 — 2026-11-04
+- DynamoDB Local3.3.0 xác nhận PutItem collision và DeleteItem ownership conditions chạy đúng; GSI query ScanIndexForward=false đọc LastEvaluatedKey đến hết. Code được dựng từ PK LINK#, không cần thêm code attribute vào schema lưu trữ. 6 item khoảng220KB buộc pagination thật và kiểm milliseconds ordering.
+- API chỉ dùng authorizer.jwt.claims.sub. Body ownerId, bearer chưa xác thực và X-Local-User không tạo danh tính production. List xuất đúng4 fields; missing và khác owner có cùng404. Create nhận một object JSON, chặn null/nonstring/trailing JSON và body>16KiB.
+- PutEvents phải kiểm FailedEntryCount và entry riêng, không chỉ HTTP200. Chỉ retry InternalFailure/ThrottlingException (3calls tổng), full jitter50/100ms, context2s và NopRetryer mỗi SDK operation để tránh retry lồng. Transport error có kết quả bất định nên fail closed ngay. Whole handler4s; lỗi EMF không làm publish lại. Nguồn: [AWS result entry](https://docs.aws.amazon.com/eventbridge/latest/APIReference/API_PutEventsResultEntry.html), [SDK timeout/retry](https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/configure-retries-timeouts.html).
+- Local harness dùng IP loopback/credentials local cố định, không load operator credential chain. -record-events là fixture giao thức opt-in, chỉ ghi nhận event và ack cục bộ, không tạo analytics hay xác minh delivery AWS. HTTP E2E dùng SDK serializer, real handlers và DynamoDB Local; JWT authorizer/IAM/pipeline vẫn pending.
+- Skills ở host hiện tại không còn giống audit lịch sử: chỉ24 thư mục AWS tại ~/.agents/skills; TDD tìm thấy dưới plugin superpowers. Không có planning-with-files/ponytail/differential-review; làm theo AGENTS về trạng thái/review, không tự cài lại.
+- SDK v2 modules mới pin theo resolver; core1.47.5/smithy1.28.7 là patch dependency bắt buộc. Scan reachable exit0/0 symbol/package, còn4 module-only warnings đã ghi ở Phase1; không thay dependency ngoài phạm vi để che cảnh báo.

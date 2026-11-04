@@ -4,7 +4,7 @@
 Tái hiện hoàn chỉnh hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS theo chuỗi 21 bài và repository `nghiadaulau/serverless-url-shortener-aws`, chuyển đổi sang **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js Static Export (`S3 + CloudFront OAC`)**, với mỗi Task hoàn thành được tạo một **Pull Request riêng** và luôn cập nhật trạng thái hiện tại của dự án.
 
 ## Current Phase
-Phase 1 — complete. Task 1.1/1.2 đã merge main qua PR #68/#69; IPv4 và static export đã sửa/kiểm thử. Kế tiếp Phase 2 / Task 2.1, chưa bắt đầu.
+Phase 2 — in_progress. Task 2.1 complete (chờ review/merge) trên nhánh riêng từ origin/main; Task 2.2 pending.
 
 ## Phases & Tasks
 
@@ -19,9 +19,10 @@ Phase 1 — complete. Task 1.1/1.2 đã merge main qua PR #68/#69; IPv4 và stat
 - **Status:** complete (Task 1.1/1.2 đã vào main; final review đã sửa/kiểm thử)
 
 ### Phase 2: Core URL Shortener (DynamoDB, Cognito JWT & 4 HTTP Handlers)
-- [ ] **Task 2.1:** Triển khai DynamoDB Repository, Link Service, EventBridge publisher, local HTTP harness & 4 Go HTTP Lambda Handlers kèm unit/integration tests (multi-tenant, anti-IDOR, collision retry, 301, lỗi publish).
+- **Task hiện tại:** Task 2.1 — complete (chờ review/merge)
+- [x] **Task 2.1:** Triển khai DynamoDB Repository, Link Service, EventBridge publisher, local HTTP harness & 4 Go HTTP Lambda Handlers kèm unit/integration tests (multi-tenant, anti-IDOR, collision retry, 301, lỗi publish).
 - [ ] **Task 2.2:** Xây dựng Terraform Bootstrap (S3 remote state + lockfile, OIDC provider/deployment role) & Core Infrastructure (`dynamodb`, Cognito Google-only social IdP, `lambda`, `http_api`, custom event bus) + `environments/dev`.
-- **Status:** pending
+- **Status:** in_progress
 
 ### Phase 3: Event-Driven Analytics (EventBridge, SQS + DLQ, ClickAggregator)
 - [ ] **Task 3.1:** Triển khai Go Lambda `click-aggregator` (`TransactWriteItems` 3 thao tác, phân biệt chính xác `CancellationReasons`, `ReportBatchItemFailures`) kèm unit/integration tests.

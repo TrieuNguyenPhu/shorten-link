@@ -1,6 +1,6 @@
 # PROJECT_STATUS.md — Trạng Thái Hiện Tại Của Dự Án
 
-> **Cập nhật lần cuối:** 2026-11-04 (**Phase 1 complete; Task 1.1/1.2 đã merge main; static export đã kiểm thử**)
+> **Cập nhật lần cuối:** 2026-11-04 (**Phase 2 in_progress; Task 2.1 complete, chờ review/merge**)
 > **Quy tắc bắt buộc:** File này luôn được cập nhật ngay sau khi hoàn thành mỗi Task trước khi mở Pull Request tương ứng.
 
 ---
@@ -9,9 +9,9 @@
 
 | Hạng mục | Trạng thái | Chi tiết |
 | --- | --- | --- |
-| **Giai đoạn hiện tại (Current Phase)** | **Phase 1 — `complete`** | Task 1.1/1.2 đã vào main qua #68/#69; các lỗi final review đã sửa và static export đã kiểm thử |
-| **Task hiện tại** | **Task 1.2 — `complete`** | Go/race/vet/packaging PASS; CI Linux/Windows của #69 PASS và đã merge main |
-| **Task tiếp theo (Next Up)** | **Task 2.1 (Phase 2)** | DynamoDB repository, service/publisher, HTTP harness và bốn HTTP Lambda thật |
+| **Giai đoạn hiện tại (Current Phase)** | **Phase 2 — `in_progress`** | Task 2.1 đã triển khai/kiểm thử; Task 2.2 pending |
+| **Task hiện tại** | **Task 2.1 — `complete`** | Bốn HTTP Lambda, DynamoDB/HTTP E2E local, race/vet/scan và bốn ZIP arm64 PASS; chờ review/merge |
+| **Task tiếp theo (Next Up)** | **Task 2.2 (Phase 2)** | Terraform bootstrap và core modules sau khi Task 2.1 được review/merge |
 | **Trạng thái AWS Cloud** | **Đã dọn theo xác nhận người dùng** | Người dùng xác nhận ngày 2026-10-26 đã xóa toàn bộ tài nguyên triển khai trước đó; phiên hoàn thiện Phase 0 không kiểm kê AWS hay xác nhận hóa đơn |
 | **13 Bộ Skills & `AGENTS.md`** | **Đã kiểm tra file/config** | Đủ 13 file skill đại diện; 314 thư mục cấp đầu có `SKILL.md`. Có cấu hình trỏ `~/.agents/skills`; không suy ra mọi host đều tự nạp |
 
@@ -24,7 +24,7 @@
 | **Phase 0** | **Task 0.1** | Xác minh setup skills/`AGENTS.md`, hoàn thiện Reference Audit, Architecture & Master Plan | `chore/phase-00-reset-and-architecture-plan` | **complete (đã merge main qua PR #65)** | [PR #65](https://github.com/TrieuNguyenPhu/shorten-link/pull/65) |
 | **Phase 1** | **Task 1.1** | Monorepo, `Makefile`, Go module, Domain Models, Base62 Generator & URL Validator + Unit Tests, CI nền | `fix/phase-01-task-01-final-review` | complete | [PR #68 — đã merge main](https://github.com/TrieuNguyenPhu/shorten-link/pull/68); gốc #66 |
 | **Phase 1** | **Task 1.2** | Observability Middleware (`slog` JSON, CloudWatch EMF, X-Ray) & Script đóng gói Lambda `arm64` ZIP | `fix/phase-01-task-02-main-integration` | complete | [PR #69 — đã merge main](https://github.com/TrieuNguyenPhu/shorten-link/pull/69); gốc #67 |
-| **Phase 2** | **Task 2.1** | DynamoDB Repository, Link Service, EventBridge publisher, local HTTP harness & 4 HTTP Lambdas + Tests | `feat/phase-02-task-01-core-crud-lambdas` | ⏳ Pending | — |
+| **Phase 2** | **Task 2.1** | DynamoDB Repository, Link Service, EventBridge publisher, local HTTP harness & 4 HTTP Lambdas + Tests | `feat/phase-02-task-01-core-crud-lambdas` | complete (chờ review/merge) | [PR #71](https://github.com/TrieuNguyenPhu/shorten-link/pull/71) |
 | **Phase 2** | **Task 2.2** | Terraform Bootstrap (S3 state/lockfile, OIDC) & Core Modules, Cognito Google-only, custom event bus | `feat/phase-02-task-02-terraform-core-infra` | ⏳ Pending | — |
 | **Phase 3** | **Task 3.1** | Go Lambda `click-aggregator` (`TransactWriteItems`, `CancellationReasons`, `ReportBatchItemFailures`) + Tests | `feat/phase-03-task-01-click-aggregator-lambda` | ⏳ Pending | — |
 | **Phase 3** | **Task 3.2** | Terraform Module `event_pipeline` (nhận bus từ Task 2.2, tạo rule, SQS `ClickQueue` + `ClickDLQ`, ESM) | `feat/phase-03-task-02-terraform-event-pipeline` | ⏳ Pending | — |
@@ -96,3 +96,16 @@
 - Phase 1 hoàn tất nền tảng local; kế tiếp Task 2.1. Chưa triển khai AWS, Terraform, JWT authorizer, E2E nghiệp vụ hoặc Google login.
 
 - PR sửa scaffold/static export: [#70](https://github.com/TrieuNguyenPhu/shorten-link/pull/70), base main sau #69; trạng thái CI/merge xem tại PR.
+
+
+## 10. Phase 2 / Task 2.1 — 2026-11-04
+- Nhánh riêng từ origin/main c9d0c85 sau PR #70; có create/resolve/list/delete Lambda thật, repository DynamoDB, service, EventBridge publisher và local HTTP harness. Không có memory repository cho luồng link.
+- TDD RED do API mới chưa tồn tại; GREEN unit/race với collision tối đa 5 writes, owner lấy từ authorizer sub, conditional delete, pagination và body validation. Publisher chỉ ack EventId hợp lệ, retry entry tối đa 3 lần, deadline2s/NopRetryer; toàn request4s, metric lỗi không gây publish lại.
+- Go1.26.10/Linux: `go -C backend test -race -count=1 -cover ./...`, `go -C backend vet ./...`, `go -C backend mod verify` PASS. Các regression bổ sung events/httpapi và runtime/harness được chạy lại với race, exit0.
+- DynamoDB Local3.3.0: `DYNAMODB_ENDPOINT=http://127.0.0.1:8000 go -C backend test -race -tags=integration -count=1 -v ./internal/repository/... ./tools/local-http/...` PASS. Pagination thật vượt1MB, timestamp trong cùng giây, chống IDOR và giữ STAT/CLICK khi delete. HTTP E2E và CLI smoke bốn route PASS; EventBridge recorder là fixture tại ranh giới HTTP, không phải service AWS.
+- `bash scripts/build-lambdas.sh` PASS: bốn ZIP trong backend/dist (ignored), mỗi ZIP chỉ bootstrap0755, ELF64 AArch64 không PT_INTERP. CI thêm DynamoDB Local integration/E2E và build4ZIP; fmt/diff/liên kết/JSON được kiểm trước commit.
+- govulncheck v1.9.0 verbose exit0: 0 symbol/package vulnerabilities; vẫn 4 module-only advisories như mục8, không suppress. AWS SDK v2 DynamoDB/EventBridge/config/credentials đã pin trong go.mod/go.sum.
+- Rà soát diff không secret/state/tfvars thực, không sửa frontend, không có transaction aggregator trong scope. Không chạy AWS/apply/load test; JWT/IAM/EventBridge pipeline và trace export giữ pending. Hướng dẫn tại [docs/local-testing.md](./docs/local-testing.md).
+
+- PR Task 2.1: [#71](https://github.com/TrieuNguyenPhu/shorten-link/pull/71), base main, CI PASS, chờ review; chưa merge.
+- CI [run #164](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41759270780) trên commit39fdbe8 PASS cả backend (race/vet/DynamoDB integration/HTTP E2E/build4ZIP/scan), packaging-windows và frontend (lint/typecheck/static build/tests/audit). Commit sau chỉ cập nhật bằng chứng tài liệu.

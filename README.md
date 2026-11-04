@@ -2,7 +2,7 @@
 
 Đặc tả và kế hoạch tái triển khai hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS bằng **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js App Router (`output: "export"`)** trên **Amazon S3 (Private) + CloudFront Origin Access Control (OAC)**.
 
-Phase 1 cung cấp nền tảng Go chạy local và đã vào main qua PR #68/#69. Scaffold frontend có static export và kiểm tra artifact; Google login, Doodle UI, dashboard, HTTP handlers và Terraform thuộc các phase sau. AWS cũ đã được xóa theo xác nhận người dùng; phiên này không triển khai AWS.
+Phase 1 cung cấp nền tảng Go chạy local và đã vào main qua PR #68/#69. Scaffold frontend có static export và kiểm tra artifact; Task 2.1 bổ sung bốn HTTP Lambda, repository DynamoDB, EventBridge publisher và HTTP harness. Google login, Doodle UI, dashboard và Terraform chưa triển khai. AWS cũ đã được xóa theo xác nhận người dùng; phiên này không triển khai AWS.
 
 Dự án bám sát kiến trúc hướng sự kiện, thiết kế bảng đơn DynamoDB và luồng xử lý của:
 - **Chuỗi 21 bài viết:** [Serverless Thực Chiến Trên AWS](https://kkloudtarus.net/blog/series/serverless-on-aws-event-driven)
@@ -90,7 +90,7 @@ bash scripts/build-lambdas.sh
 
 Hai wrapper dùng chung `backend/tools/build-lambdas`, tìm các `backend/cmd/<handler>/main.go` hiện có, build `GOOS=linux GOARCH=arm64 CGO_ENABLED=0` với `lambda.norpc`, tạo `backend/dist/<handler>.zip`. Mỗi ZIP chứa đúng file gốc `bootstrap` với quyền Unix `0755`, dùng được cho `provided.al2023`/`arm64`; không cần cài zip/Python riêng. Artifact cũ được giữ nếu handler build lỗi.
 
-Phase 1 chưa có handler nghiệp vụ (Phase 2–4 sẽ tạo đủ 8 Lambda), nên lệnh build hiện trả lỗi rõ ràng khi không có handler. Test dùng một chương trình Go tối thiểu trong thư mục tạm để kiểm ELF/ZIP và wrapper thực trên Windows/Linux; fixture này không phải Lambda nghiệp vụ và không chứng minh E2E AWS. Không dùng placeholder handler để tạo artifact triển khai giả.
+Task 2.1 có bốn handler thật: create-link, resolve-link, list-links, delete-link. Lệnh build tạo bốn ZIP; Phase 3–4 bổ sung bốn Lambda còn lại. Test dùng một chương trình Go tối thiểu trong thư mục tạm để kiểm ELF/ZIP và wrapper thực trên Windows/Linux; fixture này không phải Lambda nghiệp vụ và không chứng minh E2E AWS. Không dùng placeholder handler để tạo artifact triển khai giả.
 
 ## 6. Kiểm tra scaffold frontend tĩnh
 
@@ -105,4 +105,11 @@ corepack pnpm@10.33.2 --dir frontend test
 corepack pnpm@10.33.2 --dir frontend audit --prod
 ```
 
-Build tạo `frontend/out/` để phục vụ bằng static hosting; không dùng `next start`. Chạy build trước test vì test kiểm artifact HTML/404 và asset thật. `make check` hiện chỉ kiểm backend; CI chạy cả backend và frontend. Frontend vẫn là scaffold: Google auth, giao diện Doodle, dashboard và API thật triển khai ở Phase 5.
+Build tạo `frontend/out/` để phục vụ bằng static hosting; không dùng `next start`. Chạy build trước test vì test kiểm artifact HTML/404 và asset thật. `make check` kiểm unit/race/vet backend; `DYNAMODB_ENDPOINT=http://127.0.0.1:8000 make test-integration` kiểm DynamoDB Local và HTTP E2E; CI chạy cả backend và frontend. Frontend vẫn là scaffold: Google auth, giao diện Doodle, dashboard và API thật triển khai ở Phase 5.
+
+
+## 7. Core HTTP API và kiểm thử local
+
+Xem [hướng dẫn local](docs/local-testing.md) để chạy DynamoDB Local, HTTP harness, hai danh tính thử nghiệm và recorder EventBridge tùy chọn. Các route `POST /links`, `GET /links`, `DELETE /links/{code}` lấy owner từ JWT authorizer `sub`; `GET /{code}` công khai và chỉ trả 301 sau khi publish thành công. Không có kho dữ liệu in-memory trong luồng link.
+
+Local harness chỉ bind loopback và dùng header `X-Local-User` nằm trong allowlist cấu hình; header này không được Lambda production dùng làm danh tính. Recorder chỉ là fixture giao thức PutEvents, không thay kiểm chứng EventBridge/IAM/Cognito hoặc pipeline analytics trên AWS. Terraform và E2E AWS vẫn pending ở Task 2.2 trở đi.
