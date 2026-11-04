@@ -8,3 +8,5 @@ output "aggregator_role_arn" { value = module.aggregator.role_arn }
 output "aggregator_alias_arn" { value = module.aggregator.alias_arn }
 output "event_bus_name" { value = var.event_bus_name }
 output "event_bus_arn" { value = var.event_bus_arn }
+
+output "aggregator_environment_variables" { value = module.aggregator.environment_variables }

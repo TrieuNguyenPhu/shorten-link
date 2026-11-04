@@ -98,3 +98,13 @@ variable "click_event_source_mapping_ids" {
     error_message = "Use actual lowercase ESM UUIDs, without wildcards."
   }
 }
+
+variable "websocket_api_ids" {
+  type        = set(string)
+  default     = []
+  description = "Operator-provisioned WebSocket API IDs. Pin before push/CD; empty grants no ManageConnections."
+  validation {
+    condition     = alltrue([for id in var.websocket_api_ids : can(regex("^[a-z0-9]+$", id))])
+    error_message = "Use exact WebSocket API IDs without wildcards."
+  }
+}

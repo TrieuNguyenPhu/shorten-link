@@ -71,7 +71,7 @@ run "http_api_tag_permissions" {
   command = plan
   variables { http_api_ids = ["api123"] }
   assert {
-    condition     = alltrue([for arn in local.api_tag_arns : strcontains(arn, "api123")]) && one([for statement in jsondecode(aws_iam_role_policy.deployment.policy).Statement : statement if statement.Sid == "ProtectApiOwnershipTags"]).Condition["ForAnyValue:StringEqualsIgnoreCase"]["aws:TagKeys"] == ["Project", "Environment"]
+    condition     = alltrue([for arn in local.api_tag_arns : strcontains(arn, "api123")]) && one([for statement in jsondecode(aws_iam_policy.api_deployment.policy).Statement : statement if statement.Sid == "ProtectApiOwnershipTags"]).Condition["ForAnyValue:StringEqualsIgnoreCase"]["aws:TagKeys"] == ["Project", "Environment"]
     error_message = "API tag endpoints need ID/path scope and protection against changing ownership tags."
   }
 }
@@ -83,7 +83,7 @@ run "cognito_has_no_provisioning_or_retag_escape" {
     error_message = "Deployment must not provision arbitrary pools or claim foreign pools through request tags."
   }
   assert {
-    condition     = contains(one([for s in jsondecode(aws_iam_role_policy.deployment.policy).Statement : s if s.Sid == "AppFunctions"]).Action, "lambda:GetFunctionCodeSigningConfig")
+    condition     = contains(one([for s in jsondecode(aws_iam_policy.lambda_deployment.policy).Statement : s if s.Sid == "AppFunctions"]).Action, "lambda:GetFunctionCodeSigningConfig")
     error_message = "The pinned AWS provider requires GetFunctionCodeSigningConfig when refreshing ZIP Lambdas."
   }
 }

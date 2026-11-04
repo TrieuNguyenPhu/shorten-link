@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('Core', 'OIDC', 'Pipeline')]
+    [ValidateSet('Core', 'OIDC', 'Pipeline', 'Realtime')]
     [string]$Scenario = 'Core',
     [Parameter(Mandatory)]
     [string]$OutputsPath
@@ -25,6 +25,11 @@ function Require-Environment([string]$Name) {
 }
 
 $outputs = Get-Content -LiteralPath $OutputsPath -Raw | ConvertFrom-Json -AsHashtable
+if ($Scenario -eq 'Realtime') {
+    . (Join-Path $PSScriptRoot 'realtime.ps1')
+    Invoke-Realtime $outputs
+    return
+}
 if ($Scenario -eq 'Pipeline') {
     . (Join-Path $PSScriptRoot 'pipeline.ps1')
     Invoke-Pipeline $outputs

@@ -104,3 +104,12 @@ variable "log_retention_days" {
   type    = number
   default = 14
 }
+
+variable "moderation_boundary_arn" {
+  type     = string
+  nullable = false
+  validation {
+    condition     = var.moderation_boundary_arn == "arn:aws:iam::${var.aws_account_id}:policy/url-shortener/bootstrap/${var.name_prefix}-moderation-boundary"
+    error_message = "Provide the dedicated moderation boundary ARN from bootstrap."
+  }
+}

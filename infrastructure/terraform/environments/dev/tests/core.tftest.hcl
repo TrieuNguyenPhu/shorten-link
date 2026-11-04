@@ -13,14 +13,15 @@ mock_provider "aws" {
   mock_resource "aws_cognito_user_pool" { defaults = { endpoint = "cognito-idp.ap-southeast-1.amazonaws.com/ap-southeast-1_test" } }
 }
 variables {
-  aws_account_id        = "111111111111"
-  runtime_boundary_arn  = "arn:aws:iam::111111111111:policy/url-shortener/bootstrap/url-shortener-dev-runtime-boundary"
-  cognito_domain_prefix = "url-shortener-test"
-  google_client_id      = "test-client.apps.googleusercontent.com"
-  google_client_secret  = "test-only-not-a-real-secret"
-  callback_urls         = ["http://localhost:3000/auth/callback/"]
-  logout_urls           = ["http://localhost:3000/"]
-  cors_origins          = ["http://localhost:3000"]
+  aws_account_id          = "111111111111"
+  moderation_boundary_arn = "arn:aws:iam::111111111111:policy/url-shortener/bootstrap/url-shortener-dev-moderation-boundary"
+  runtime_boundary_arn    = "arn:aws:iam::111111111111:policy/url-shortener/bootstrap/url-shortener-dev-runtime-boundary"
+  cognito_domain_prefix   = "url-shortener-test"
+  google_client_id        = "test-client.apps.googleusercontent.com"
+  google_client_secret    = "test-only-not-a-real-secret"
+  callback_urls           = ["http://localhost:3000/auth/callback/"]
+  logout_urls             = ["http://localhost:3000/"]
+  cors_origins            = ["http://localhost:3000"]
 }
 run "core_wiring" {
   command = plan
@@ -36,8 +37,8 @@ run "core_wiring" {
 run "pipeline_root_wiring" {
   command = plan
   assert {
-    condition     = module.event_pipeline.event_bus_name == module.event_bus.name && module.event_pipeline.event_bus_arn == module.event_bus.arn && toset(keys(output.lambda_roles)) == toset(["create-link", "resolve-link", "list-links", "delete-link", "click-aggregator"]) && output.lambda_aliases["click-aggregator"] == module.event_pipeline.aggregator_alias_arn && output.click_queue_arn == module.event_pipeline.click_queue_arn && output.click_event_source_mapping_id == module.event_pipeline.event_source_mapping_id
-    error_message = "The existing bus and fifth Lambda must be exposed without changing the four HTTP targets."
+    condition     = module.event_pipeline.event_bus_name == module.event_bus.name && module.event_pipeline.event_bus_arn == module.event_bus.arn && toset(keys(output.lambda_roles)) == toset(["create-link", "resolve-link", "list-links", "delete-link", "click-aggregator", "ws-connect", "ws-disconnect", "moderate-check"]) && output.lambda_aliases["click-aggregator"] == module.event_pipeline.aggregator_alias_arn && output.click_queue_arn == module.event_pipeline.click_queue_arn && output.click_event_source_mapping_id == module.event_pipeline.event_source_mapping_id
+    error_message = "The existing bus and eight Lambdas must be exposed without changing the four HTTP targets."
   }
 }
 run "per_handler_permissions" {

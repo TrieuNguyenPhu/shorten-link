@@ -330,6 +330,12 @@ Sau transaction thành công, notifier đọc META với `ConsistentRead=true`, 
 
 Frontend reconnect bằng backoff và nạp lại `GET /links` khi reconnect, không polling giả realtime. Hợp nhất snapshot/push theo `max(currentClicks, incomingClicks)` cho cùng link để count không lùi khi message lệch thứ tự hoặc GSI snapshot cũ. Link đã xóa phải dọn socket và state.
 
+
+### 5.5 Wiring Terraform Phase4
+
+Module websocket_api tạo hai route public/stage prod; ba Lambda mới nằm trong realtime_functions tại dev root, aggregator vẫn thuộc event_pipeline. URL WebSocket cho browser và HTTPS management URL được tách thành output riêng. Module moderation_sfn render ASL Task4.1, dùng role/boundary riêng với trust đúng account/machine và chỉ invoke moderate-check:live/update bảng. Bootstrap pin websocket_api_ids để mở POST/prod/@connections; không pin thì boundary không cho push. Chi tiết và thứ tự operator-first tại [Terraform realtime và moderation](./terraform-realtime-and-moderation.md). Đây là implementation/local, chưa có bằng chứng AWS apply/execution history.
+
+
 ## 6. Bootstrap, IAM, Canary và Static Deployment
 
 - **Bootstrap độc lập:** Task 2.2 quản lý S3 state/versioning/lockfile và GitHub OIDC provider `token.actions.githubusercontent.com`, deployment role. Lần đầu dùng operator credentials/SSO khi được phép; giữ state bootstrap độc lập, an toàn. Provider có sẵn phải import, không tạo duplicate. App deployment role không tự sửa trust hoặc bootstrap.

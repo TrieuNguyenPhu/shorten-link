@@ -4,3 +4,4 @@ output "deployment_role_arn" { value = aws_iam_role.deployment.arn }
 output "runtime_boundary_arn" { value = aws_iam_policy.runtime_boundary.arn }
 output "oidc_provider_arn" { value = aws_iam_openid_connect_provider.github.arn }
 output "github_subject" { value = jsondecode(aws_iam_role.deployment.assume_role_policy).Statement[0].Condition.StringEquals["token.actions.githubusercontent.com:sub"] }
+output "moderation_boundary_arn" { value = aws_iam_policy.moderation_boundary.arn }

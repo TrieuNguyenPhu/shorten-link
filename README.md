@@ -2,7 +2,7 @@
 
 Đặc tả và kế hoạch tái triển khai hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS bằng **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js App Router (`output: "export"`)** trên **Amazon S3 (Private) + CloudFront Origin Access Control (OAC)**.
 
-Phase 1 cung cấp nền tảng Go qua PR #68/#69; scaffold frontend có static export và kiểm tra artifact. Phase 2 có bốn HTTP Lambda, DynamoDB repository, EventBridge publisher, HTTP harness và Terraform bootstrap/core; AWS core đã triển khai ngày 2026-11-04 qua đợt final review PR #73. Task 3.1 bổ sung click-aggregator với transaction idempotency và kiểm thử DynamoDB Local/HTTP analytics E2E; Task3.2 bổ sung Terraform EventBridge rule/SQS/DLQ/ESM cùng Scenario Pipeline; phần pipeline chưa được apply trên AWS. Task4.1 bổ sung WebSocket Lambdas/pusher và moderation Lambda/ASL, đã kiểm thử local; Terraform WebSocket/Step Functions thuộc Task4.2. Google login frontend, Doodle UI và dashboard chưa hoàn thiện. Các phiên Phase3/Task4.1 chỉ kiểm thử local, không thay đổi tài nguyên AWS.
+Phase 1 cung cấp nền tảng Go qua PR #68/#69; scaffold frontend có static export và kiểm tra artifact. Phase 2 có bốn HTTP Lambda, DynamoDB repository, EventBridge publisher, HTTP harness và Terraform bootstrap/core; AWS core đã triển khai ngày 2026-11-04 qua đợt final review PR #73. Task 3.1 bổ sung click-aggregator với transaction idempotency và kiểm thử DynamoDB Local/HTTP analytics E2E; Task3.2 bổ sung Terraform EventBridge rule/SQS/DLQ/ESM cùng Scenario Pipeline; phần pipeline chưa được apply trên AWS. Phase4 bổ sung WebSocket Lambdas/pusher, moderation Lambda/ASL và Terraform WebSocket/Step Functions; implementation/local đã kiểm, AWS Phase3/4 chưa deploy. Google login frontend, Doodle UI và dashboard chưa hoàn thiện. Các phiên Phase3/4 chỉ kiểm thử local, không thay đổi tài nguyên AWS.
 
 Dự án bám sát kiến trúc hướng sự kiện, thiết kế bảng đơn DynamoDB và luồng xử lý của:
 - **Chuỗi 21 bài viết:** [Serverless Thực Chiến Trên AWS](https://kkloudtarus.net/blog/series/serverless-on-aws-event-driven)
@@ -126,4 +126,4 @@ Hạ tầng analytics và E2E AWS: [runbook event pipeline](docs/terraform-event
 
 ## 8. WebSocket và moderation
 
-Task4.1 gắn pusher khi aggregator có `WS_ENDPOINT` và cung cấp ba Lambda/ASL còn lại. Xem [hợp đồng và runbook manual](docs/websocket-and-moderation.md) cùng [bằng chứng local](docs/local-testing.md). Terraform WebSocket/Step Functions và kiểm thử execution history AWS nằm ở Task4.2; create/redirect giữ nguyên luồng độc lập với moderation.
+Task4.1 gắn pusher khi aggregator có `WS_ENDPOINT` và cung cấp ba Lambda/ASL còn lại. Xem [hợp đồng và runbook manual](docs/websocket-and-moderation.md) cùng [bằng chứng local](docs/local-testing.md). Task4.2 đã có [Terraform và E2E scenario](docs/terraform-realtime-and-moderation.md); execution history AWS còn pending deployment được phép. Create/redirect giữ nguyên luồng độc lập với moderation.

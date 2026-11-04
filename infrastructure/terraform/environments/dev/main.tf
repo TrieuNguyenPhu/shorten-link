@@ -69,4 +69,41 @@ module "event_pipeline" {
   runtime_boundary_arn = var.runtime_boundary_arn
   aggregator_filename  = abspath("${path.root}/${var.lambda_package_directory}/click-aggregator.zip")
   log_retention_days   = var.log_retention_days
+  ws_endpoint          = module.websocket_api.management_endpoint
+  ws_connections_arn   = module.websocket_api.connections_arn
+}
+
+locals {
+  realtime_permissions = {
+    ws-connect     = [{ actions = ["dynamodb:PutItem"], resources = [module.table.arn] }]
+    ws-disconnect  = [{ actions = ["dynamodb:DeleteItem"], resources = [module.table.arn] }]
+    moderate-check = []
+  }
+}
+module "realtime_functions" {
+  for_each              = local.realtime_permissions
+  source                = "../../modules/lambda"
+  function_name         = "${var.name_prefix}-${each.key}"
+  filename              = abspath("${path.root}/${var.lambda_package_directory}/${each.key}.zip")
+  role_path             = "/url-shortener/dev/"
+  runtime_boundary_arn  = var.runtime_boundary_arn
+  permissions           = each.value
+  environment_variables = each.key == "moderate-check" ? {} : { TABLE_NAME = module.table.name }
+  log_retention_days    = var.log_retention_days
+}
+module "websocket_api" {
+  source         = "../../modules/websocket_api"
+  name           = var.name_prefix
+  aws_account_id = var.aws_account_id
+  lambda_targets = { for key, fn in module.realtime_functions : key => {
+    function_name = fn.function_name, alias_invoke_arn = fn.alias_invoke_arn
+  } if key != "moderate-check" }
+}
+module "moderation_sfn" {
+  source                  = "../../modules/moderation_sfn"
+  name_prefix             = var.name_prefix
+  table_name              = module.table.name
+  table_arn               = module.table.arn
+  moderate_check_arn      = module.realtime_functions["moderate-check"].alias_arn
+  moderation_boundary_arn = var.moderation_boundary_arn
 }

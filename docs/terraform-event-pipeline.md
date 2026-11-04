@@ -1,5 +1,8 @@
 # Event pipeline — Phase 3 / Task 3.2
 
+> Từ Task4.2, dev root có cả WebSocket/Step Functions và yêu cầu `moderation_boundary_arn` từ bootstrap. Trước khi dùng các lệnh triển khai dưới đây với code hiện tại, đọc [thứ tự bootstrap/app và pin API ID](./terraform-realtime-and-moderation.md#bootstrap-iam-và-thứ-tự-triển-khai-khi-được-yêu-cầu). Chưa có authorization apply mới.
+
+
 ## Phạm vi và trạng thái
 
 Module `infrastructure/terraform/modules/event_pipeline` nhận name/ARN của custom bus do Task2.2 tạo; không tạo bus thứ hai. Root dev nối table/bus/boundary/package thật, thêm aggregator vào outputs roles/aliases và giữ bốn HTTP targets hiện có. Implementation và kiểm thử local hoàn tất; rule/SQS/ESM chưa được apply lên AWS trong task này.

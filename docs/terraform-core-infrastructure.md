@@ -1,5 +1,8 @@
 # Terraform bootstrap và core infrastructure — Task 2.2
 
+> Từ Task4.2, dev root có cả WebSocket/Step Functions và yêu cầu `moderation_boundary_arn` từ bootstrap. Trước khi dùng các lệnh triển khai dưới đây với code hiện tại, đọc [thứ tự bootstrap/app và pin API ID](./terraform-realtime-and-moderation.md#bootstrap-iam-và-thứ-tự-triển-khai-khi-được-yêu-cầu). Chưa có authorization apply mới.
+
+
 Task 2.2 cung cấp cấu hình triển khai, không phải bằng chứng đã triển khai AWS. Task 2.1 đã merge qua PR #71; root `bootstrap` và `environments/dev` được kiểm bằng Terraform plan với mock provider. Không có AWS apply, JWT federation, IAM hoặc pipeline service test trong phiên này.
 
 ## 1. Cấu trúc và kiểm tra local

@@ -156,3 +156,19 @@
 - PR riêng Task4.1: [#76](https://github.com/TrieuNguyenPhu/shorten-link/pull/76), base main6dee1ca → affc345, tree c90b0cf đã khớp local/remote. Host không có gh/Git author/HTTPS helper nên xuất bản bằng GitHub connector; checkout đã đồng bộ không mất thay đổi. CI đang chạy, không tự merge. Container DynamoDB Local của phiên đã dừng.
 
 - CI [run #180](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41790392763) trên affc345 PASS cả4jobs, gồm backend E2E mới/build8ZIP, Terraform checks/PS, Windows packaging và frontend static checks. Commit chốt chỉ thêm URL PR/CI và đánh dấu master plan Step4 hoàn tất; không merge/apply.
+
+
+## Session 2026-11-04 — Phase4 / Task4.2
+- Người dùng xác nhận merge; fetch mainf6e3769 sau PR#76. Nhánh feat/phase-04-task-02-terraform-websocket-and-sfn từ main; Task4.2 in_progress. Đọc bốn file trạng thái/spec/master plan, dùng aws-serverless/aws-iam và test-first.
+- Autopilot availability/install: uvx/pip đều exit127; dùng SAR fallback theo skill, không upload IAM/call account. Không có yêu cầu apply mới.
+
+- Task4.2 implementation/local complete: RED missingmodules và bootstrapvariables/policies → GREEN; quota fullypinned12314byte RED→GREEN sau managedpolicy split. Regression provider SFN validation/versions quyềnthiếu RED→GREEN bằng đối chiếu source6.71.0/SAR. Lỗi testfixture computedSFNARN và script test scope Require-Environment đã sửa bằng mock ARN/entrypointthật, không apply để né tests.
+- Terraform1.17.1 fmt/init-backend=false-lockfile-readonly/validate,19bootstrap+18dev=37plan tests PASS. Go1.26.10 race/vet/build8ZIP PASS. PS7.5 networknone parser/preflightcho4scenarios và resource/missingtokennegatives PASS; CI tự bao gồm tests mới.
+- Rà soát thủ công IAM, trust, boundaries, quotaspinning, APIgatewaynativeenvelope/alias/prod và PS secret/resource/cleanup handling. Runbook mới docs/terraform-realtime-and-moderation.md nêu bootstrap input/operator-first, actualscenario pending và loggingPhase6. Chưa apply/callAWSaccount/E2Ecloud/loadtest.
+- Phase4 complete implementation/local, Task5.1 tiếp theo sau Task4.2 review/merge. Chuẩn bị PR riêng; commit/title/bodytiếngAnh.
+
+- Kiểm tra cuối: 34 liên kết Markdown nội bộ,9ví dụJSON, cú pháp shell runbook, CI YAML và git diff --check PASS. Không chạy lại ứng dụng frontend tại local vì không sửa frontend; CI toàn repo sẽ kiểm tra hồi quy.
+
+- PR riêng Task4.2: [#77](https://github.com/TrieuNguyenPhu/shorten-link/pull/77), base mainf6e3769 → db716ad; tree af3e6d7 đã đối chiếu local/remote. Xuất bản bằng GitHub connector vì host thiếu gh/Git author/HTTPS helper; checkout đã đồng bộ. Không tự merge; CI đang chạy.
+
+- CI [run #183](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41793539394) trên db716ad PASS cả4jobs: backend gồm DynamoDB Local/HTTP-WebSocket E2E/build8ZIP/scan, Terraform37plan tests/PS preflight, Windows packaging và frontend lint/typecheck/static build/tests/audit. Commit chốt chỉ tài liệu và URL/evidence; không merge/apply.
