@@ -1,6 +1,6 @@
 # PROJECT_STATUS.md — Trạng Thái Hiện Tại Của Dự Án
 
-> **Cập nhật lần cuối:** 2026-11-04 (**Task 1.1 final review complete local; chờ tích hợp GitHub**)
+> **Cập nhật lần cuối:** 2026-11-04 (**Task 1.1 đã vào main; Task 1.2 complete local; chờ CI/merge**)
 > **Quy tắc bắt buộc:** File này luôn được cập nhật ngay sau khi hoàn thành mỗi Task trước khi mở Pull Request tương ứng.
 
 ---
@@ -9,9 +9,9 @@
 
 | Hạng mục | Trạng thái | Chi tiết |
 | --- | --- | --- |
-| **Giai đoạn hiện tại (Current Phase)** | **Phase 1 — `in_progress`** | Task 1.1 hoàn tất nền tảng domain/config/Go CI; Task 1.2 tiếp theo |
-| **Task hiện tại** | **Task 1.1 — `complete` local** | Đã sửa IPv4 và regression tests; nhánh fix/phase-01-task-01-final-review chờ push/PR vào main |
-| **Task tiếp theo (Next Up)** | **Task 1.2 (Phase 1)** | Structured logs, EMF, X-Ray và script build ZIP arm64 |
+| **Giai đoạn hiện tại (Current Phase)** | **Phase 1 — `in_progress`** | Task 1.1 đã merge main qua PR #68; đang tích hợp Task 1.2 và sửa static export riêng |
+| **Task hiện tại** | **Task 1.2 — `complete` local** | Observability/packaging đã qua test/race/vet/scan; chờ PR tích hợp main |
+| **Task tiếp theo (Next Up)** | **Task 2.1 (Phase 2)** | DynamoDB repository, service/publisher, HTTP harness và bốn HTTP Lambda thật |
 | **Trạng thái AWS Cloud** | **Đã dọn theo xác nhận người dùng** | Người dùng xác nhận ngày 2026-10-26 đã xóa toàn bộ tài nguyên triển khai trước đó; phiên hoàn thiện Phase 0 không kiểm kê AWS hay xác nhận hóa đơn |
 | **13 Bộ Skills & `AGENTS.md`** | **Đã kiểm tra file/config** | Đủ 13 file skill đại diện; 314 thư mục cấp đầu có `SKILL.md`. Có cấu hình trỏ `~/.agents/skills`; không suy ra mọi host đều tự nạp |
 
@@ -21,9 +21,9 @@
 
 | Phase | Task | Nội dung công việc | Nhánh (Branch) | Trạng thái | Pull Request |
 | --- | --- | --- | --- | --- | --- |
-| **Phase 0** | **Task 0.1** | Xác minh setup skills/`AGENTS.md`, hoàn thiện Reference Audit, Architecture & Master Plan | `chore/phase-00-reset-and-architecture-plan` | **complete (PR #65 đã merge main ngày 2026-11-04)** | [PR #65](https://github.com/TrieuNguyenPhu/shorten-link/pull/65) |
-| **Phase 1** | **Task 1.1** | Monorepo, `Makefile`, Go module, Domain Models, Base62 Generator & URL Validator + Unit Tests, CI nền | `feat/phase-01-task-01-monorepo-and-domain` | complete | [PR #66](https://github.com/TrieuNguyenPhu/shorten-link/pull/66) |
-| **Phase 1** | **Task 1.2** | Observability Middleware (`slog` JSON, CloudWatch EMF, X-Ray) & Script đóng gói Lambda `arm64` ZIP | `feat/phase-01-task-02-observability-and-packaging` | ⏳ Pending | — |
+| **Phase 0** | **Task 0.1** | Xác minh setup skills/`AGENTS.md`, hoàn thiện Reference Audit, Architecture & Master Plan | `chore/phase-00-reset-and-architecture-plan` | **complete (đã merge main qua PR #65)** | [PR #65](https://github.com/TrieuNguyenPhu/shorten-link/pull/65) |
+| **Phase 1** | **Task 1.1** | Monorepo, `Makefile`, Go module, Domain Models, Base62 Generator & URL Validator + Unit Tests, CI nền | `feat/phase-01-task-01-monorepo-and-domain` | complete | [PR #68 — đã merge main](https://github.com/TrieuNguyenPhu/shorten-link/pull/68); gốc #66 |
+| **Phase 1** | **Task 1.2** | Observability Middleware (`slog` JSON, CloudWatch EMF, X-Ray) & Script đóng gói Lambda `arm64` ZIP | `feat/phase-01-task-02-observability-and-packaging` | complete | [PR #67](https://github.com/TrieuNguyenPhu/shorten-link/pull/67) |
 | **Phase 2** | **Task 2.1** | DynamoDB Repository, Link Service, EventBridge publisher, local HTTP harness & 4 HTTP Lambdas + Tests | `feat/phase-02-task-01-core-crud-lambdas` | ⏳ Pending | — |
 | **Phase 2** | **Task 2.2** | Terraform Bootstrap (S3 state/lockfile, OIDC) & Core Modules, Cognito Google-only, custom event bus | `feat/phase-02-task-02-terraform-core-infra` | ⏳ Pending | — |
 | **Phase 3** | **Task 3.1** | Go Lambda `click-aggregator` (`TransactWriteItems`, `CancellationReasons`, `ReportBatchItemFailures`) + Tests | `feat/phase-03-task-01-click-aggregator-lambda` | ⏳ Pending | — |
@@ -60,10 +60,30 @@
 - PR phụ thuộc #65; frontend untracked được giữ nguyên. Chưa gọi AWS hoặc chạy Terraform/pnpm.
 - Cập nhật review Task1.1: minimum Go/CI chuyển sang1.26.10 để khắc phục stdlib vulnerabilities phát hiện trong Phase1; bằng chứng1.26.5 bên trên là lịch sử.
 
-## 6. Sửa final review Task 1.1 — 2026-11-04
+## 6. Bằng chứng Phase 1 / Task 1.2
+- Minimum Go/CI **1.26.10**; code ứng dụng SDK v2, aws-lambda-go v1.55.1, X-Ray SDK v1.8.5 và go.sum được pin.
+- Windows: `go -C backend test ./...`, `go -C backend vet ./...` PASS; PS wrapper chạy từ thư mục khác có dấu cách và trả lỗi đúng khi compiler fail.
+- WSL Ubuntu/GCC: `GOTOOLCHAIN=go1.26.10 go -C backend test -race ./...` và vet PASS cả 4 packages; Bash wrapper được kiểm trực tiếp trong integration test.
+- Packaging test build chương trình Go thật trong thư mục tạm, kiểm ELF64 AArch64 không dynamic linker, ZIP chỉ có bootstrap ở gốc/quyền0755 và giữ artifact cũ khi build lỗi. Chưa có cmd nghiệp vụ ở Phase1 nên lệnh build repo trả lỗi rõ ràng, không phát ZIP handler giả.
+- `govulncheck@v1.9.0 -show verbose ./...` trên Go1.26.10: exit0, 0 symbol/package vulnerabilities; còn 2 module-only GO-2022-0646/GO-2022-0635 ở S3 Crypto của SDKv1 gián tiếp, không import/call bởi app. Không suppress. CI bổ sung reachable vulnerability scan.
+- `go mod verify`, `gofmt -l backend`, `git diff --check` PASS. Review độc lập cả hai task không có finding code phải sửa.
+- Ruling: EmitCountMetric trả error để không nuốt lỗi JSON/write; WithRequestID lấy invocation context cho logger. Hai wrapper dùng Go helper chung để bảo toàn quyền Unix trên Windows.
+- X-Ray SDK maintenance và SDKv1 gián tiếp là giới hạn được công bố; chưa xác minh trace export trên AWS. Không gọi AWS, Terraform hoặc load test; frontend untracked được giữ nguyên.
+- Thứ tự review/merge: #65 → #66 → #67. Retarget về main sau khi PR phụ thuộc đã merge; không tự merge.
+
+
+## 7. Sửa final review Task 1.1 — 2026-11-04
 - PR #65 đã squash vào main tại `c99bd5e`; #66 đã merge vào nhánh Phase 0 sau đó, nên main chưa nhận Task 1.1. Nhánh sửa mới tạo từ origin/main, phục hồi đúng ba commit Task 1.1; không gộp Task 1.2/frontend.
 - RED: regression test từ chối `127.0.0.999`, `256.1.2.3`, IPv4 sai có trailing dot và năm octet thất bại trước sửa. GREEN sau khi không cho địa chỉ IPv4 dạng số sai rơi vào nhánh DNS.
 - Linux / Go 1.26.10: `go -C backend test -race -count=1 -cover ./...`, `go -C backend vet ./...`, `go -C backend mod verify`, `gofmt -l backend` và `git diff --check` PASS; config coverage 100%, domain 88.9%.
 - Đã xác nhận kết nối GitHub và quyền ghi repository; đang tạo PR tích hợp vào main, chưa khẳng định main đã có code. Phase 1 còn in_progress đến khi tích hợp các task còn lại; Phase 2 chưa bắt đầu.
 
-- PR tích hợp Task 1.1 vào main: [#68](https://github.com/TrieuNguyenPhu/shorten-link/pull/68), chờ CI/merge.
+- PR tích hợp Task 1.1 vào main: [#68](https://github.com/TrieuNguyenPhu/shorten-link/pull/68), đã qua CI và merge main tại `4725d97`.
+
+## 8. Tích hợp Task 1.2 — 2026-11-04
+- PR #68 đã merge main tại `4725d97`; nhánh `fix/phase-01-task-02-main-integration` tạo từ main này, chỉ phục hồi Task 1.2 và tài liệu liên quan.
+- Go 1.26.10/Linux: test-race-count1-cover/vet/mod-verify/gofmt/diff-check PASS, cả 4 packages. Packaging test chạy compiler và Bash wrapper thật, kiểm ELF AArch64/tĩnh, ZIP root bootstrap0755 và bảo toàn artifact khi build lỗi.
+- govulncheck v1.9.0 verbose: exit0, 0 symbol/package vulnerabilities; 4 module-only: GO-2026-6866/GO-2026-6860 ở x/net và GO-2022-0646/GO-2022-0635 ở S3 Crypto SDKv1, không có đường gọi từ ứng dụng. Không suppress hoặc tuyên bố không còn mọi cảnh báo.
+- Chưa có handler nghiệp vụ; không chạy AWS/Terraform. Static export sửa qua PR riêng trước Phase 2.
+
+- PR tích hợp Task 1.2 vào main: [#69](https://github.com/TrieuNguyenPhu/shorten-link/pull/69), chờ CI/merge.

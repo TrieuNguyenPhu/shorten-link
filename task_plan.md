@@ -4,19 +4,19 @@
 Tái hiện hoàn chỉnh hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS theo chuỗi 21 bài và repository `nghiadaulau/serverless-url-shortener-aws`, chuyển đổi sang **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js Static Export (`S3 + CloudFront OAC`)**, với mỗi Task hoàn thành được tạo một **Pull Request riêng** và luôn cập nhật trạng thái hiện tại của dự án.
 
 ## Current Phase
-Phase 1 — in_progress. Task 1.1 final review complete local; chờ push/PR main. Sau đó tích hợp Task 1.2 và sửa static export riêng.
+Phase 1 — in_progress. Task 1.1 đã merge main qua PR #68; Task 1.2 đã kiểm thử local, chờ CI/merge. Static export sửa riêng trước Phase 2.
 
 ## Phases & Tasks
 
 ### Phase 0: Reference Audit, Clean Reset & Architecture Specification
 - [x] **Task 0.1:** Hoàn thiện audit nguồn, xác minh setup skills/`AGENTS.md`, đặc tả kiến trúc và kế hoạch chi tiết sau review PR #65. AWS cũ đã được người dùng xác nhận dọn sạch; không lặp lại thao tác xóa.
-- **Status:** complete (PR #65 đã merge main ngày 2026-11-04; chưa triển khai ứng dụng)
+- **Status:** complete (PR #65 đã merge main; chưa triển khai ứng dụng)
 
 ### Phase 1: Monorepo & Local Foundation
-- **Task hiện tại:** Task 1.1 — complete local (final review); chờ tích hợp main
+- **Task hiện tại:** Task 1.2 — complete local (chờ CI/merge main)
 - [x] **Task 1.1:** Khởi tạo cấu trúc Monorepo, `Makefile`, Go module (`backend/`), Domain Models, Base62 Generator (`crypto/rand`) & URL Validator kèm unit tests và CI nền.
-- [ ] **Task 1.2:** Xây dựng Observability Middleware (`slog` JSON, CloudWatch EMF metrics, X-Ray wrapper) & script đóng gói Lambda `bootstrap` ZIP (`arm64`) kèm tests.
-- **Status:** in_progress
+- [x] **Task 1.2:** Xây dựng Observability Middleware (`slog` JSON, CloudWatch EMF metrics, X-Ray wrapper) & script đóng gói Lambda `bootstrap` ZIP (`arm64`) kèm tests.
+- **Status:** in_progress (tích hợp Task 1.2 và sửa static export)
 
 ### Phase 2: Core URL Shortener (DynamoDB, Cognito JWT & 4 HTTP Handlers)
 - [ ] **Task 2.1:** Triển khai DynamoDB Repository, Link Service, EventBridge publisher, local HTTP harness & 4 Go HTTP Lambda Handlers kèm unit/integration tests (multi-tenant, anti-IDOR, collision retry, 301, lỗi publish).
