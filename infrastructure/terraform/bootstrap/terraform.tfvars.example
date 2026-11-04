@@ -1,0 +1,6 @@
+aws_account_id    = "REPLACE_WITH_12_DIGIT_ACCOUNT_ID"
+state_bucket_name = "replace-with-globally-unique-state-bucket"
+github_repository = "TrieuNguyenPhu/shorten-link"
+github_environment = "dev"
+# After the first approved app deployment, pin the actual output http_api_id:
+# http_api_ids = ["actualapiid"]

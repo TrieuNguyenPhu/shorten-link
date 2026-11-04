@@ -2,7 +2,7 @@
 
 Đặc tả và kế hoạch tái triển khai hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS bằng **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js App Router (`output: "export"`)** trên **Amazon S3 (Private) + CloudFront Origin Access Control (OAC)**.
 
-Phase 1 cung cấp nền tảng Go chạy local và đã vào main qua PR #68/#69. Scaffold frontend có static export và kiểm tra artifact; Task 2.1 bổ sung bốn HTTP Lambda, repository DynamoDB, EventBridge publisher và HTTP harness. Google login, Doodle UI, dashboard và Terraform chưa triển khai. AWS cũ đã được xóa theo xác nhận người dùng; phiên này không triển khai AWS.
+Phase 1 cung cấp nền tảng Go chạy local và đã vào main qua PR #68/#69. Scaffold frontend có static export và kiểm tra artifact; Task 2.1 bổ sung bốn HTTP Lambda, repository DynamoDB, EventBridge publisher và HTTP harness. Task 2.2 bổ sung Terraform bootstrap/core modules với kiểm thử plan offline; chưa triển khai AWS. Google login frontend, Doodle UI và dashboard chưa hoàn thiện. AWS cũ đã được xóa theo xác nhận người dùng; phiên này không triển khai AWS.
 
 Dự án bám sát kiến trúc hướng sự kiện, thiết kế bảng đơn DynamoDB và luồng xử lý của:
 - **Chuỗi 21 bài viết:** [Serverless Thực Chiến Trên AWS](https://kkloudtarus.net/blog/series/serverless-on-aws-event-driven)
@@ -105,7 +105,7 @@ corepack pnpm@10.33.2 --dir frontend test
 corepack pnpm@10.33.2 --dir frontend audit --prod
 ```
 
-Build tạo `frontend/out/` để phục vụ bằng static hosting; không dùng `next start`. Chạy build trước test vì test kiểm artifact HTML/404 và asset thật. `make check` kiểm unit/race/vet backend; `DYNAMODB_ENDPOINT=http://127.0.0.1:8000 make test-integration` kiểm DynamoDB Local và HTTP E2E; CI chạy cả backend và frontend. Frontend vẫn là scaffold: Google auth, giao diện Doodle, dashboard và API thật triển khai ở Phase 5.
+Build tạo `frontend/out/` để phục vụ bằng static hosting; không dùng `next start`. Chạy build trước test vì test kiểm artifact HTML/404 và asset thật. `make check` kiểm unit/race/vet backend và Terraform (yêu cầu Terraform1.17.1); `DYNAMODB_ENDPOINT=http://127.0.0.1:8000 make test-integration` kiểm DynamoDB Local và HTTP E2E; CI chạy cả backend và frontend. Frontend vẫn là scaffold: Google auth, giao diện Doodle, dashboard và API thật triển khai ở Phase 5.
 
 
 ## 7. Core HTTP API và kiểm thử local
@@ -113,3 +113,10 @@ Build tạo `frontend/out/` để phục vụ bằng static hosting; không dùn
 Xem [hướng dẫn local](docs/local-testing.md) để chạy DynamoDB Local, HTTP harness, hai danh tính thử nghiệm và recorder EventBridge tùy chọn. Các route `POST /links`, `GET /links`, `DELETE /links/{code}` lấy owner từ JWT authorizer `sub`; `GET /{code}` công khai và chỉ trả 301 sau khi publish thành công. Không có kho dữ liệu in-memory trong luồng link.
 
 Local harness chỉ bind loopback và dùng header `X-Local-User` nằm trong allowlist cấu hình; header này không được Lambda production dùng làm danh tính. Recorder chỉ là fixture giao thức PutEvents, không thay kiểm chứng EventBridge/IAM/Cognito hoặc pipeline analytics trên AWS. Terraform và E2E AWS vẫn pending ở Task 2.2 trở đi.
+
+
+## 8. Terraform bootstrap và core infrastructure
+
+Xem [runbook Task 2.2](docs/terraform-core-infrastructure.md) cho S3 remote state/lockfile, OIDC trust, permissions boundary, Cognito Google-only, core modules và AWS E2E Core. Chạy `make terraform-check` để build Lambda rồi fmt/init-backend=false/validate/test hai root bằng mock provider; không gọi AWS. Terraform1.17.1 và AWS provider6.71.0 được pin cùng lockfiles.
+
+Google OAuth Web client/secret và operator authorization là đầu vào khi triển khai. AWS E2E vẫn pending; Task2.2 không chạy apply. Sau lần app deployment được phép đầu tiên, pin http_api_id trong bootstrap trước khi bật CD để thu hẹp quyền API Gateway child resources.

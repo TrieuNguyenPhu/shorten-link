@@ -94,3 +94,15 @@
 
 - Git HTTPS push thiếu credential helper; đã xuất bản cùng tree40d4dc1 qua GitHub connector, kiểm SHA tree trùng local rồi đồng bộ branch. PR riêng [#71](https://github.com/TrieuNguyenPhu/shorten-link/pull/71), base main; chưa merge, chờ CI/review.
 - CI run#164 (41759270780) trên39fdbe8 PASS cả3jobs: backend gồm integration/E2E/build/scan; Windows packaging; frontend lint/typecheck/static build/tests/audit. Cập nhật cuối chỉ ghi bằng chứng tài liệu; chưa merge PR#71, Task2.2 tiếp theo.
+
+
+## Session 2026-11-04 — Phase 2 / Task 2.2
+- Người dùng đã review/merge #71; origin/main158b127 được dùng làm baseline nhánh feat/phase-02-task-02-terraform-core-infra. Task2.2 in_progress.
+- Từ đây commit và PR title/description dùng tiếng Anh theo yêu cầu người dùng; tài liệu/progress giữ tiếng Việt. Đã cập nhật AGENTS để lưu yêu cầu. Không được apply AWS hoặc load test lớn.
+
+- Task2.2 implementation complete/local: TDD RED khi bootstrap resources chưa khai báo, GREEN sau cấu hình; regression API tag policy RED khi scope local chưa tồn tại, GREEN sau ID/path/ownership-tag protection.
+- Terraform1.17.1/provider6.71.0: fmt-check/init-backend=false-lockfile-readonly/validate/test PASS cả bootstrap/dev,8+8 plan/mock runs. Go1.26.10 test-race-count1/vet/build4ZIP PASS. PowerShell7.5 docker parser+Core/OIDC endpoint/role/missing-token preflight PASS; YAML/Markdown links/diff check PASS.
+- Lỗi môi trường: make không có, chạy command recipes trực tiếp; Autopilot không chạy vì uvx/pip/ensurepip thiếu, dùng SAR fallback104 action names/resource capabilities. Các lỗi assertion ban đầu do computed ARN unknown/collection type đã sửa fixture/assertion; không chạy AWS apply để né test.
+- Review core wiring/IAM/boundary/state lock/Google-only/alias ownership/negative auth script hoàn tất; chưa có dữ liệu AWS/account calls. Runbook docs/terraform-core-infrastructure.md ghi bootstrap độc lập, secret/state, Google setup, API ID pinning trước CD và AWS E2E pending. Chuẩn bị PR riêng với title/body tiếng Anh; Task3.1 kế tiếp sau review/merge.
+
+- PR Task2.2: [#72](https://github.com/TrieuNguyenPhu/shorten-link/pull/72), base main158b127. Xuất bản bằng GitHub connector vì Git HTTPS chưa có credential helper; kiểm remote tree271147e trùng local trước đồng bộ branch. Commit/title/body tiếng Anh; chưa merge, CI xem tại PR.

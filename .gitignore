@@ -48,3 +48,8 @@ playwright-report/
 ref-repo/
 scratch/
 tmp/
+
+# Local infrastructure inputs and public E2E output snapshots
+**/backend.hcl
+*.tfplan.json
+tests/e2e/*.local.json
