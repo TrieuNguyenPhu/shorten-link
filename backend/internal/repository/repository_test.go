@@ -1,0 +1,121 @@
+package repository
+
+import (
+	"context"
+	"errors"
+	"testing"
+
+	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/domain"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+)
+
+type sdkStub struct {
+	put    func(*dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error)
+	get    func(*dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error)
+	query  func(*dynamodb.QueryInput) (*dynamodb.QueryOutput, error)
+	delete func(*dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error)
+}
+
+func (s sdkStub) PutItem(_ context.Context, in *dynamodb.PutItemInput, _ ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error) {
+	return s.put(in)
+}
+
+func (s sdkStub) GetItem(_ context.Context, in *dynamodb.GetItemInput, _ ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error) {
+	return s.get(in)
+}
+
+func (s sdkStub) Query(_ context.Context, in *dynamodb.QueryInput, _ ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error) {
+	return s.query(in)
+}
+
+func (s sdkStub) DeleteItem(_ context.Context, in *dynamodb.DeleteItemInput, _ ...func(*dynamodb.Options)) (*dynamodb.DeleteItemOutput, error) {
+	return s.delete(in)
+}
+
+func str(v types.AttributeValue) string { return v.(*types.AttributeValueMemberS).Value }
+
+func TestCreateConditionalAndCollision(t *testing.T) {
+	repo := New(sdkStub{put: func(in *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
+		if aws.ToString(in.TableName) != "url-shortener" || aws.ToString(in.ConditionExpression) != "attribute_not_exists(PK)" || str(in.Item["PK"]) != "LINK#Abc1234" || str(in.Item["SK"]) != "META" || str(in.Item["GSI1PK"]) != "USER#alice" || str(in.Item["GSI1SK"]) != "LINK#2026-11-04T00:00:00.001Z" {
+			t.Fatalf("unsafe put: %+v", in)
+		}
+		return nil, &types.ConditionalCheckFailedException{}
+	}}, "url-shortener")
+	err := repo.CreateLink(context.Background(), domain.Link{Code: "Abc1234", OwnerID: "alice", Target: "https://example.org", CreatedAt: "2026-11-04T00:00:00.001Z"})
+	if !errors.Is(err, ErrCollision) {
+		t.Fatalf("got %v", err)
+	}
+}
+
+func TestGetDecodesStoredMetadataWithoutCodeAttribute(t *testing.T) {
+	repo := New(sdkStub{get: func(in *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
+		if str(in.Key["PK"]) != "LINK#Abc1234" || str(in.Key["SK"]) != "META" {
+			t.Fatal(in)
+		}
+		return &dynamodb.GetItemOutput{Item: map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: "LINK#Abc1234"}, "target": &types.AttributeValueMemberS{Value: "https://example.org"}, "clicks": &types.AttributeValueMemberN{Value: "4"}}}, nil
+	}}, "url-shortener")
+	link, err := repo.GetLink(context.Background(), "Abc1234")
+	if err != nil || link.Code != "Abc1234" || link.Clicks != 4 {
+		t.Fatalf("%+v %v", link, err)
+	}
+}
+
+func TestListPaginatesOwnerQueryNewestFirst(t *testing.T) {
+	calls := 0
+	key := map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: "LINK#new"}}
+	repo := New(sdkStub{query: func(in *dynamodb.QueryInput) (*dynamodb.QueryOutput, error) {
+		calls++
+		if aws.ToString(in.IndexName) != "GSI1" || aws.ToBool(in.ScanIndexForward) || aws.ToString(in.KeyConditionExpression) != "GSI1PK = :u" || str(in.ExpressionAttributeValues[":u"]) != "USER#alice" {
+			t.Fatalf("unsafe query: %+v", in)
+		}
+		code := "new"
+		out := &dynamodb.QueryOutput{}
+		if calls == 1 {
+			out.LastEvaluatedKey = key
+		} else {
+			code = "old"
+			if str(in.ExclusiveStartKey["PK"]) != "LINK#new" {
+				t.Fatal("lost cursor")
+			}
+		}
+		out.Items = []map[string]types.AttributeValue{{"PK": &types.AttributeValueMemberS{Value: "LINK#" + code}, "ownerId": &types.AttributeValueMemberS{Value: "alice"}}}
+		return out, nil
+	}}, "url-shortener")
+	links, err := repo.ListUserLinks(context.Background(), "alice")
+	if err != nil || calls != 2 || len(links) != 2 || links[0].Code != "new" || links[1].Code != "old" {
+		t.Fatalf("%+v %v calls=%d", links, err, calls)
+	}
+}
+
+func TestDeleteIsAtomicAndHidesOwnership(t *testing.T) {
+	repo := New(sdkStub{delete: func(in *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
+		if aws.ToString(in.ConditionExpression) != "attribute_exists(PK) AND ownerId = :me" || str(in.ExpressionAttributeValues[":me"]) != "bob" || str(in.Key["PK"]) != "LINK#Abc1234" || str(in.Key["SK"]) != "META" {
+			t.Fatalf("unsafe delete: %+v", in)
+		}
+		return nil, &types.ConditionalCheckFailedException{}
+	}}, "url-shortener")
+	if err := repo.DeleteUserLink(context.Background(), "Abc1234", "bob"); !errors.Is(err, ErrNotFound) {
+		t.Fatal(err)
+	}
+}
+
+func TestRepositoryPropagatesFailuresAndEmptyList(t *testing.T) {
+	failure := errors.New("unavailable")
+	ctx := context.Background()
+	repo := New(sdkStub{put: func(*dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) { return nil, failure }, get: func(*dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) { return &dynamodb.GetItemOutput{}, nil }, query: func(*dynamodb.QueryInput) (*dynamodb.QueryOutput, error) { return &dynamodb.QueryOutput{}, nil }, delete: func(*dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) { return nil, failure }}, "table")
+	if err := repo.CreateLink(ctx, domain.Link{}); !errors.Is(err, failure) {
+		t.Fatal(err)
+	}
+	if _, err := repo.GetLink(ctx, "missing"); !errors.Is(err, ErrNotFound) {
+		t.Fatal(err)
+	}
+	links, err := repo.ListUserLinks(ctx, "alice")
+	if err != nil || links == nil || len(links) != 0 {
+		t.Fatalf("%v %v", links, err)
+	}
+	if err := repo.DeleteUserLink(ctx, "x", "alice"); !errors.Is(err, failure) {
+		t.Fatal(err)
+	}
+}

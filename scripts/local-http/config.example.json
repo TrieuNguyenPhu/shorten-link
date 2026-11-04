@@ -1,0 +1,8 @@
+{
+  "listen": "127.0.0.1:8080",
+  "dynamodbEndpoint": "http://127.0.0.1:8000",
+  "eventBridgeEndpoint": "http://127.0.0.1:8010",
+  "tableName": "url-shortener-local",
+  "eventBus": "local-events",
+  "users": ["alice", "bob"]
+}

@@ -81,3 +81,13 @@
 - Diff-check toàn bộ và liên kết tài liệu được kiểm sau cập nhật. Không chạy Terraform/AWS hoặc tuyên bố E2E nghiệp vụ. Phase 1 complete; Task2.1 chưa bắt đầu.
 
 - PR frontend riêng: [#70](https://github.com/TrieuNguyenPhu/shorten-link/pull/70), base main sau #69; trạng thái CI/merge theo GitHub.
+
+
+## Session 2026-11-04 — Phase 2 / Task 2.1
+- Đã đọc trạng thái, đặc tả và master plan; nhánh riêng từ origin/main c9d0c85 sau #70. Task 2.1 in_progress; Task 2.2 giữ pending.
+- Skills hiện tại khác audit lịch sử: tìm thấy TDD tại plugin superpowers; planning-with-files/ponytail/differential-review không có. Áp dụng quy trình trong AGENTS và AWS skills sẵn có, không cài thêm.
+
+- Task 2.1 complete (chờ review/merge): test-first RED do repository/publisher/service/handler/harness APIs thiếu, GREEN sau implementation. Unit/race-count1-cover toàn bộ backend PASS; regression events/httpapi/runtime/harness chạy lại với race PASS. Vet/mod verify PASS trên Go1.26.10 Linux.
+- DynamoDB Local3.3.0 digest d89f8fcc…: integration/race-count1 PASS, gồm query>1MB, timestamps milliseconds, owner conditions, collision, delete giữ STAT/CLICK. HTTP E2E dùng handler/service/repository thật và SDK tới PutEvents recorder; CLI harness smoke create/list/IDOR/resolve/delete PASS. Không giả lập JWT/IAM hoặc analytics AWS.
+- Packaging bốn cmd thật PASS; kiểm từng ZIP bootstrap root0755/ELF64 AArch64/static. govulncheck v1.9.0 verbose exit0, 0 symbol/package và4 module-only advisories; CI thêm integration/E2E và build.
+- Đã rà soát owner condition, pagination, publish ack/retry/deadline, JSON/body limit, telemetry isolation và dependency diff; không thêm secret/state/tfvars/AWS calls. docs/local-testing.md ghi command/config/giới hạn; Phase2 in_progress, Task2.2 pending. CLI gh không có trong host, dùng GitHub connector mở PR sau push.

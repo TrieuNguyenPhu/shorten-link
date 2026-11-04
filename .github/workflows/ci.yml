@@ -11,6 +11,11 @@ permissions:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      dynamodb:
+        image: amazon/dynamodb-local:3.3.0@sha256:d89f8fcc6b1a39cb35976c248ed42a28c66ae00dc043099210f5571e42648ab4
+        ports:
+          - 8000:8000
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -24,6 +29,12 @@ jobs:
         run: go -C backend test -race ./...
       - name: Vet
         run: go -C backend vet ./...
+      - name: DynamoDB Local integration and HTTP E2E
+        env:
+          DYNAMODB_ENDPOINT: http://127.0.0.1:8000
+        run: go -C backend test -race -tags=integration -count=1 ./internal/repository/... ./tools/local-http/...
+      - name: Build HTTP Lambda arm64 archives
+        run: bash scripts/build-lambdas.sh
       - name: Check reachable vulnerabilities
         run: go -C backend run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
   packaging-windows:

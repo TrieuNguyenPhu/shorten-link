@@ -141,7 +141,7 @@
     - `repository.LinkRepository` (`CreateLink`, `GetLink`, `ListUserLinks`, `DeleteUserLink`)
     - 4 binary entrypoints cho `POST /links`, `GET /{code}`, `GET /links`, `DELETE /links/{code}`
 - **Steps:**
-  - [ ] **Step 1:** Viết bộ test đầy đủ trong `link_service_test.go` và `handler_test.go` bao phủ:
+  - [x] **Step 1:** Viết bộ test đầy đủ trong `link_service_test.go` và `handler_test.go` bao phủ:
     - Chưa có JWT `sub` → trả `401`
     - URL sai, body null, thiếu url hoặc url không phải string → trả `400`
     - Trùng mã ngắn → tối đa 5 lần ghi tổng cộng gồm lần đầu; hết lượt trả `500`
@@ -150,8 +150,8 @@
     - User B xóa link của User A → bị chặn bởi `ConditionExpression`, trả `404`
     - Resolve thành công chỉ 301 sau EventId hợp lệ; missing link404; publish HTTP200/FailedEntryCount1, nonretryable, retry success/exhausted, entry thiếu/sai theo hợp đồng 3.4
     - List paginate đến hết LastEvaluatedKey; giữ JSON links, thứ tự và owner scope
-  - [ ] **Step 2:** Triển khai `dynamodb.go`, `link_service.go`, `httpapi/handler.go`, EventBridge publisher và 4 `cmd/*/main.go` theo đặc tả; tạo local HTTP harness dùng handler/repository thật và DynamoDB Local, không production memory storage. Unit mock chỉ tại ranh giới SDK/publisher; harness không chứng minh JWT authorizer/IAM AWS.
-  - [ ] **Step 3:** Chạy Go race/vet, integration DynamoDB Local và build 4 ZIP arm64; ghi lệnh khởi động harness, cấu hình test và bằng chứng vào `docs/local-testing.md`, mở rộng CI tương ứng.
+  - [x] **Step 2:** Triển khai `dynamodb.go`, `link_service.go`, `httpapi/handler.go`, EventBridge publisher và 4 `cmd/*/main.go` theo đặc tả; tạo local HTTP harness dùng handler/repository thật và DynamoDB Local, không production memory storage. Unit mock chỉ tại ranh giới SDK/publisher; harness không chứng minh JWT authorizer/IAM AWS.
+  - [x] **Step 3:** Chạy Go race/vet, integration DynamoDB Local và build 4 ZIP arm64; ghi lệnh khởi động harness, cấu hình test và bằng chứng vào `docs/local-testing.md`, mở rộng CI tương ứng.
   - [ ] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 2.1.
 
 #### Task 2.2: Terraform Bootstrap & Core Infrastructure Modules (`dynamodb`, `cognito`, `http_api`, `lambda`)
