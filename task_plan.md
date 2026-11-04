@@ -4,7 +4,7 @@
 Tái hiện hoàn chỉnh hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS theo chuỗi 21 bài và repository `nghiadaulau/serverless-url-shortener-aws`, chuyển đổi sang **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js Static Export (`S3 + CloudFront OAC`)**, với mỗi Task hoàn thành được tạo một **Pull Request riêng** và luôn cập nhật trạng thái hiện tại của dự án.
 
 ## Current Phase
-Phase 1 — in_progress. Task 1.1 complete; Task 1.2 tiếp theo.
+Phase 1 — complete. Task 1.1 và1.2 hoàn tất; chờ review/merge PR. Tiếp theo Phase2 / Task2.1.
 
 ## Phases & Tasks
 
@@ -13,10 +13,10 @@ Phase 1 — in_progress. Task 1.1 complete; Task 1.2 tiếp theo.
 - **Status:** complete (PR #65 chờ review/merge; chưa triển khai ứng dụng)
 
 ### Phase 1: Monorepo & Local Foundation
-- **Task hiện tại:** Task 1.1 — complete; tiếp theo Task 1.2
+- **Task hiện tại:** Task 1.2 — complete
 - [x] **Task 1.1:** Khởi tạo cấu trúc Monorepo, `Makefile`, Go module (`backend/`), Domain Models, Base62 Generator (`crypto/rand`) & URL Validator kèm unit tests và CI nền.
-- [ ] **Task 1.2:** Xây dựng Observability Middleware (`slog` JSON, CloudWatch EMF metrics, X-Ray wrapper) & script đóng gói Lambda `bootstrap` ZIP (`arm64`) kèm tests.
-- **Status:** in_progress
+- [x] **Task 1.2:** Xây dựng Observability Middleware (`slog` JSON, CloudWatch EMF metrics, X-Ray wrapper) & script đóng gói Lambda `bootstrap` ZIP (`arm64`) kèm tests.
+- **Status:** complete (chờ PR review/merge)
 
 ### Phase 2: Core URL Shortener (DynamoDB, Cognito JWT & 4 HTTP Handlers)
 - [ ] **Task 2.1:** Triển khai DynamoDB Repository, Link Service, EventBridge publisher, local HTTP harness & 4 Go HTTP Lambda Handlers kèm unit/integration tests (multi-tenant, anti-IDOR, collision retry, 301, lỗi publish).

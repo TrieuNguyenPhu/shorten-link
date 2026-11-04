@@ -60,3 +60,34 @@ Race detector cần CGO và C compiler trên máy chạy test. CI dùng Linux; t
 `domain.GenerateShortCode(7)` dùng crypto/rand, `domain.NormalizeURL` nhận HTTP/HTTPS absolute, IP/localhost và DNS ASCII (IDN dùng punycode), không truy cập đích URL. `FormatCreatedAt` trả UTC cố định 3 chữ số milliseconds để sắp xếp GSI1.
 
 `config.Load()` đọc `TABLE_NAME` bắt buộc; `EVENT_BUS`, `WS_ENDPOINT` và `PUBLIC_REDIRECT_BASE_URL` tùy chọn theo Lambda. Caller kiểm tra biến cần cho nghiệp vụ khi khởi tạo. `WS_ENDPOINT` là HTTP(S) Management API (ví dụ `https://abc.execute-api.ap-southeast-1.amazonaws.com/prod`), không phải địa chỉ `wss://` của browser. Base URL bỏ dấu `/` cuối, không nhận credentials/query/fragment; hỗ trợ path stage của API. Không đưa secret vào repository.
+
+## 5. Observability và đóng gói Lambda
+
+Mỗi invocation lấy logger theo context của Lambda để có request ID, rồi dùng cùng context cho SDK v2:
+
+```go
+logger := middleware.WithRequestID(ctx, middleware.NewLogger("resolve-link"))
+logger.InfoContext(ctx, "resolved", "code", code)
+if err := middleware.EmitCountMetric(os.Stdout, "UrlShortener", "resolve-link", "LinkResolved", 1); err != nil {
+    logger.ErrorContext(ctx, "emit metric", "error", err)
+}
+```
+
+Tạo logger gốc một lần ở startup, gọi `WithRequestID` cho từng invocation; không log token, owner ID hoặc target URL có thể chứa dữ liệu nhạy cảm. EMF xuất JSON trực tiếp ra stdout, namespace `UrlShortener`, dimension duy nhất `service`, unit Count; không đưa request ID/code vào dimension gây tăng cardinality. Hàm trả lỗi validation/write để caller có thể ghi nhận lỗi telemetry.
+
+Gọi `middleware.InstrumentAWSConfig(&cfg)` đúng một lần trước khi tạo SDK v2 clients. Truyền context invocation vào mọi SDK call, bật Lambda Active tracing và IAM X-Ray ở Phase 2. X-Ray SDK v1.8.5 tương thích stack SDK v2 trong test local (subsegment và header propagation). SDK đã ở maintenance từ 25/02/2026, còn kéo AWS SDK v1 gián tiếp dù code ứng dụng chỉ dùng v2; transitive dependencies được pin và kiểm tra bảo mật. Scan Go1.26.10 báo 0 symbol/package vulnerabilities, còn GO-2022-0646/GO-2022-0635 ở S3 Crypto của module SDK v1 gián tiếp mà ứng dụng không import/gọi; không suppress cảnh báo. Chưa xác minh xuất trace trên AWS. [Timeline AWS](https://docs.aws.amazon.com/xray/latest/devguide/xray-sdk-daemon-timeline.html).
+
+Build từ root bằng một trong các lệnh:
+
+```powershell
+./scripts/build-lambdas.ps1
+```
+
+```sh
+bash scripts/build-lambdas.sh
+# Hoặc: make build-lambdas
+```
+
+Hai wrapper dùng chung `backend/tools/build-lambdas`, tìm các `backend/cmd/<handler>/main.go` hiện có, build `GOOS=linux GOARCH=arm64 CGO_ENABLED=0` với `lambda.norpc`, tạo `backend/dist/<handler>.zip`. Mỗi ZIP chứa đúng file gốc `bootstrap` với quyền Unix `0755`, dùng được cho `provided.al2023`/`arm64`; không cần cài zip/Python riêng. Artifact cũ được giữ nếu handler build lỗi.
+
+Phase 1 chưa có handler nghiệp vụ (Phase 2–4 sẽ tạo đủ 8 Lambda), nên lệnh build hiện trả lỗi rõ ràng khi không có handler. Test dùng một chương trình Go tối thiểu trong thư mục tạm để kiểm ELF/ZIP và wrapper thực trên Windows/Linux; fixture này không phải Lambda nghiệp vụ và không chứng minh E2E AWS. Không dùng placeholder handler để tạo artifact triển khai giả.
