@@ -65,3 +65,5 @@
 - RED: regression test từ chối `127.0.0.999`, `256.1.2.3`, IPv4 sai có trailing dot và năm octet thất bại trước sửa. GREEN sau khi không cho địa chỉ IPv4 dạng số sai rơi vào nhánh DNS.
 - Linux / Go 1.26.10: `go -C backend test -race -count=1 -cover ./...`, `go -C backend vet ./...`, `go -C backend mod verify`, `gofmt -l backend` và `git diff --check` PASS; config coverage 100%, domain 88.9%.
 - Đã xác nhận kết nối GitHub và quyền ghi repository; đang tạo PR tích hợp vào main, chưa khẳng định main đã có code. Phase 1 còn in_progress đến khi tích hợp các task còn lại; Phase 2 chưa bắt đầu.
+
+- PR tích hợp Task 1.1 vào main: [#68](https://github.com/TrieuNguyenPhu/shorten-link/pull/68), chờ CI/merge.

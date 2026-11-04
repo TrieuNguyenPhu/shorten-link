@@ -53,3 +53,5 @@
 - Nhánh `fix/phase-01-task-01-final-review` tạo từ origin/main c99bd5e, phục hồi commits domain/config/Go CI của Task 1.1; các PR gốc đã merged vào nhánh phụ nên phải có PR tích hợp mới.
 - Regression test IPv4 RED trước implementation; GREEN sau sửa validation. Go 1.26.10/Linux: test-race-count1-cover, vet, mod verify, gofmt và diff-check PASS; 2 packages config/domain, coverage 100%/88.9%.
 - Đã kiểm tra diff: không có handler placeholder, AWS call, Terraform apply hoặc secret. Đã xác nhận kết nối GitHub/quyền ghi; tiếp tục xuất bản PR main, rồi Task 1.2 và static export riêng.
+
+- PR tích hợp Task 1.1 vào main: [#68](https://github.com/TrieuNguyenPhu/shorten-link/pull/68), chờ CI/merge.
