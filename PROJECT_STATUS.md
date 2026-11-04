@@ -32,7 +32,7 @@
 | **Phase 4** | **Task 4.2** | Terraform Modules `websocket_api` (`$connect`, `$disconnect`, stage `prod`) & `moderation_sfn` | `feat/phase-04-task-02-terraform-websocket-and-sfn` | complete (đã merge main501c049; review fix riêng) | [PR #77](https://github.com/TrieuNguyenPhu/shorten-link/pull/77); [fix #78](https://github.com/TrieuNguyenPhu/shorten-link/pull/78) |
 | **Phase 5** | **Task 5.1** | Next.js static, Google-only qua Cognito PKCE, Landing/Login/Callback theo Doodle & Sketch UI | `feat/phase-05-task-01-nextjs-auth-and-pages` | ⏳ Pending (auth/UI); scaffold đã kiểm | [PR #70 — scaffold/static export](https://github.com/TrieuNguyenPhu/shorten-link/pull/70) |
 | **Phase 5** | **Task 5.2** | Dashboard & My Links Doodle & Sketch, API thật & Native WebSocket Hook (`useRealtimeClicks`) | `feat/phase-05-task-02-dashboard-api-and-websocket` | ⏳ Pending | — |
-| **Phase 5** | **Task 5.3** | Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + URL Rewrite) | `feat/phase-05-task-03-terraform-s3-cloudfront-oac` | complete (local) | — |
+| **Phase 5** | **Task 5.3** | Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + URL Rewrite) | `feat/phase-05-task-03-terraform-s3-cloudfront-oac` | complete (local) | [PR #80](https://github.com/TrieuNguyenPhu/shorten-link/pull/80) |
 | **Phase 6** | **Task 6.1** | Terraform Modules `observability` (Alarms, SNS, Dashboard, X-Ray) & `codedeploy_canary` (`live` alias) | `feat/phase-06-task-01-observability-and-canary` | ⏳ Pending | — |
 | **Phase 6** | **Task 6.2** | GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), k6 Load Test & Runbook E2E | `feat/phase-06-task-02-cicd-k6-and-runbook` | ⏳ Pending | — |
 

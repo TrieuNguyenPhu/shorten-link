@@ -188,3 +188,5 @@
 - Thêm private S3 và CloudFront OAC, TTL riêng cho trang và bundle, rewrite viewer request và dùng domain distribution cho OAuth/CORS.
 - Kiểm tra local đạt `terraform fmt -check -recursive`, init offline, validate, 19 mock tests ở dev và 19 ở bootstrap. Tám ca Node kiểm rewrite đạt. Đã kiểm tra thứ tự publish và invalidation bằng CLI giả lập.
 - Chạy `scripts/publish-frontend.sh [dev-root] [frontend-root]` sau khi apply. Script lấy cấu hình public từ outputs, build bằng lockfile và kiểm tra 5 trang trước khi upload. Sau khi invalidation hoàn tất, chạy `node tests/e2e/frontend-hosting.mjs <frontend_url>` để kiểm tra trên distribution thật.
+
+- Đã mở [PR #80](https://github.com/TrieuNguyenPhu/shorten-link/pull/80) cho Task 5.3 từ main `f80c0dc`.
