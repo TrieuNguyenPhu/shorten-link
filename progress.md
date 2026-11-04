@@ -93,3 +93,4 @@
 - Đã rà soát owner condition, pagination, publish ack/retry/deadline, JSON/body limit, telemetry isolation và dependency diff; không thêm secret/state/tfvars/AWS calls. docs/local-testing.md ghi command/config/giới hạn; Phase2 in_progress, Task2.2 pending. CLI gh không có trong host, dùng GitHub connector mở PR sau push.
 
 - Git HTTPS push thiếu credential helper; đã xuất bản cùng tree40d4dc1 qua GitHub connector, kiểm SHA tree trùng local rồi đồng bộ branch. PR riêng [#71](https://github.com/TrieuNguyenPhu/shorten-link/pull/71), base main; chưa merge, chờ CI/review.
+- CI run#164 (41759270780) trên39fdbe8 PASS cả3jobs: backend gồm integration/E2E/build/scan; Windows packaging; frontend lint/typecheck/static build/tests/audit. Cập nhật cuối chỉ ghi bằng chứng tài liệu; chưa merge PR#71, Task2.2 tiếp theo.
