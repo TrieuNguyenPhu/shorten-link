@@ -10,7 +10,7 @@
 | Hạng mục | Trạng thái | Chi tiết |
 | --- | --- | --- |
 | **Giai đoạn hiện tại (Current Phase)** | **Phase 3 — `in_progress`** | Task 3.1 implementation/local complete; Task 3.2 pending; PR #73 đã merge main e1e8bed |
-| **Task hiện tại** | **Task 3.1 — `complete` (implementation/local)** | Unit/race/vet/integration/HTTP analytics E2E/build5ZIP PASS; PR #74 chờ CI/review |
+| **Task hiện tại** | **Task 3.1 — `complete` (implementation/local)** | Unit/race/vet/integration/HTTP analytics E2E/build5ZIP PASS; PR #74 chờ review; CI #174 PASS |
 | **Task tiếp theo (Next Up)** | **Task 3.2 (Phase 3)** | Terraform event pipeline từ main sau Task 3.1 merge |
 | **Trạng thái AWS Cloud** | **Core đã triển khai ngày 2026-11-04** | Account654822777701, ap-southeast-1; bootstrap10 + core42 tài nguyên mới; pin deployment policy sau apply, không destroy |
 | **13 Bộ Skills & `AGENTS.md`** | **Đã kiểm tra file/config** | Đủ 13 file skill đại diện; 314 thư mục cấp đầu có `SKILL.md`. Có cấu hình trỏ `~/.agents/skills`; không suy ra mọi host đều tự nạp |
@@ -146,3 +146,5 @@
 - Không đổi Terraform, không apply/call AWS hoặc load test; event bus/rule/SQS/ESM/DLQ/IAM và AWS delivery E2E thuộc Task3.2, WebSocket thuộc Phase4. Kế tiếp Task3.2 từ main sau Task3.1 merge; Phase3 vẫn in_progress.
 
 - PR riêng Task3.1: [#74](https://github.com/TrieuNguyenPhu/shorten-link/pull/74), base main e1e8bed, commit fbd9ab1; chưa merge. Xuất bản bằng GitHub connector vì host thiếu Git author/gh/credential helper; remote tree ee08d52 trùng index đã kiểm thử.
+
+- CI [run #174](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41784113801) trên commit587dc7f PASS cả bốn job: backend (race/vet/transaction integration/HTTP analytics E2E/build5ZIP/scan), Terraform, packaging-windows và frontend. Commit chốt sau chỉ sửa tài liệu/README, không đổi implementation.

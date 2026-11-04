@@ -127,3 +127,5 @@
 - Theo workflow plan, dùng verification-before-completion và review độc lập bởi subagent; finishing-a-development-branch áp dụng lựa chọn push/PR đã được AGENTS ủy quyền, không hỏi lại. Giữ checkout cho sửa review; không merge PR tự động.
 
 - PR riêng Task3.1: [#74](https://github.com/TrieuNguyenPhu/shorten-link/pull/74), base main e1e8bed và commit fbd9ab1; chưa merge. Git author/gh/HTTPS credential helper chưa có, tạo commit/branch bằng connector và xác minh tree ee08d52 trùng local trước đồng bộ. CI đang chạy; commit tiếp theo chỉ cập nhật URL/evidence tài liệu.
+
+- CI [run #174](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41784113801) trên587dc7f PASS cả4jobs: backend, terraform, packaging-windows, frontend. README cập nhật5handler/5ZIP và tình trạng AWS core hiện có; commit cuối chỉ tài liệu. Checkout sạch sau đồng bộ, container DynamoDB Local của phiên đã dừng; không merge PR.
