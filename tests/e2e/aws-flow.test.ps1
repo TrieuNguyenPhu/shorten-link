@@ -146,3 +146,5 @@ try {
     Remove-Item -LiteralPath $realtimeTemporary -Force
 }
 Write-Host 'Realtime parser, resource scope and missing-token preflight PASS; no AWS requests sent.'
+
+& (Join-Path $PSScriptRoot 'realtime-lifecycle.test.ps1')

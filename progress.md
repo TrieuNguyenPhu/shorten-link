@@ -172,3 +172,13 @@
 - PR riêng Task4.2: [#77](https://github.com/TrieuNguyenPhu/shorten-link/pull/77), base mainf6e3769 → db716ad; tree af3e6d7 đã đối chiếu local/remote. Xuất bản bằng GitHub connector vì host thiếu gh/Git author/HTTPS helper; checkout đã đồng bộ. Không tự merge; CI đang chạy.
 
 - CI [run #183](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41793539394) trên db716ad PASS cả4jobs: backend gồm DynamoDB Local/HTTP-WebSocket E2E/build8ZIP/scan, Terraform37plan tests/PS preflight, Windows packaging và frontend lint/typecheck/static build/tests/audit. Commit chốt chỉ tài liệu và URL/evidence; không merge/apply.
+
+
+## Session 2026-11-04 — Sửa review Phase4 / Task4.2
+- Người dùng yêu cầu sửa finding P2 về StartExecution mất response. Đã đọc bốn file trạng thái và luồng E2E; bắt đầu sửa trên branch Task4.2 hiện có. Không có authorization apply mới.
+- Regression test RED trên code cũ → GREEN sau pre-register name/ARN trước request. Cleanup đối soát execution qua Describe, chỉ stop RUNNING và chỉ xóa link khi xác nhận terminal; unknown/nonterminal giữ link và ARN.
+- PowerShell7.5 network=none PASS toàn bộ preflight và tám lifecycle cases: lost-running/lost-completed/unknown/still-running/pending/poll-error/lost-stop/success. Test chạy hàm start/finally thật với mock AWS/HTTP/client disposal/delay. Không sửa Go/Terraform/ASL/IAM hoặc gọi AWS account.
+- Khi fetch để push, xác nhận PR #77 đã merge main501c049. Chuyển đúng bản sửa sang branch fix/phase-04-task-02-execution-cleanup từ main và mở [PR fix #78](https://github.com/TrieuNguyenPhu/shorten-link/pull/78), code commit ff45f5a. CI đang chạy; không tự merge/apply.
+- Cập nhật trạng thái đã ghi nhầm nội dung task_plan vào progress.md; khôi phục nguyên lịch sử từ main và chỉ thêm mục phiên này. Kiểm tra prefix lịch sử và diff trước commit tài liệu.
+
+- CI [run #186](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41798012440) trên ff45f5a PASS cả4jobs, bao gồm tám regression cases lifecycle. Commit cuối chỉ thêm URL/evidence và phục hồi progress.md giữ nguyên toàn bộ lịch sử main501c049; checkout được đối chiếu tree/diff trước bàn giao. Không merge/apply.
