@@ -1,0 +1,5 @@
+bucket       = "REPLACE_WITH_BOOTSTRAP_STATE_BUCKET"
+key          = "dev/terraform.tfstate"
+region       = "ap-southeast-1"
+encrypt      = true
+use_lockfile = true

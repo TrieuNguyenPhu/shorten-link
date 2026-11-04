@@ -32,7 +32,7 @@ Bạn đang làm việc với vai trò **Senior AWS Serverless Architect + Golan
    - `ws-disconnect` (WebSocket `$disconnect`)
    - `moderate-check` (Step Functions task `CheckSafety`)
 4. **Quy tắc ngôn ngữ:**
-   - Tài liệu, giải thích, báo cáo tiến độ, nội dung PR viết bằng **tiếng Việt**.
+   - Tài liệu, giải thích và báo cáo tiến độ viết bằng **tiếng Việt**. PR title/description và commit message viết bằng **tiếng Anh** (cập nhật theo yêu cầu người dùng ngày 2026-11-04).
    - Tên biến, hàm, package, file, commit message và mã nguồn viết bằng **tiếng Anh** chuẩn.
 5. **Không dùng mock data cho luồng chính:** Mọi luồng nghiệp vụ phải đi qua code thực thi thật, có unit test, integration test và kịch bản E2E kiểm chứng.
 6. **An toàn chi phí AWS:** Không tự ý chạy `terraform apply` hoặc chạy load test lớn trên AWS khi chưa được người dùng yêu cầu rõ ràng.
@@ -99,7 +99,7 @@ Mỗi Task trong kế hoạch (`docs/superpowers/plans/2026-10-26-serverless-url
 - Ghi nhật ký kết quả test và bài học kỹ thuật vào `progress.md` và `findings.md`.
 
 ### Bước 6: Tạo Pull Request riêng cho Task
-- Push branch lên `origin` và tạo Pull Request riêng bằng `gh pr create` với mô tả tiếng Việt rõ ràng (Mục tiêu task, Thay đổi chính, Kết quả kiểm thử, Trạng thái dự án).
+- Push branch lên `origin` và tạo Pull Request riêng bằng `gh pr create` với tiêu đề và mô tả tiếng Anh rõ ràng (Mục tiêu task, Thay đổi chính, Kết quả kiểm thử, Trạng thái dự án).
 - Ghi nhận URL/số PR vào `PROJECT_STATUS.md` và `progress.md`.
 
 ---
