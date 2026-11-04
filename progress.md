@@ -190,3 +190,5 @@
 2026-11-05: Kiểm tra full Go suite/vet sau Task 5.1 bị fail trước khi compile các package do diff có sẵn ở `backend/internal/config/config.go:27` (`dest` khai báo nhưng không dùng sau khi xóa phép gán). Giữ lỗi ngoài phạm vi, chưa sửa hoặc commit chung với frontend.
 
 2026-11-05: Bắt đầu Phase 5 trên nhánh `feat/phase-05-task-01-nextjs-auth-and-pages`; chốt phạm vi Task 5.1 cho static landing/login/callback, Google-only Cognito PKCE và Doodle UI. Đã ghi thiết kế tại `docs/superpowers/specs/2026-11-05-phase-5-task-5-1-frontend-design.md`; chưa chạy AWS hoặc Terraform apply.
+
+- Đã mở [PR #79](https://github.com/TrieuNguyenPhu/shorten-link/pull/79) cho Task 5.1 từ main `f80c0dc`.
