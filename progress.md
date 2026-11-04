@@ -152,3 +152,7 @@
 - DynamoDB Local3.3.0 race integration/HTTP E2E PASS: subscription TTL, pagination>1MB, push SDK ký SigV4,410cleanup,403không cleanup/không retry click, duplicate không push và disconnect lặp. Chỉ protocol fixtures cho EventBridge/Management API; không tuyên bố AWS handshake/delivery.
 - Build8ZIP PASS, kiểm bootstrap root0755/ELF64 AArch64/static. govulncheckverbose exit0,0symbol/package và4module-only advisories cũ. ASL contract tests PASS; runbook manual safe/reject/retry/Fail công bố input/precondition/upsert. CI mở rộng build8ZIP và WebSocket E2E.
 - Rà soát thủ công diff/security không có finding cần sửa; không dùng subagent trong task này. Không apply/call AWS/load test. Chuẩn bị PR riêng Task4.1; Task4.2 pending sau review/merge để tuân thủ branch từ main.
+
+- PR riêng Task4.1: [#76](https://github.com/TrieuNguyenPhu/shorten-link/pull/76), base main6dee1ca → affc345, tree c90b0cf đã khớp local/remote. Host không có gh/Git author/HTTPS helper nên xuất bản bằng GitHub connector; checkout đã đồng bộ không mất thay đổi. CI đang chạy, không tự merge. Container DynamoDB Local của phiên đã dừng.
+
+- CI [run #180](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41790392763) trên affc345 PASS cả4jobs, gồm backend E2E mới/build8ZIP, Terraform checks/PS, Windows packaging và frontend static checks. Commit chốt chỉ thêm URL PR/CI và đánh dấu master plan Step4 hoàn tất; không merge/apply.

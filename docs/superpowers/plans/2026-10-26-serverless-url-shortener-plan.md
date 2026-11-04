@@ -257,7 +257,7 @@
     - `moderate-check` → kiểm tra danh sách từ khóa cấm (`malware`, `phishing`, `evil`), trả `{code, target, safe}`.
   - [x] **Step 2:** Triển khai Go/ASL giữ Retry/Catch/updateItem gốc theo kiến trúc5.3; thêm runbook manual input `{code,target}`, safe/reject/retry/Fail, tạo META hợp lệ trước và không xóa song song vì ASL có thể upsert. Không nối moderation vào create/redirect.
   - [x] **Step 3:** Chạy Go race/vet, build 8 binaries và mở rộng CI; execution history Step Functions thật nằm trong AWS E2E khi được phép.
-  - [ ] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 4.1.
+  - [x] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 4.1.
 
 #### Task 4.2: Terraform Modules `websocket_api` & `moderation_sfn`
 - **Branch:** `feat/phase-04-task-02-terraform-websocket-and-sfn`

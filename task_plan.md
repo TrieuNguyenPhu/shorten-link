@@ -4,7 +4,7 @@
 Tái hiện hoàn chỉnh hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS theo chuỗi 21 bài và repository `nghiadaulau/serverless-url-shortener-aws`, chuyển đổi sang **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js Static Export (`S3 + CloudFront OAC`)**, với mỗi Task hoàn thành được tạo một **Pull Request riêng** và luôn cập nhật trạng thái hiện tại của dự án.
 
 ## Current Phase
-Phase 4 — in_progress. Task4.1 complete (implementation/local): WebSocket/pusher/moderation/ASL, Go race/vet, DynamoDB Local/E2E và build8ZIP PASS; chuẩn bị PR riêng từ main6dee1ca. Task4.2 pending sau review/merge; chưa được phép apply AWS.
+Phase 4 — in_progress. Task4.1 complete (implementation/local): WebSocket/pusher/moderation/ASL, Go race/vet, DynamoDB Local/E2E và build8ZIP PASS; [PR #76](https://github.com/TrieuNguyenPhu/shorten-link/pull/76) từ main6dee1ca, CI #180 PASS, chờ review. Task4.2 pending sau review/merge; chưa được phép apply AWS.
 
 ## Phases & Tasks
 
