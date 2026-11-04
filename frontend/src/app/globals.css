@@ -1,26 +1,21 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
+:root { --paper: #fffaf0; --paper-deep: #f2e6cf; --ink: #24221e; --ink-muted: #635e53; --sun: #ffd45c; --coral: #e85f4f; }
+@theme inline { --color-paper: var(--paper); --color-paper-deep: var(--paper-deep); --color-ink: var(--ink); --color-ink-muted: var(--ink-muted); --color-sun: var(--sun); --color-coral: var(--coral); --font-display: "Trebuchet MS", "Arial Rounded MT Bold", sans-serif; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+a { color: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+.paper-shell { min-height: 100vh; background-color: var(--paper); background-image: radial-gradient(rgba(36, 34, 30, 0.07) 0.7px, transparent 0.7px); background-size: 14px 14px; display: flex; flex-direction: column; }
+.font-display { font-family: "Trebuchet MS", "Arial Rounded MT Bold", sans-serif; }
+.sketch-card { border: 2px solid var(--ink); border-radius: 20px 16px 22px 14px; background: rgba(255, 255, 255, 0.64); padding: 1.5rem; box-shadow: 4px 4px 0 var(--ink); }
+.sketch-button { display: inline-flex; min-height: 3.25rem; align-items: center; gap: 0.65rem; border: 2px solid var(--ink); border-radius: 12px 15px 11px 14px; background: var(--ink); color: var(--paper); padding: 0.75rem 1.1rem; font-weight: 800; box-shadow: 3px 3px 0 var(--coral); transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease; }
+.sketch-button:hover { transform: translate(-1px, -1px) rotate(-0.5deg); box-shadow: 5px 5px 0 var(--coral); }
+.sketch-button:focus-visible { outline: 3px solid var(--coral); outline-offset: 4px; }
+.sketch-button:disabled { cursor: wait; opacity: 0.65; transform: none; }
+.sketch-button-secondary { background: transparent; color: var(--ink); box-shadow: 3px 3px 0 var(--ink); }
+.sketch-button-small { min-height: 2.5rem; padding: 0.5rem 0.8rem; box-shadow: 2px 2px 0 var(--coral); }
+.ink-note { color: var(--coral); font-size: 0.75rem; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase; }
+.scribble-underline { position: absolute; right: -0.1em; bottom: -0.15em; left: 0; height: 0.15em; border-bottom: 3px solid var(--coral); border-radius: 50%; transform: rotate(-2deg); }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .sketch-button { transition: none; } }

@@ -182,3 +182,11 @@
 - Cập nhật trạng thái đã ghi nhầm nội dung task_plan vào progress.md; khôi phục nguyên lịch sử từ main và chỉ thêm mục phiên này. Kiểm tra prefix lịch sử và diff trước commit tài liệu.
 
 - CI [run #186](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41798012440) trên ff45f5a PASS cả4jobs, bao gồm tám regression cases lifecycle. Commit cuối chỉ thêm URL/evidence và phục hồi progress.md giữ nguyên toàn bộ lịch sử main501c049; checkout được đối chiếu tree/diff trước bàn giao. Không merge/apply.
+
+## Phiên 2026-11-05 — Phase 5 / Task 5.1
+
+2026-11-05: Task 5.1 hoàn tất ở mức implementation/local. Frontend có landing, login Google-only, callback state/nonce/PKCE/expiry và dashboard handoff; build static tạo đủ `/`, `/login/`, `/auth/callback/`, `/dashboard/`, `404`. Cổng `pnpm lint`, `pnpm typecheck`, `pnpm test` (12 pass), `pnpm build` và artifact tests PASS. Không chạy Terraform apply, hosting CloudFront hoặc Google browser federation E2E.
+
+2026-11-05: Kiểm tra full Go suite/vet sau Task 5.1 bị fail trước khi compile các package do diff có sẵn ở `backend/internal/config/config.go:27` (`dest` khai báo nhưng không dùng sau khi xóa phép gán). Giữ lỗi ngoài phạm vi, chưa sửa hoặc commit chung với frontend.
+
+2026-11-05: Bắt đầu Phase 5 trên nhánh `feat/phase-05-task-01-nextjs-auth-and-pages`; chốt phạm vi Task 5.1 cho static landing/login/callback, Google-only Cognito PKCE và Doodle UI. Đã ghi thiết kế tại `docs/superpowers/specs/2026-11-05-phase-5-task-5-1-frontend-design.md`; chưa chạy AWS hoặc Terraform apply.
