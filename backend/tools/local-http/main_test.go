@@ -30,6 +30,10 @@ func (noSDK) Query(context.Context, *dynamodb.QueryInput, ...func(*dynamodb.Opti
 	panic("unexpected storage call")
 }
 
+func (noSDK) TransactWriteItems(context.Context, *dynamodb.TransactWriteItemsInput, ...func(*dynamodb.Options)) (*dynamodb.TransactWriteItemsOutput, error) {
+	panic("unexpected storage call")
+}
+
 func (noSDK) DeleteItem(context.Context, *dynamodb.DeleteItemInput, ...func(*dynamodb.Options)) (*dynamodb.DeleteItemOutput, error) {
 	panic("unexpected storage call")
 }

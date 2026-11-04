@@ -203,16 +203,18 @@
   - Consumes: `events.SQSEvent` (chứa EventBridge envelope `source: "urlshortener"`, `detail-type: "link.clicked"`)
   - Produces: `events.SQSEventResponse` (`BatchItemFailures`)
 - **Steps:**
-  - [ ] **Step 1:** Viết unit/integration tests trong `aggregator_service_test.go` kiểm chứng:
+  - [x] **Step 1:** Viết unit/integration tests trong `aggregator_service_test.go` kiểm chứng:
     - Sự kiện hợp lệ tăng `META.clicks` lên 1, tăng `STAT#YYYY-MM-DD.count` lên 1, và tạo `CLICK#<eventId>` với `ttl = now + 86400`.
     - Duplicate đúng cả ba reasons, mixed reasons, empty/nil/unknown reasons, conflicts và throttle theo bảng phân loại kiến trúc5.2; không chỉ xét marker index2.
     - Delete race không tái tạo META/STAT/marker; chỉ ack late-deleted sau consistent read xác nhận, Get lỗi hoặc META còn thì retry. Marker TTL đã qua nhưng còn item vẫn dedupe; marker bị xóa rồi replay đếm lại.
     - Lỗi `TransactionCanceledException` do `TransactionConflict` hoặc lỗi mạng DynamoDB **bắt buộc** đưa `messageId` vào `BatchItemFailures` để SQS retry.
     - Trong một batch 10 messages có 2 messages lỗi và 8 messages hợp lệ, chỉ đúng 2 `messageId` lỗi được trả về trong `BatchItemFailures`.
     - Khi notifier WebSocket trả lỗi, bộ đếm đã ghi không bị ảnh hưởng và record SQS vẫn thành công.
-  - [ ] **Step 2:** Triển khai `RecordClickTransaction` trong `dynamodb.go`, `aggregator_service.go` và `backend/cmd/click-aggregator/main.go`.
-  - [ ] **Step 3:** Chạy Go race/vet và integration DynamoDB Local cho transaction, cập nhật CI và đóng gói `click-aggregator.zip`.
-  - [ ] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 3.1.
+  - [x] **Step 2:** Triển khai `RecordClickTransaction` trong `dynamodb.go`, `aggregator_service.go` và `backend/cmd/click-aggregator/main.go`.
+  - [x] **Step 3:** Chạy Go race/vet và integration DynamoDB Local cho transaction, cập nhật CI và đóng gói `click-aggregator.zip`.
+  - [x] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 3.1.
+
+- **Kết quả 2026-11-04:** implementation/local complete; Go race/vet, DynamoDB Local transaction/concurrency/HTTP analytics E2E, build5ZIP và review độc lập PASS. PR riêng đang chuẩn bị; Task3.2 và AWS pipeline delivery còn pending.
 
 #### Task 3.2: Terraform Module `event_pipeline` (Nhận EventBridge Bus, Rule, SQS `ClickQueue` + `ClickDLQ`, Event Source Mapping)
 - **Branch:** `feat/phase-03-task-02-terraform-event-pipeline`

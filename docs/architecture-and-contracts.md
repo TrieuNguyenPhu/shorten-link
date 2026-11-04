@@ -287,6 +287,7 @@ Theo [AWS PutEvents](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb
 ### 5.2 Cấu Hình SQS & Xử Lý Lỗi Theo Lô (`ReportBatchItemFailures`)
 - **ClickQueue:** `VisibilityTimeout = 30` giây (>= 6 lần timeout 5s của Lambda), `maxReceiveCount = 3`, `BatchSize = 10`.
 - **ClickDLQ:** `MessageRetentionPeriod = 1209600` giây (14 ngày).
+- **Ngày thống kê:** `STAT#YYYY-MM-DD` lấy ngày UTC của `detail.at` (RFC3339); TTL marker lấy thời điểm xử lý +86400giây. Consumer từ chối envelope sai source/detail-type và timestamp không hợp lệ để retry/DLQ. Producer phát timestamp UTC như schema5.1.
 - **Partial Batch Failure:** `click-aggregator` trả về `events.SQSEventResponse{BatchItemFailures: ...}`. Record JSON hỏng, thiếu `id`/`code` hoặc lỗi chưa được phân loại ack ở bảng dưới được thêm vào `BatchItemFailures`; duplicate và late-deleted đúng điều kiện thì ack.
 
 Giữ `maxReceiveCount = 3` để tương thích nguồn, dù [AWS khuyến nghị ít nhất 5](https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-configure.html). Không dùng unit test để kết luận ESM/IAM/redrive thực tế hoạt động.
