@@ -91,3 +91,5 @@
 - DynamoDB Local3.3.0 digest d89f8fcc…: integration/race-count1 PASS, gồm query>1MB, timestamps milliseconds, owner conditions, collision, delete giữ STAT/CLICK. HTTP E2E dùng handler/service/repository thật và SDK tới PutEvents recorder; CLI harness smoke create/list/IDOR/resolve/delete PASS. Không giả lập JWT/IAM hoặc analytics AWS.
 - Packaging bốn cmd thật PASS; kiểm từng ZIP bootstrap root0755/ELF64 AArch64/static. govulncheck v1.9.0 verbose exit0, 0 symbol/package và4 module-only advisories; CI thêm integration/E2E và build.
 - Đã rà soát owner condition, pagination, publish ack/retry/deadline, JSON/body limit, telemetry isolation và dependency diff; không thêm secret/state/tfvars/AWS calls. docs/local-testing.md ghi command/config/giới hạn; Phase2 in_progress, Task2.2 pending. CLI gh không có trong host, dùng GitHub connector mở PR sau push.
+
+- Git HTTPS push thiếu credential helper; đã xuất bản cùng tree40d4dc1 qua GitHub connector, kiểm SHA tree trùng local rồi đồng bộ branch. PR riêng [#71](https://github.com/TrieuNguyenPhu/shorten-link/pull/71), base main; chưa merge, chờ CI/review.

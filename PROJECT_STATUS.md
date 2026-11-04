@@ -24,7 +24,7 @@
 | **Phase 0** | **Task 0.1** | Xác minh setup skills/`AGENTS.md`, hoàn thiện Reference Audit, Architecture & Master Plan | `chore/phase-00-reset-and-architecture-plan` | **complete (đã merge main qua PR #65)** | [PR #65](https://github.com/TrieuNguyenPhu/shorten-link/pull/65) |
 | **Phase 1** | **Task 1.1** | Monorepo, `Makefile`, Go module, Domain Models, Base62 Generator & URL Validator + Unit Tests, CI nền | `fix/phase-01-task-01-final-review` | complete | [PR #68 — đã merge main](https://github.com/TrieuNguyenPhu/shorten-link/pull/68); gốc #66 |
 | **Phase 1** | **Task 1.2** | Observability Middleware (`slog` JSON, CloudWatch EMF, X-Ray) & Script đóng gói Lambda `arm64` ZIP | `fix/phase-01-task-02-main-integration` | complete | [PR #69 — đã merge main](https://github.com/TrieuNguyenPhu/shorten-link/pull/69); gốc #67 |
-| **Phase 2** | **Task 2.1** | DynamoDB Repository, Link Service, EventBridge publisher, local HTTP harness & 4 HTTP Lambdas + Tests | `feat/phase-02-task-01-core-crud-lambdas` | complete (chờ review/merge) | Đang tạo PR |
+| **Phase 2** | **Task 2.1** | DynamoDB Repository, Link Service, EventBridge publisher, local HTTP harness & 4 HTTP Lambdas + Tests | `feat/phase-02-task-01-core-crud-lambdas` | complete (chờ review/merge) | [PR #71](https://github.com/TrieuNguyenPhu/shorten-link/pull/71) |
 | **Phase 2** | **Task 2.2** | Terraform Bootstrap (S3 state/lockfile, OIDC) & Core Modules, Cognito Google-only, custom event bus | `feat/phase-02-task-02-terraform-core-infra` | ⏳ Pending | — |
 | **Phase 3** | **Task 3.1** | Go Lambda `click-aggregator` (`TransactWriteItems`, `CancellationReasons`, `ReportBatchItemFailures`) + Tests | `feat/phase-03-task-01-click-aggregator-lambda` | ⏳ Pending | — |
 | **Phase 3** | **Task 3.2** | Terraform Module `event_pipeline` (nhận bus từ Task 2.2, tạo rule, SQS `ClickQueue` + `ClickDLQ`, ESM) | `feat/phase-03-task-02-terraform-event-pipeline` | ⏳ Pending | — |
@@ -106,3 +106,5 @@
 - `bash scripts/build-lambdas.sh` PASS: bốn ZIP trong backend/dist (ignored), mỗi ZIP chỉ bootstrap0755, ELF64 AArch64 không PT_INTERP. CI thêm DynamoDB Local integration/E2E và build4ZIP; fmt/diff/liên kết/JSON được kiểm trước commit.
 - govulncheck v1.9.0 verbose exit0: 0 symbol/package vulnerabilities; vẫn 4 module-only advisories như mục8, không suppress. AWS SDK v2 DynamoDB/EventBridge/config/credentials đã pin trong go.mod/go.sum.
 - Rà soát diff không secret/state/tfvars thực, không sửa frontend, không có transaction aggregator trong scope. Không chạy AWS/apply/load test; JWT/IAM/EventBridge pipeline và trace export giữ pending. Hướng dẫn tại [docs/local-testing.md](./docs/local-testing.md).
+
+- PR Task 2.1: [#71](https://github.com/TrieuNguyenPhu/shorten-link/pull/71), base main, chờ CI/review; chưa merge.

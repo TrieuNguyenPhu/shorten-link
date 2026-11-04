@@ -152,7 +152,9 @@
     - List paginate đến hết LastEvaluatedKey; giữ JSON links, thứ tự và owner scope
   - [x] **Step 2:** Triển khai `dynamodb.go`, `link_service.go`, `httpapi/handler.go`, EventBridge publisher và 4 `cmd/*/main.go` theo đặc tả; tạo local HTTP harness dùng handler/repository thật và DynamoDB Local, không production memory storage. Unit mock chỉ tại ranh giới SDK/publisher; harness không chứng minh JWT authorizer/IAM AWS.
   - [x] **Step 3:** Chạy Go race/vet, integration DynamoDB Local và build 4 ZIP arm64; ghi lệnh khởi động harness, cấu hình test và bằng chứng vào `docs/local-testing.md`, mở rộng CI tương ứng.
-  - [ ] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 2.1.
+  - [x] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 2.1.
+
+- **Kết quả 2026-11-04:** complete (local); [PR #71](https://github.com/TrieuNguyenPhu/shorten-link/pull/71) chờ CI/review/merge. AWS E2E pending.
 
 #### Task 2.2: Terraform Bootstrap & Core Infrastructure Modules (`dynamodb`, `cognito`, `http_api`, `lambda`)
 - **Branch:** `feat/phase-02-task-02-terraform-core-infra`
