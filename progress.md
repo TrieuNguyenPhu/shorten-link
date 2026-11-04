@@ -40,3 +40,11 @@
   - `PROJECT_STATUS.md`
   - `README.md`
 - **Pull Request:** [PR #65](https://github.com/TrieuNguyenPhu/shorten-link/pull/65)
+
+## Session 2026-10-27 — Phase 1
+- Task 1.1: in_progress. Đã đọc bốn file trạng thái, plan/spec; không có .codegraph nên dùng tìm kiếm trực tiếp. Branch mới từ main, fast-forward Phase 0; giữ frontend untracked.
+- Đã viết test trước implementation: Base62, URL, timestamp/sort, config.
+- Task 1.1 complete: RED do GenerateShortCode/NormalizeURL/FormatCreatedAt/Load chưa tồn tại; GREEN toàn bộ unit tests. Windows test/vet PASS; WSL Go1.26.5 + GCC test -race -v và vet PASS. Coverage config 100%, domain 88.2%. Formatting/diff check PASS; review độc lập không có finding.
+- Lỗi môi trường: Windows -race thiếu CGO/C compiler; đã cài GCC/libc6-dev trong WSL Ubuntu bằng root và chạy đúng toolchain pin. Không thay cấu hình AWS.
+- PR Task 1.1: [#66](https://github.com/TrieuNguyenPhu/shorten-link/pull/66), base Phase 0 (#65); chờ review/merge.
+- Sửa review Task1.1: nâng minimum/CI từ Go1.26.5 lên Go1.26.10 sau khi scan Phase1 phát hiện stdlib vulnerabilities; PR #66 được cập nhật cùng branch trước khi merge.
