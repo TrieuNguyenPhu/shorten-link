@@ -214,7 +214,7 @@
   - [x] **Step 3:** Chạy Go race/vet và integration DynamoDB Local cho transaction, cập nhật CI và đóng gói `click-aggregator.zip`.
   - [x] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 3.1.
 
-- **Kết quả 2026-11-04:** implementation/local complete; Go race/vet, DynamoDB Local transaction/concurrency/HTTP analytics E2E, build5ZIP và review độc lập PASS. PR riêng đang chuẩn bị; Task3.2 và AWS pipeline delivery còn pending.
+- **Kết quả 2026-11-04:** implementation/local complete; Go race/vet, DynamoDB Local transaction/concurrency/HTTP analytics E2E, build5ZIP và review độc lập PASS. [PR #74](https://github.com/TrieuNguyenPhu/shorten-link/pull/74) chờ CI/review; Task3.2 và AWS pipeline delivery còn pending.
 
 #### Task 3.2: Terraform Module `event_pipeline` (Nhận EventBridge Bus, Rule, SQS `ClickQueue` + `ClickDLQ`, Event Source Mapping)
 - **Branch:** `feat/phase-03-task-02-terraform-event-pipeline`

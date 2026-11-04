@@ -10,7 +10,7 @@
 | Hạng mục | Trạng thái | Chi tiết |
 | --- | --- | --- |
 | **Giai đoạn hiện tại (Current Phase)** | **Phase 3 — `in_progress`** | Task 3.1 implementation/local complete; Task 3.2 pending; PR #73 đã merge main e1e8bed |
-| **Task hiện tại** | **Task 3.1 — `complete` (implementation/local)** | Unit/race/vet/integration/HTTP analytics E2E/build5ZIP PASS; chuẩn bị PR riêng |
+| **Task hiện tại** | **Task 3.1 — `complete` (implementation/local)** | Unit/race/vet/integration/HTTP analytics E2E/build5ZIP PASS; PR #74 chờ CI/review |
 | **Task tiếp theo (Next Up)** | **Task 3.2 (Phase 3)** | Terraform event pipeline từ main sau Task 3.1 merge |
 | **Trạng thái AWS Cloud** | **Core đã triển khai ngày 2026-11-04** | Account654822777701, ap-southeast-1; bootstrap10 + core42 tài nguyên mới; pin deployment policy sau apply, không destroy |
 | **13 Bộ Skills & `AGENTS.md`** | **Đã kiểm tra file/config** | Đủ 13 file skill đại diện; 314 thư mục cấp đầu có `SKILL.md`. Có cấu hình trỏ `~/.agents/skills`; không suy ra mọi host đều tự nạp |
@@ -26,7 +26,7 @@
 | **Phase 1** | **Task 1.2** | Observability Middleware (`slog` JSON, CloudWatch EMF, X-Ray) & Script đóng gói Lambda `arm64` ZIP | `fix/phase-01-task-02-main-integration` | complete | [PR #69 — đã merge main](https://github.com/TrieuNguyenPhu/shorten-link/pull/69); gốc #67 |
 | **Phase 2** | **Task 2.1** | DynamoDB Repository, Link Service, EventBridge publisher, local HTTP harness & 4 HTTP Lambdas + Tests | `feat/phase-02-task-01-core-crud-lambdas` | complete (đã merge main) | [PR #71](https://github.com/TrieuNguyenPhu/shorten-link/pull/71) |
 | **Phase 2** | **Task 2.2** | Terraform Bootstrap (S3 state/lockfile, OIDC) & Core Modules, Cognito Google-only, custom event bus | `feat/phase-02-task-02-terraform-core-infra` | complete (đã merge main) | [PR #72](https://github.com/TrieuNguyenPhu/shorten-link/pull/72) |
-| **Phase 3** | **Task 3.1** | Go Lambda `click-aggregator` (`TransactWriteItems`, `CancellationReasons`, `ReportBatchItemFailures`) + Tests | `feat/phase-03-task-01-click-aggregator-lambda` | complete (implementation/local) | Đang chuẩn bị | |
+| **Phase 3** | **Task 3.1** | Go Lambda `click-aggregator` (`TransactWriteItems`, `CancellationReasons`, `ReportBatchItemFailures`) + Tests | `feat/phase-03-task-01-click-aggregator-lambda` | complete (implementation/local) | [PR #74](https://github.com/TrieuNguyenPhu/shorten-link/pull/74) | |
 | **Phase 3** | **Task 3.2** | Terraform Module `event_pipeline` (nhận bus từ Task 2.2, tạo rule, SQS `ClickQueue` + `ClickDLQ`, ESM) | `feat/phase-03-task-02-terraform-event-pipeline` | ⏳ Pending | — |
 | **Phase 4** | **Task 4.1** | Go Lambdas `ws-connect`, `ws-disconnect`, `PostToConnection` Pusher (`410 Gone`) & `moderate-check` + ASL | `feat/phase-04-task-01-websocket-and-moderation-lambdas` | ⏳ Pending | — |
 | **Phase 4** | **Task 4.2** | Terraform Modules `websocket_api` (`$connect`, `$disconnect`, stage `prod`) & `moderation_sfn` | `feat/phase-04-task-02-terraform-websocket-and-sfn` | ⏳ Pending | — |
@@ -144,3 +144,5 @@
 - `bash scripts/build-lambdas.sh` PASS nămZIP; từng archive bootstrap root0755/ELF64 AArch64/no PT_INTERP. CI tự chạy tests mới/build5ZIP; đổi tên bước cho đúng phạm vi. govulncheck1.9.0 verbose exit0:0symbol/package vulnerabilities,4module-only advisories như baseline, không suppress.
 - Review độc lập không có finding cần sửa; controller rà soát diff/schema/reason bounds/deadline/postcommit failures. gofmt/diff-check,13Markdown links và6JSON examples PASS. Lượt kiểm contention thiếu endpoint ban đầu fail đúng guard, chạy lại đủ biến môi trường PASS; không coi lỗi setup là lỗi nghiệp vụ.
 - Không đổi Terraform, không apply/call AWS hoặc load test; event bus/rule/SQS/ESM/DLQ/IAM và AWS delivery E2E thuộc Task3.2, WebSocket thuộc Phase4. Kế tiếp Task3.2 từ main sau Task3.1 merge; Phase3 vẫn in_progress.
+
+- PR riêng Task3.1: [#74](https://github.com/TrieuNguyenPhu/shorten-link/pull/74), base main e1e8bed, commit fbd9ab1; chưa merge. Xuất bản bằng GitHub connector vì host thiếu Git author/gh/credential helper; remote tree ee08d52 trùng index đã kiểm thử.
