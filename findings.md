@@ -147,3 +147,7 @@
 - StartExecution không truyền name dùng UUID do AWS tạo nên response bị mất thì không biết execution ARN. Tạo tên e2e-code-GUID trước request cho phép suy ra ARN, đăng ký trước khi gửi và giữ CLI retries idempotent theo name/input của STANDARD.
 - Không xem lỗi transport là bằng chứng request bị từ chối. Cleanup Describe trước; chỉ stop RUNNING, rồi Describe để xác nhận terminal. Stop bị mất response vẫn có thể đối soát ABORTED. Execution chưa tồn tại/không đọc được/still RUNNING/PENDING_REDRIVE đều giữ META và in ARN, không suy diễn an toàn để xóa.
 - Regression tests chạy hàm Start-RealtimeModeration và finally lấy trực tiếp từ AST nguồn để không khởi động luồng AWS/HTTP thật; mock tại dependency boundary. Tám trường hợp bao gồm start mất response, workflow đã xong, không rõ trạng thái, stop bị từ chối/mất response, poll lỗi, trạng thái chưa kết thúc và success.
+
+## Task 5.3 — Route tĩnh và callback OAuth
+
+CloudFront Function chỉ sửa `request.uri`. Browser vẫn giữ query cho PKCE, còn cache policy loại query và cookie khỏi cache key lẫn request tới S3. Quyền `s3:GetObject` giới hạn theo ARN của distribution và HTTPS. Object thiếu trả mã lỗi từ S3. Khi publish, bundle mới được upload trước dữ liệu route và HTML; giữ bundle cũ để tab đang mở tải được chunk của phiên bản trước.

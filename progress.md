@@ -182,3 +182,9 @@
 - Cập nhật trạng thái đã ghi nhầm nội dung task_plan vào progress.md; khôi phục nguyên lịch sử từ main và chỉ thêm mục phiên này. Kiểm tra prefix lịch sử và diff trước commit tài liệu.
 
 - CI [run #186](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41798012440) trên ff45f5a PASS cả4jobs, bao gồm tám regression cases lifecycle. Commit cuối chỉ thêm URL/evidence và phục hồi progress.md giữ nguyên toàn bộ lịch sử main501c049; checkout được đối chiếu tree/diff trước bàn giao. Không merge/apply.
+
+## 2026-11-05 — Task 5.3, hosting Next.js
+
+- Thêm private S3 và CloudFront OAC, TTL riêng cho trang và bundle, rewrite viewer request và dùng domain distribution cho OAuth/CORS.
+- Kiểm tra local đạt `terraform fmt -check -recursive`, init offline, validate, 19 mock tests ở dev và 19 ở bootstrap. Tám ca Node kiểm rewrite đạt. Đã kiểm tra thứ tự publish và invalidation bằng CLI giả lập.
+- Chạy `scripts/publish-frontend.sh [dev-root] [frontend-root]` sau khi apply. Script lấy cấu hình public từ outputs, build bằng lockfile và kiểm tra 5 trang trước khi upload. Sau khi invalidation hoàn tất, chạy `node tests/e2e/frontend-hosting.mjs <frontend_url>` để kiểm tra trên distribution thật.

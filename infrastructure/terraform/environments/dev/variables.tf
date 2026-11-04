@@ -68,26 +68,29 @@ variable "google_client_secret" {
 
 variable "callback_urls" {
   validation {
-    condition     = length(var.callback_urls) > 0 && alltrue([for u in var.callback_urls : can(regex("^(https://[^/?#@*[:space:]]+|http://(localhost|127[.]0[.]0[.]1)(:[0-9]+)?)/auth/callback/$", u))])
+    condition     = alltrue([for u in var.callback_urls : can(regex("^(https://[^/?#@*[:space:]]+|http://(localhost|127[.]0[.]0[.]1)(:[0-9]+)?)/auth/callback/$", u))])
     error_message = "Callbacks must be exact HTTPS or local HTTP /auth/callback/ URLs."
   }
-  type = set(string)
+  type    = set(string)
+  default = []
 }
 
 variable "logout_urls" {
   validation {
-    condition     = length(var.logout_urls) > 0 && alltrue([for u in var.logout_urls : can(regex("^(https://[^/?#@*[:space:]]+|http://(localhost|127[.]0[.]0[.]1)(:[0-9]+)?)/$", u))])
+    condition     = alltrue([for u in var.logout_urls : can(regex("^(https://[^/?#@*[:space:]]+|http://(localhost|127[.]0[.]0[.]1)(:[0-9]+)?)/$", u))])
     error_message = "Logout URLs must be HTTPS or local HTTP root URLs."
   }
-  type = set(string)
+  type    = set(string)
+  default = []
 }
 
 variable "cors_origins" {
   validation {
-    condition     = length(var.cors_origins) > 0 && alltrue([for u in var.cors_origins : can(regex("^(https://[^/?#@*]+|http://(localhost|127[.]0[.]0[.]1)(:[0-9]+)?)$", u))])
+    condition     = alltrue([for u in var.cors_origins : can(regex("^(https://[^/?#@*]+|http://(localhost|127[.]0[.]0[.]1)(:[0-9]+)?)$", u))])
     error_message = "CORS origins must be exact HTTPS or local HTTP origins, without a wildcard or path."
   }
-  type = set(string)
+  type    = set(string)
+  default = []
 }
 
 variable "lambda_package_directory" {

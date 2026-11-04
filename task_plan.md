@@ -4,6 +4,9 @@
 Tái hiện hoàn chỉnh hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS theo chuỗi 21 bài và repository `nghiadaulau/serverless-url-shortener-aws`, chuyển đổi sang **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js Static Export (`S3 + CloudFront OAC`)**, với mỗi Task hoàn thành được tạo một **Pull Request riêng** và luôn cập nhật trạng thái hiện tại của dự án.
 
 ## Current Phase
+Phase 5 — in_progress. Task 5.3 đã hoàn thành local, chờ publish và kiểm tra CloudFront thật.
+
+### Lịch sử
 Review fix Task4.2 — complete (implementation/local): execution name/ARN được theo dõi trước StartExecution; cleanup chỉ xóa khi xác nhận terminal. Tám lifecycle regression tests và PS offline PASS; PR #77 đã merge main501c049; [PR fix #78](https://github.com/TrieuNguyenPhu/shorten-link/pull/78) từ main, CI #186 PASS, chờ review.
 
 Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e3769; Task4.2 có Terraform WebSocket/Step Functions, bounded IAM và E2E scenario, 37plan tests/Go checks/PS offline PASS; [PR #77](https://github.com/TrieuNguyenPhu/shorten-link/pull/77) CI #183 PASS, đã merge main501c049. AWS Phase3/4 chưa apply; Task5.1 kế tiếp sau review/merge.
@@ -41,8 +44,8 @@ Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e37
 ### Phase 5: Frontend Next.js Dashboard & S3 + CloudFront OAC Hosting
 - [ ] **Task 5.1:** Scaffold static export/CI đã có; Google auth và UI chưa triển khai. Khởi tạo Next.js App Router (`output: "export"`), nút Google qua Cognito PKCE & các trang Landing (`/`), Login (`/login`), Callback (`/auth/callback`) theo Hand-Drawn / Doodle & Sketch UI.
 - [ ] **Task 5.2:** Xây dựng Dashboard (`/dashboard`), My Links (`/links`) cùng phong cách Doodle & Sketch, tích hợp HTTP API thật & Native WebSocket Hook (`useRealtimeClicks`).
-- [ ] **Task 5.3:** Xây dựng Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + CloudFront Function URL rewrite).
-- **Status:** pending
+- [x] **Task 5.3:** `Status: complete` (local). Xây dựng Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + CloudFront Function URL rewrite).
+- **Status:** in_progress
 
 ### Phase 6: Production Operations, Observability, Canary CI/CD & Load Testing
 - [ ] **Task 6.1:** Xây dựng Terraform Modules `observability` (CloudWatch Alarms, SNS, Dashboard, X-Ray) & `codedeploy_canary` (`LambdaCanary10Percent5Minutes` trên alias `live`).

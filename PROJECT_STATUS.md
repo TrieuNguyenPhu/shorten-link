@@ -1,6 +1,6 @@
 # PROJECT_STATUS.md — Trạng Thái Hiện Tại Của Dự Án
 
-> **Cập nhật lần cuối:** 2026-11-04 (**Phase 4 implementation/local complete; PR #77 đã merge; cleanup review fix PR #78 CI #186 PASS, chờ review**)
+> **Cập nhật lần cuối:** 2026-11-05 (Task 5.3 đã hoàn thành triển khai và kiểm tra local).
 > **Quy tắc bắt buộc:** File này luôn được cập nhật ngay sau khi hoàn thành mỗi Task trước khi mở Pull Request tương ứng.
 
 ---
@@ -9,8 +9,8 @@
 
 | Hạng mục | Trạng thái | Chi tiết |
 | --- | --- | --- |
-| **Giai đoạn hiện tại (Current Phase)** | **Phase 4 — `complete` (implementation/local)** | Task4.1 đã merge; Task4.2 Terraform/local complete, AWS Phase3/4 chưa deploy |
-| **Task hiện tại** | **Task 4.2 — `complete` (implementation/local, review fix)** | Lost-response cleanup đã sửa; tám lifecycle regressions và PS offline PASS; PR #78 từ main501c049 sau PR #77 merge; CI #186 PASS, chờ review |
+| **Giai đoạn hiện tại (Current Phase)** | **Phase 5 — `in_progress`** | Hosting đã qua kiểm tra local, các task frontend được theo dõi riêng |
+| **Task hiện tại** | **Task 5.3 — `complete` (local)** | Private S3, OAC, cache và rewrite đã qua 38 Terraform tests và 8 Node tests trên hai root |
 | **Task tiếp theo (Next Up)** | **Task 5.1 (Phase 5)** | Next.js Google auth và Doodle UI sau Phase4 |
 | **Trạng thái AWS Cloud** | **Core đã triển khai ngày 2026-11-04** | Account654822777701, ap-southeast-1; bootstrap10 + core42 tài nguyên mới; pin deployment policy sau apply, không destroy |
 | **13 Bộ Skills & `AGENTS.md`** | **Đã kiểm tra file/config** | Đủ 13 file skill đại diện; 314 thư mục cấp đầu có `SKILL.md`. Có cấu hình trỏ `~/.agents/skills`; không suy ra mọi host đều tự nạp |
@@ -32,7 +32,7 @@
 | **Phase 4** | **Task 4.2** | Terraform Modules `websocket_api` (`$connect`, `$disconnect`, stage `prod`) & `moderation_sfn` | `feat/phase-04-task-02-terraform-websocket-and-sfn` | complete (đã merge main501c049; review fix riêng) | [PR #77](https://github.com/TrieuNguyenPhu/shorten-link/pull/77); [fix #78](https://github.com/TrieuNguyenPhu/shorten-link/pull/78) |
 | **Phase 5** | **Task 5.1** | Next.js static, Google-only qua Cognito PKCE, Landing/Login/Callback theo Doodle & Sketch UI | `feat/phase-05-task-01-nextjs-auth-and-pages` | ⏳ Pending (auth/UI); scaffold đã kiểm | [PR #70 — scaffold/static export](https://github.com/TrieuNguyenPhu/shorten-link/pull/70) |
 | **Phase 5** | **Task 5.2** | Dashboard & My Links Doodle & Sketch, API thật & Native WebSocket Hook (`useRealtimeClicks`) | `feat/phase-05-task-02-dashboard-api-and-websocket` | ⏳ Pending | — |
-| **Phase 5** | **Task 5.3** | Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + URL Rewrite) | `feat/phase-05-task-03-terraform-s3-cloudfront-oac` | ⏳ Pending | — |
+| **Phase 5** | **Task 5.3** | Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + URL Rewrite) | `feat/phase-05-task-03-terraform-s3-cloudfront-oac` | complete (local) | — |
 | **Phase 6** | **Task 6.1** | Terraform Modules `observability` (Alarms, SNS, Dashboard, X-Ray) & `codedeploy_canary` (`live` alias) | `feat/phase-06-task-01-observability-and-canary` | ⏳ Pending | — |
 | **Phase 6** | **Task 6.2** | GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), k6 Load Test & Runbook E2E | `feat/phase-06-task-02-cicd-k6-and-runbook` | ⏳ Pending | — |
 

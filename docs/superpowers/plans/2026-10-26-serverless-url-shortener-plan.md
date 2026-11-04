@@ -328,10 +328,10 @@
   - Create: `infrastructure/terraform/modules/frontend_hosting/url-rewrite.js`
   - Modify: `infrastructure/terraform/environments/dev/main.tf`, `infrastructure/terraform/environments/dev/outputs.tf`, `PROJECT_STATUS.md`, `task_plan.md`, `progress.md`, `findings.md`
 - **Steps:**
-  - [ ] **Step 1:** Tạo module `frontend_hosting` gồm S3 bucket private (`aws_s3_bucket_public_access_block` bật cả 4 cờ), `aws_cloudfront_origin_access_control` (SigV4 `always`), bucket policy chỉ cho phép CloudFront distribution ARN đọc object qua HTTPS.
-  - [ ] **Step 2:** CloudFront cache `_next/static/*` immutable1year, HTML TTL ngắn; viewer-request rewrite `/dashboard` → `/dashboard/index.html`, bảo toàn callback query. Missing route/asset non-200 (403 hoặc404 private S3), không catch-all200; không cấp ListBucket rộng hay che OAC error để ép404. Test rewrite và E2E routes/assets/missing/auth callback.
-  - [ ] **Step 3:** Cập nhật CORS HTTP API và callback/logout URLs Cognito theo domain CloudFront thật (`/auth/callback/`); giữ Google OAuth redirect URI trỏ Cognito `/oauth2/idpresponse`, không trỏ CloudFront.
-  - [ ] **Step 4:** Chạy cổng Terraform fmt/init-backend=false/validate/test ở cuối kế hoạch, cập nhật CI và frontend E2E.
+  - [x] **Step 1:** Tạo module `frontend_hosting` gồm S3 bucket private (`aws_s3_bucket_public_access_block` bật cả 4 cờ), `aws_cloudfront_origin_access_control` (SigV4 `always`), bucket policy chỉ cho phép CloudFront distribution ARN đọc object qua HTTPS.
+  - [x] **Step 2:** CloudFront cache `_next/static/*` immutable1year, HTML TTL ngắn; viewer-request rewrite `/dashboard` → `/dashboard/index.html`, bảo toàn callback query. Missing route/asset non-200 (403 hoặc404 private S3), không catch-all200; không cấp ListBucket rộng hay che OAC error để ép404. Test rewrite và E2E routes/assets/missing/auth callback.
+  - [x] **Step 3:** Cập nhật CORS HTTP API và callback/logout URLs Cognito theo domain CloudFront thật (`/auth/callback/`); giữ Google OAuth redirect URI trỏ Cognito `/oauth2/idpresponse`, không trỏ CloudFront.
+  - [x] **Step 4:** Chạy cổng Terraform fmt/init-backend=false/validate/test ở cuối kế hoạch, cập nhật CI và frontend E2E.
   - [ ] **Step 5:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 5.3.
 
 ---
