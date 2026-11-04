@@ -126,3 +126,12 @@ Script kiểm tất cả issuer/expiry/aud/sub trước kết nối, gọi STS A
 Người dùng đã yêu cầu sửa lỗi và apply sau final review ngày2026-11-04. Triển khai bằng operator trước, sau đó pin cả http_api_ids/cognito_user_pool_ids và cập nhật bootstrap trước khi role CD được dùng. CreateUserPool không được cấp cho deployment role; quyền Tag/Untag pool chỉ trên ARN được pin và bị deny ownership keys. Thêm quyền đọc GetFunctionCodeSigningConfig cho các function ARN hiện có.
 
 AWS Core kiểm delete bằng Wait-DeletedLink (tối đa10 reads, cách250ms, chỉ retry301; status khác fail ngay), phù hợp eventual reads. API list dùng cursor contract đã được người dùng chốt, xem architecture3.2. Saved plan/state/input OAuth phải được bảo vệ, không commit hoặc log secret. State/resource output thực sẽ ghi trong PROJECT_STATUS sau apply thành công; không coi fixture/mock test là bằng chứng AWS.
+
+
+## 9. Bằng chứng triển khai 2026-11-04
+
+Theo yêu cầu apply rõ ràng của người dùng, account654822777701/ap-southeast-1 đã nhận10bootstrap +42core resources; policy deployment sau đó update1lần để pin API txnaexyh3d và pool ap-southeast-1_SGj2otrc0. Không có destroy. Endpoint https://txnaexyh3d.execute-api.ap-southeast-1.amazonaws.com . Cấu hình OAuth đọc trực tiếp từ JSON local, callback hiện http://localhost:3000/auth/callback/ trước Phase5.
+
+AWS smoke đã xác minh JWT negatives, CRUD/list cursor qua operator Lambda invokes, HTTP301/404, publisher ack và redirect Cognito→Google; đã xóa cả2link thử. Đây chưa phải Core E2E với Google access tokens thật. Bootstrap state backup riêng tại /home/trieunguyen/.local/state/shorten-link/bootstrap-terraform.tfstate, quyền0600; inputs/state/plan không commit.
+
+Cognito tự thêm username mapping và Google endpoint metadata khi read-back. Module ignore đúng các entries tự sinh, giữ client_id/client_secret/authorize_scopes và email/name dưới quản lý Terraform; [source provider6.71.0](https://github.com/hashicorp/terraform-provider-aws/blob/v6.71.0/internal/service/cognitoidp/identity_provider.go) đọc toàn bộ maps. Final bootstrap/core plan đều detailed-exitcode0. IAM Access Analyzer trên policy đã pin không có errors/security warnings. CI170 của PR#73 PASS cả4jobs trước commit chốt evidence/default handling.

@@ -1,6 +1,6 @@
 # PROJECT_STATUS.md — Trạng Thái Hiện Tại Của Dự Án
 
-> **Cập nhật lần cuối:** 2026-11-04 (**Phase 2 final review fixes in_progress; người dùng đã yêu cầu apply AWS**)
+> **Cập nhật lần cuối:** 2026-11-04 (**Phase 2 final review/apply complete; AWS core đã triển khai**)
 > **Quy tắc bắt buộc:** File này luôn được cập nhật ngay sau khi hoàn thành mỗi Task trước khi mở Pull Request tương ứng.
 
 ---
@@ -9,10 +9,10 @@
 
 | Hạng mục | Trạng thái | Chi tiết |
 | --- | --- | --- |
-| **Giai đoạn hiện tại (Current Phase)** | **Phase 2 — `complete` (implementation)** | Task 2.1 đã merge #71; Task 2.2 kiểm tra local PASS, chờ review/merge; AWS E2E pending |
-| **Task hiện tại** | **Phase 2 final review — `in_progress`** | Bootstrap/core modules, 16 plan tests và PowerShell preflight PASS; chờ review/merge |
+| **Giai đoạn hiện tại (Current Phase)** | **Phase 2 — `complete` (implementation)** | Task 2.1/#71 và 2.2/#72 đã merge; final review/apply hoàn tất qua PR #73; Google authenticated E2E pending |
+| **Task hiện tại** | **Phase 2 final review — `complete`** | 18 plan tests, AWS smoke PASS; bootstrap/core final plans no changes; PR #73 chờ review/merge |
 | **Task tiếp theo (Next Up)** | **Task 3.1 (Phase 3)** | Click aggregator sau Phase 2 |
-| **Trạng thái AWS Cloud** | **Đã dọn theo xác nhận người dùng** | Người dùng xác nhận ngày 2026-10-26 đã xóa toàn bộ tài nguyên triển khai trước đó; phiên hoàn thiện Phase 0 không kiểm kê AWS hay xác nhận hóa đơn |
+| **Trạng thái AWS Cloud** | **Core đã triển khai ngày 2026-11-04** | Account654822777701, ap-southeast-1; bootstrap10 + core42 tài nguyên mới; pin deployment policy sau apply, không destroy |
 | **13 Bộ Skills & `AGENTS.md`** | **Đã kiểm tra file/config** | Đủ 13 file skill đại diện; 314 thư mục cấp đầu có `SKILL.md`. Có cấu hình trỏ `~/.agents/skills`; không suy ra mọi host đều tự nạp |
 
 ---
@@ -25,7 +25,7 @@
 | **Phase 1** | **Task 1.1** | Monorepo, `Makefile`, Go module, Domain Models, Base62 Generator & URL Validator + Unit Tests, CI nền | `fix/phase-01-task-01-final-review` | complete | [PR #68 — đã merge main](https://github.com/TrieuNguyenPhu/shorten-link/pull/68); gốc #66 |
 | **Phase 1** | **Task 1.2** | Observability Middleware (`slog` JSON, CloudWatch EMF, X-Ray) & Script đóng gói Lambda `arm64` ZIP | `fix/phase-01-task-02-main-integration` | complete | [PR #69 — đã merge main](https://github.com/TrieuNguyenPhu/shorten-link/pull/69); gốc #67 |
 | **Phase 2** | **Task 2.1** | DynamoDB Repository, Link Service, EventBridge publisher, local HTTP harness & 4 HTTP Lambdas + Tests | `feat/phase-02-task-01-core-crud-lambdas` | complete (đã merge main) | [PR #71](https://github.com/TrieuNguyenPhu/shorten-link/pull/71) |
-| **Phase 2** | **Task 2.2** | Terraform Bootstrap (S3 state/lockfile, OIDC) & Core Modules, Cognito Google-only, custom event bus | `feat/phase-02-task-02-terraform-core-infra` | complete (chờ review/merge) | [PR #72](https://github.com/TrieuNguyenPhu/shorten-link/pull/72) |
+| **Phase 2** | **Task 2.2** | Terraform Bootstrap (S3 state/lockfile, OIDC) & Core Modules, Cognito Google-only, custom event bus | `feat/phase-02-task-02-terraform-core-infra` | complete (đã merge main) | [PR #72](https://github.com/TrieuNguyenPhu/shorten-link/pull/72) |
 | **Phase 3** | **Task 3.1** | Go Lambda `click-aggregator` (`TransactWriteItems`, `CancellationReasons`, `ReportBatchItemFailures`) + Tests | `feat/phase-03-task-01-click-aggregator-lambda` | ⏳ Pending | — |
 | **Phase 3** | **Task 3.2** | Terraform Module `event_pipeline` (nhận bus từ Task 2.2, tạo rule, SQS `ClickQueue` + `ClickDLQ`, ESM) | `feat/phase-03-task-02-terraform-event-pipeline` | ⏳ Pending | — |
 | **Phase 4** | **Task 4.1** | Go Lambdas `ws-connect`, `ws-disconnect`, `PostToConnection` Pusher (`410 Gone`) & `moderate-check` + ASL | `feat/phase-04-task-01-websocket-and-moderation-lambdas` | ⏳ Pending | — |
@@ -125,6 +125,13 @@
 
 
 ## 12. Sửa final review và triển khai Phase 2 — 2026-11-04
-- Người dùng đã yêu cầu sửa bốn phát hiện, review cuối rồi terraform apply. Đây là authorization triển khai mới; không yêu cầu xác nhận apply lần nữa. Đang kiểm credentials/Google OAuth inputs, chưa apply. #71/#72 đã merge main634ee88; nhánh fix/phase-02-final-review từ main.
+- Người dùng đã yêu cầu sửa bốn phát hiện, review cuối rồi terraform apply. Đây là authorization triển khai mới; đã apply bootstrap/core và pin policy sau final review. #71/#72 đã merge main634ee88; nhánh fix/phase-02-final-review từ main.
 
 - Đã sửa bốn finding: Cognito maintenance pin pool ARN và cấm retag ownership, thêm GetFunctionCodeSigningConfig; cursor pagination được người dùng chốt và cập nhật đặc tả; bounded deletion wait. Go race/vet/build4ZIP, DynamoDB Local integration/HTTP E2E, Terraform validate/fmt/18 plan tests và PowerShell preflight/deletion tests PASS. Final diff review không còn finding cần sửa; đang triển khai AWS được người dùng yêu cầu. Google Web client JSON đã được đọc trực tiếp từ file local, không commit/log secret.
+
+- PR sửa review: [#73](https://github.com/TrieuNguyenPhu/shorten-link/pull/73); commit code b62811f. CI [run170](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41767763287) PASS backend, terraform, packaging-windows và frontend. Commit tiếp theo chốt evidence và Cognito read-back defaults.
+- AWS account654822777701 / ap-southeast-1: bootstrap apply10added/0changed/0destroyed; core42added/0changed/0destroyed; pinning0added/1changed/0destroyed. Cognito pool ap-southeast-1_SGj2otrc0, API txnaexyh3d; deployment policy chỉ cho maintenance đúng pool/API, IAM Access Analyzer không có errors/security warnings trên policy thực đã pin.
+- API: https://txnaexyh3d.execute-api.ap-southeast-1.amazonaws.com ; table url-shortener (PITR/TTL/deletion protection); bus url-shortener-events; bốn Lambda arm64 có alias live. Cognito Google client2dvtankl8jhb76q0qukiuhmtlg, domain https://url-shortener-dev-654822777701.auth.ap-southeast-1.amazoncognito.com . Callback hiện http://localhost:3000/auth/callback/; frontend auth/hosting vẫn Phase5.
+- Smoke AWS PASS: ba private routes thiếu JWT401, malformed JWT401, public missing404; operator invoke các Lambda tạo2link, list hai trang, reject foreign delete404/cross-owner cursor400/limit101400; HTTP resolve301 qua live alias và EventBridge publisher nhận ack. Cleanup cả2link rồi HTTP404; Cognito code+PKCE authorization redirect302 về accounts.google.com. Operator invocation với authorizer context không thay thế Google access-token E2E.
+- Lượt plan sau apply phát hiện Cognito thêm username/sub và6 provider metadata keys. Sửa lifecycle chỉ ignore các AWS defaults, giữ credentials/scopes/email/name được quản lý. RED actual plan exit2; GREEN sau sửa: fmt/validate/8core tests PASS và bootstrap/core detailed-exitcode đều0 (no changes). Không thay secret hoặc recreate pool.
+- Bootstrap state local và backup /home/trieunguyen/.local/state/shorten-link/bootstrap-terraform.tfstate quyền0600; app state S3 private/versioned/AES256/TLS/native lockfile. OAuth JSON/tfvars/plan/state không tracked hoặc hiển thị secret. Google browser sign-in/API E2E hai tài khoản, STS OIDC trust matrix, trace export và pipeline delivery vẫn pending theo task sở hữu; không chạy load test.

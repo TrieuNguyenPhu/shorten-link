@@ -44,6 +44,19 @@ resource "aws_cognito_identity_provider" "google" {
     email = "email"
     name  = "name"
   }
+  # Cognito adds these read-only Google defaults on DescribeIdentityProvider.
+  # Keep client credentials, scopes and application attribute mappings managed.
+  lifecycle {
+    ignore_changes = [
+      attribute_mapping["username"],
+      provider_details["attributes_url"],
+      provider_details["attributes_url_add_attributes"],
+      provider_details["authorize_url"],
+      provider_details["oidc_issuer"],
+      provider_details["token_request_method"],
+      provider_details["token_url"],
+    ]
+  }
 }
 resource "aws_cognito_user_pool_client" "web" {
   name                                 = "${var.name}-web"
