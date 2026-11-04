@@ -11,8 +11,8 @@ variables {
 run "aggregator_role_and_boundary" {
   command = plan
   assert {
-    condition     = contains(local.handlers, "click-aggregator") && length(local.handlers) == 5 && contains(local.role_arns, "arn:aws:iam::111111111111:role/url-shortener/dev/url-shortener-dev-click-aggregator")
-    error_message = "Only the five implemented Lambda roles may be created/passed."
+    condition     = contains(local.handlers, "click-aggregator") && length(local.handlers) == 8 && contains(local.role_arns, "arn:aws:iam::111111111111:role/url-shortener/dev/url-shortener-dev-click-aggregator")
+    error_message = "Only the eight implemented Lambda roles may be created/passed."
   }
   assert {
     condition     = contains(jsondecode(aws_iam_policy.runtime_boundary.policy).Statement[0].Action, "dynamodb:UpdateItem") && one([for s in jsondecode(aws_iam_policy.runtime_boundary.policy).Statement : s if contains(s.Action, "sqs:ReceiveMessage")]).Resource == ["arn:aws:sqs:ap-southeast-1:111111111111:url-shortener-dev-ClickQueue"]

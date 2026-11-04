@@ -98,3 +98,51 @@ foreach ($body in @('42','true','null','[1,2]','[{"id":"wanted"}]','{"id":["want
 $matched = Read-PipelineEnvelope -Body '{"id":"wanted","detail":{"code":"Abc1234"}}' -EventID 'wanted'
 if ($null -eq $matched -or $matched.detail.code -ne 'Abc1234') { throw 'The matching DLQ envelope must remain available for validation and cleanup.' }
 Write-Host 'Pipeline DLQ JSON shape/matching regression PASS; no AWS requests sent.'
+
+[void][Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'realtime.ps1'), [ref]$tokens, [ref]$errors)
+if ($errors.Count -gt 0) { throw ($errors | Out-String) }
+. (Join-Path $PSScriptRoot 'realtime.ps1')
+$realtimeConfig = @{
+    table_name = @{value='url-shortener'}
+    table_arn = @{value='arn:aws:dynamodb:ap-southeast-1:111111111111:table/url-shortener'}
+    http_api_endpoint = @{value='https://http123.execute-api.ap-southeast-1.amazonaws.com'}
+    websocket_api_id = @{value='ws123'}
+    websocket_endpoint = @{value='wss://ws123.execute-api.ap-southeast-1.amazonaws.com/prod'}
+    websocket_management_endpoint = @{value='https://ws123.execute-api.ap-southeast-1.amazonaws.com/prod'}
+    websocket_connections_arn = @{value='arn:aws:execute-api:ap-southeast-1:111111111111:ws123/prod/POST/@connections/*'}
+    moderation_state_machine_arn = @{value='arn:aws:states:ap-southeast-1:111111111111:stateMachine:url-shortener-dev-moderation'}
+    moderation_role_arn = @{value='arn:aws:iam::111111111111:role/url-shortener/dev/url-shortener-dev-moderation-sfn'}
+    lambda_aliases = @{value=@{'moderate-check'='arn:aws:lambda:ap-southeast-1:111111111111:function:url-shortener-dev-moderate-check:live';'click-aggregator'='arn:aws:lambda:ap-southeast-1:111111111111:function:url-shortener-dev-click-aggregator:live'}}
+    cognito_issuer = @{value='https://cognito-idp.ap-southeast-1.amazonaws.com/ap-southeast-1_test'}
+    cognito_client_id = @{value='test-client'}
+}
+$oldToken = $env:E2E_ACCESS_TOKEN_A
+$realtimeTemporary = [IO.Path]::GetTempFileName()
+try {
+    $env:E2E_ACCESS_TOKEN_A = ''
+    $failed = $false
+    try {
+        $realtimeConfig | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $realtimeTemporary
+        & $scriptPath -Scenario Realtime -OutputsPath $realtimeTemporary
+    }
+    catch { if ($_.Exception.Message -ne 'Missing required environment input: E2E_ACCESS_TOKEN_A') { throw }; $failed = $true }
+    if (-not $failed) { throw 'Realtime must fail before network access when a token is missing.' }
+    foreach ($pair in @(
+        @('websocket_endpoint','wss://example.org/prod'),
+        @('websocket_management_endpoint','https://ws123.execute-api.ap-southeast-1.amazonaws.com/prod?leak=true'),
+        @('moderation_state_machine_arn','arn:aws:states:ap-southeast-1:222222222222:stateMachine:url-shortener-dev-moderation'),
+        @('websocket_connections_arn','arn:aws:execute-api:ap-southeast-1:111111111111:other/prod/POST/@connections/*')
+    )) {
+        $previous = $realtimeConfig[$pair[0]].value
+        $realtimeConfig[$pair[0]].value = $pair[1]
+        $failed = $false
+        try { Get-RealtimeConfig $realtimeConfig | Out-Null }
+        catch { $failed = $_.Exception.Message -eq 'Realtime requires matching AWS HTTP, WebSocket, table and moderation outputs.' }
+        $realtimeConfig[$pair[0]].value = $previous
+        if (-not $failed) { throw 'Realtime must reject mismatched or non-AWS resource outputs before tokens or requests.' }
+    }
+} finally {
+    $env:E2E_ACCESS_TOKEN_A = $oldToken
+    Remove-Item -LiteralPath $realtimeTemporary -Force
+}
+Write-Host 'Realtime parser, resource scope and missing-token preflight PASS; no AWS requests sent.'

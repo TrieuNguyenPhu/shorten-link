@@ -4,7 +4,7 @@
 
 Task4.1 cung cấp ba Lambda Go `ws-connect`, `ws-disconnect`, `moderate-check`, repository connection, pusher cho aggregator và [ASL moderation](../statemachine/moderation.asl.json). Build bằng `bash scripts/build-lambdas.sh` tạo đủ tám ZIP Linux arm64, mỗi archive chỉ chứa `bootstrap` quyền0755.
 
-Hai Lambda WebSocket cần `TABLE_NAME`. Aggregator nhận thêm `WS_ENDPOINT` dạng management URL HTTPS `https://<api-id>.execute-api.<region>.amazonaws.com/prod`, không dùng `wss://` hoặc thêm `/@connections`. Endpoint được lấy từ cấu hình triển khai, không lấy từ input click. Khi chưa đặt biến này, aggregator chỉ ghi counter như Phase3. Task4.2 mới tạo WebSocket API/stage, IAM và truyền endpoint. `moderate-check` chỉ kiểm tra input, không cần bảng hoặc AWS credentials.
+Hai Lambda WebSocket cần `TABLE_NAME`. Aggregator nhận thêm `WS_ENDPOINT` dạng management URL HTTPS `https://<api-id>.execute-api.<region>.amazonaws.com/prod`, không dùng `wss://` hoặc thêm `/@connections`. Endpoint được lấy từ cấu hình triển khai, không lấy từ input click. Khi chưa đặt biến này, aggregator chỉ ghi counter như Phase3. Task4.2 đã có [Terraform WebSocket API/stage, IAM và wiring endpoint](./terraform-realtime-and-moderation.md); các tài nguyên này chưa được apply. `moderate-check` chỉ kiểm tra input, không cần bảng hoặc AWS credentials.
 
 Runtime DynamoDB/Management API dùng AWS SDK v2, retry tối đa2attempts/backoff100ms và X-Ray instrumentation như các Lambda hiện có. Hai handler WebSocket giới hạn4giây; notifier giữ budget200ms sau commit trong deadline4giây của batch. Không đủ thời gian thì push có thể dở dang, chỉ log lỗi; không redeliver record đã commit để cố gửi lại notification.
 
@@ -51,7 +51,7 @@ ASL giữ hai placeholder `${ModerateCheckArn}` và `${TableName}` cho Terraform
 
 ## Runbook manual AWS — chưa chạy trong Task4.1
 
-Chỉ chạy phần này sau khi Task4.2 đã được review, triển khai theo yêu cầu người dùng và có outputs endpoint, table, state machine ARN. Trong Task4.1 không apply hoặc gọi AWS. Tài liệu [kiểm thử local](./local-testing.md) mô tả bằng chứng hiện có.
+Chỉ chạy phần này sau khi Task4.2 đã được review, triển khai theo yêu cầu người dùng và có outputs endpoint, table, state machine ARN. Task4.2 cung cấp Scenario Realtime trong [hướng dẫn Terraform](./terraform-realtime-and-moderation.md). Trong Task4.1 không apply hoặc gọi AWS. Tài liệu [kiểm thử local](./local-testing.md) mô tả bằng chứng hiện có.
 
 1. Tạo hai link thật bằng `POST /links` với Cognito access token: target `https://example.org/docs` (safe) và `https://example.org/evil` (reject). Giữ code trả về cho từng link; không tự chọn code rồi để workflow tạo META. Với mỗi code, dùng `GetItem --consistent-read` kiểm `LINK#code/META` có target đúng, ownerId, createdAt và clicks. Giữ nguyên link trong toàn bộ execution, không xóa song song với moderation.
 2. Chạy một execution cho mỗi input `{code,target}` đúng link tương ứng. Theo dõi history: `CheckSafety` → `IsSafe` → `Activate`/`Reject`; execution `SUCCEEDED`, đọc META consistent để xác nhận active/rejected. Kiểm ownerId/createdAt/target/clicks không đổi. Gọi redirect để kiểm hợp đồng status không chặn301; thao tác redirect sẽ tạo click thật.

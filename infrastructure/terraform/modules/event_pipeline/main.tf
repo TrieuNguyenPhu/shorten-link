@@ -60,10 +60,14 @@ resource "aws_cloudwatch_event_target" "clicks" {
   depends_on = [aws_sqs_queue_policy.clicks]
 }
 locals {
-  aggregator_permissions = [
+  aggregator_permissions = concat([
     { actions = ["dynamodb:UpdateItem", "dynamodb:PutItem", "dynamodb:GetItem"], resources = [var.table_arn] },
     { actions = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"], resources = [aws_sqs_queue.clicks.arn] }
-  ]
+    ], var.ws_endpoint == null ? [] : [
+    { actions = ["dynamodb:Query"], resources = ["${var.table_arn}/index/GSI1"] },
+    { actions = ["dynamodb:DeleteItem"], resources = [var.table_arn] },
+    { actions = ["execute-api:ManageConnections"], resources = [var.ws_connections_arn] }
+  ])
 }
 module "aggregator" {
   source                = "../lambda"
@@ -72,7 +76,7 @@ module "aggregator" {
   role_path             = "/url-shortener/dev/"
   runtime_boundary_arn  = var.runtime_boundary_arn
   permissions           = local.aggregator_permissions
-  environment_variables = { TABLE_NAME = var.table_name }
+  environment_variables = merge({ TABLE_NAME = var.table_name }, var.ws_endpoint == null ? {} : { WS_ENDPOINT = var.ws_endpoint })
   log_retention_days    = var.log_retention_days
 }
 resource "aws_lambda_event_source_mapping" "clicks" {

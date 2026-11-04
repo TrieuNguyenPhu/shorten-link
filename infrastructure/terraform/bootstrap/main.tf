@@ -28,7 +28,7 @@ resource "aws_s3_bucket_policy" "state_tls" {
   })
 }
 locals {
-  api_ids = length(var.http_api_ids) > 0 ? var.http_api_ids : toset(["*"])
+  api_ids = length(var.http_api_ids) > 0 ? setunion(var.http_api_ids, var.websocket_api_ids) : toset(["*"])
   api_resource_arns = flatten([for id in local.api_ids : [
     "arn:${data.aws_partition.current.partition}:apigateway:${var.aws_region}::/apis/${id}",
     "arn:${data.aws_partition.current.partition}:apigateway:${var.aws_region}::/apis/${id}/stages/*"
@@ -46,7 +46,7 @@ locals {
   base_arn          = "arn:${local.partition}"
   table_arn         = "${local.base_arn}:dynamodb:${var.aws_region}:${var.aws_account_id}:table/${var.table_name}"
   bus_arn           = "${local.base_arn}:events:${var.aws_region}:${var.aws_account_id}:event-bus/${var.event_bus_name}"
-  handlers          = ["create-link", "resolve-link", "list-links", "delete-link", "click-aggregator"]
+  handlers          = ["create-link", "resolve-link", "list-links", "delete-link", "click-aggregator", "ws-connect", "ws-disconnect", "moderate-check"]
   role_arns         = [for handler in local.handlers : "${local.base_arn}:iam::${var.aws_account_id}:role/url-shortener/dev/${var.name_prefix}-${handler}"]
   function_arns = flatten([for handler in local.handlers : [
     "${local.base_arn}:lambda:${var.aws_region}:${var.aws_account_id}:function:${var.name_prefix}-${handler}",
@@ -64,14 +64,14 @@ resource "aws_iam_policy" "runtime_boundary" {
   path = "/url-shortener/bootstrap/"
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
+    Statement = concat([
       { Effect = "Allow", Action = ["dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:DeleteItem", "dynamodb:UpdateItem"], Resource = [local.table_arn] },
       { Effect = "Allow", Action = ["dynamodb:Query"], Resource = ["${local.table_arn}/index/GSI1"] },
       { Effect = "Allow", Action = ["events:PutEvents"], Resource = [local.bus_arn] },
       { Effect = "Allow", Action = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"], Resource = [local.click_queue_arns[0]] },
       { Effect = "Allow", Action = ["logs:CreateLogStream", "logs:PutLogEvents"], Resource = ["${local.base_arn}:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${var.name_prefix}-*:*"] },
       { Effect = "Allow", Action = ["xray:PutTraceSegments", "xray:PutTelemetryRecords"], Resource = ["*"] }
-    ]
+    ], [for id in sort(tolist(var.websocket_api_ids)) : { Effect = "Allow", Action = ["execute-api:ManageConnections"], Resource = ["${local.base_arn}:execute-api:${var.aws_region}:${var.aws_account_id}:${id}/prod/POST/@connections/*"] }])
   })
 }
 resource "aws_iam_role_policy" "state" {
@@ -97,18 +97,11 @@ resource "aws_iam_role_policy" "deployment" {
       { Sid = "KeepBoundary", Effect = "Deny", Action = ["iam:DeleteRolePermissionsBoundary"], Resource = local.role_arns },
       { Sid = "PassAppRoles", Effect = "Allow", Action = ["iam:PassRole"], Resource = local.role_arns, Condition = { StringEquals = { "iam:PassedToService" = "lambda.amazonaws.com" } } },
       { Sid = "ReadBoundary", Effect = "Allow", Action = ["iam:GetPolicy", "iam:GetPolicyVersion"], Resource = [aws_iam_policy.runtime_boundary.arn] },
-      { Sid = "AppFunctions", Effect = "Allow", Action = ["lambda:CreateFunction", "lambda:GetFunction", "lambda:GetFunctionConfiguration", "lambda:GetFunctionCodeSigningConfig", "lambda:UpdateFunctionCode", "lambda:UpdateFunctionConfiguration", "lambda:DeleteFunction", "lambda:PublishVersion", "lambda:ListVersionsByFunction", "lambda:CreateAlias", "lambda:GetAlias", "lambda:UpdateAlias", "lambda:DeleteAlias", "lambda:ListAliases", "lambda:AddPermission", "lambda:RemovePermission", "lambda:GetPolicy", "lambda:TagResource", "lambda:UntagResource", "lambda:ListTags"], Resource = local.function_arns },
       { Sid = "AppTable", Effect = "Allow", Action = ["dynamodb:CreateTable", "dynamodb:DescribeTable", "dynamodb:UpdateTable", "dynamodb:DeleteTable", "dynamodb:DescribeContinuousBackups", "dynamodb:UpdateContinuousBackups", "dynamodb:DescribeTimeToLive", "dynamodb:UpdateTimeToLive", "dynamodb:ListTagsOfResource", "dynamodb:TagResource", "dynamodb:UntagResource"], Resource = [local.table_arn] },
       { Sid = "AppEventBus", Effect = "Allow", Action = ["events:CreateEventBus", "events:DescribeEventBus", "events:UpdateEventBus", "events:DeleteEventBus", "events:ListTagsForResource", "events:TagResource", "events:UntagResource"], Resource = [local.bus_arn] },
       { Sid = "AppLogs", Effect = "Allow", Action = ["logs:CreateLogGroup", "logs:DeleteLogGroup", "logs:PutRetentionPolicy", "logs:DeleteRetentionPolicy", "logs:ListTagsForResource", "logs:TagResource", "logs:UntagResource"], Resource = local.log_arns },
       { Sid = "DescribeLogs", Effect = "Allow", Action = ["logs:DescribeLogGroups"], Resource = ["*"] },
       { Sid = "DescribeUserPoolDomain", Effect = "Allow", Action = ["cognito-idp:DescribeUserPoolDomain"], Resource = ["*"], Condition = { StringEquals = { "aws:RequestedRegion" = var.aws_region } } },
-      { Sid = "CreateTaggedHttpApi", Effect = "Allow", Action = ["apigateway:POST"], Resource = ["${local.base_arn}:apigateway:${var.aws_region}::/apis"], Condition = { StringEquals = { "aws:RequestTag/Project" = "url-shortener", "aws:RequestTag/Environment" = "dev" } } },
-      { Sid = "AppHttpApi", Effect = "Allow", Action = ["apigateway:GET", "apigateway:POST", "apigateway:PUT", "apigateway:PATCH", "apigateway:DELETE"], Resource = ["${local.base_arn}:apigateway:${var.aws_region}::/apis/*"], Condition = { StringEquals = { "aws:ResourceTag/Project" = "url-shortener", "aws:ResourceTag/Environment" = "dev" } } },
-      # API Gateway v2 child resources do not inherit parent tags. Scope them by IDs/path instead.
-      { Sid = "AppHttpApiChildren", Effect = "Allow", Action = ["apigateway:GET", "apigateway:POST", "apigateway:PUT", "apigateway:PATCH", "apigateway:DELETE"], Resource = local.api_child_arns },
-      { Sid = "AppApiTags", Effect = "Allow", Action = ["apigateway:GET", "apigateway:PUT", "apigateway:DELETE"], Resource = local.api_tag_arns },
-      { Sid = "ProtectApiOwnershipTags", Effect = "Deny", Action = ["apigateway:PUT", "apigateway:DELETE"], Resource = local.api_tag_arns, Condition = { "ForAnyValue:StringEqualsIgnoreCase" = { "aws:TagKeys" = ["Project", "Environment"] } } }
       ], [for statement in [
         { Sid = "AppUserPool", Effect = "Allow", Action = ["cognito-idp:DescribeUserPool", "cognito-idp:UpdateUserPool", "cognito-idp:DeleteUserPool", "cognito-idp:CreateUserPoolClient", "cognito-idp:DescribeUserPoolClient", "cognito-idp:UpdateUserPoolClient", "cognito-idp:DeleteUserPoolClient", "cognito-idp:CreateUserPoolDomain", "cognito-idp:UpdateUserPoolDomain", "cognito-idp:DeleteUserPoolDomain", "cognito-idp:CreateIdentityProvider", "cognito-idp:DescribeIdentityProvider", "cognito-idp:UpdateIdentityProvider", "cognito-idp:DeleteIdentityProvider", "cognito-idp:ListTagsForResource", "cognito-idp:TagResource", "cognito-idp:UntagResource"], Resource = local.cognito_pool_arns },
         { Sid = "ProtectCognitoOwnershipTags", Effect = "Deny", Action = ["cognito-idp:TagResource", "cognito-idp:UntagResource"], Resource = local.cognito_pool_arns, Condition = { "ForAnyValue:StringEqualsIgnoreCase" = { "aws:TagKeys" = ["Project", "Environment"] } } }

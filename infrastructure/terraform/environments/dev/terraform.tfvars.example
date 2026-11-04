@@ -1,3 +1,4 @@
+moderation_boundary_arn = "REPLACE_WITH_BOOTSTRAP_MODERATION_BOUNDARY_ARN"
 aws_account_id        = "REPLACE_WITH_12_DIGIT_ACCOUNT_ID"
 runtime_boundary_arn  = "REPLACE_WITH_BOOTSTRAP_RUNTIME_BOUNDARY_ARN"
 cognito_domain_prefix = "replace-with-unique-cognito-prefix"

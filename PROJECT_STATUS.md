@@ -1,6 +1,6 @@
 # PROJECT_STATUS.md — Trạng Thái Hiện Tại Của Dự Án
 
-> **Cập nhật lần cuối:** 2026-11-04 (**Phase 4 in_progress; Task4.1 implementation/local complete; PR #76 CI #180 PASS, chờ review**)
+> **Cập nhật lần cuối:** 2026-11-04 (**Phase 4 implementation/local complete; Task4.2 chuẩn bị PR; 37plan tests PASS**)
 > **Quy tắc bắt buộc:** File này luôn được cập nhật ngay sau khi hoàn thành mỗi Task trước khi mở Pull Request tương ứng.
 
 ---
@@ -9,9 +9,9 @@
 
 | Hạng mục | Trạng thái | Chi tiết |
 | --- | --- | --- |
-| **Giai đoạn hiện tại (Current Phase)** | **Phase 4 — `in_progress`** | Task4.1 WebSocket và moderation; AWS pipeline chưa deploy |
-| **Task hiện tại** | **Task 4.1 — `complete` (implementation/local)** | Go race/vet, DynamoDB Local/HTTP-WebSocket E2E, ASL contract và build8ZIP PASS; PR #76 CI #180 PASS, chờ review |
-| **Task tiếp theo (Next Up)** | **Task 4.2 (Phase 4)** | Terraform WebSocket API và Step Functions sau review/merge Task4.1 |
+| **Giai đoạn hiện tại (Current Phase)** | **Phase 4 — `complete` (implementation/local)** | Task4.1 đã merge; Task4.2 Terraform/local complete, AWS Phase3/4 chưa deploy |
+| **Task hiện tại** | **Task 4.2 — `complete` (implementation/local)** | 37Terraform plan tests, Go race/vet/build8ZIP và PS offline PASS; chuẩn bị PR riêng |
+| **Task tiếp theo (Next Up)** | **Task 5.1 (Phase 5)** | Next.js Google auth và Doodle UI sau Phase4 |
 | **Trạng thái AWS Cloud** | **Core đã triển khai ngày 2026-11-04** | Account654822777701, ap-southeast-1; bootstrap10 + core42 tài nguyên mới; pin deployment policy sau apply, không destroy |
 | **13 Bộ Skills & `AGENTS.md`** | **Đã kiểm tra file/config** | Đủ 13 file skill đại diện; 314 thư mục cấp đầu có `SKILL.md`. Có cấu hình trỏ `~/.agents/skills`; không suy ra mọi host đều tự nạp |
 
@@ -28,8 +28,8 @@
 | **Phase 2** | **Task 2.2** | Terraform Bootstrap (S3 state/lockfile, OIDC) & Core Modules, Cognito Google-only, custom event bus | `feat/phase-02-task-02-terraform-core-infra` | complete (đã merge main) | [PR #72](https://github.com/TrieuNguyenPhu/shorten-link/pull/72) |
 | **Phase 3** | **Task 3.1** | Go Lambda `click-aggregator` (`TransactWriteItems`, `CancellationReasons`, `ReportBatchItemFailures`) + Tests | `feat/phase-03-task-01-click-aggregator-lambda` | complete (đã merge main) | [PR #74](https://github.com/TrieuNguyenPhu/shorten-link/pull/74) | |
 | **Phase 3** | **Task 3.2** | Terraform Module `event_pipeline` (nhận bus từ Task 2.2, tạo rule, SQS `ClickQueue` + `ClickDLQ`, ESM) | `feat/phase-03-task-02-terraform-event-pipeline` | complete (đã merge main6dee1ca) | [PR #75](https://github.com/TrieuNguyenPhu/shorten-link/pull/75) | |
-| **Phase 4** | **Task 4.1** | Go Lambdas `ws-connect`, `ws-disconnect`, `PostToConnection` Pusher (`410 Gone`) & `moderate-check` + ASL | `feat/phase-04-task-01-websocket-and-moderation-lambdas` | complete (implementation/local) | [PR #76](https://github.com/TrieuNguyenPhu/shorten-link/pull/76) |
-| **Phase 4** | **Task 4.2** | Terraform Modules `websocket_api` (`$connect`, `$disconnect`, stage `prod`) & `moderation_sfn` | `feat/phase-04-task-02-terraform-websocket-and-sfn` | ⏳ Pending | — |
+| **Phase 4** | **Task 4.1** | Go Lambdas `ws-connect`, `ws-disconnect`, `PostToConnection` Pusher (`410 Gone`) & `moderate-check` + ASL | `feat/phase-04-task-01-websocket-and-moderation-lambdas` | complete (đã merge mainf6e3769) | [PR #76](https://github.com/TrieuNguyenPhu/shorten-link/pull/76) |
+| **Phase 4** | **Task 4.2** | Terraform Modules `websocket_api` (`$connect`, `$disconnect`, stage `prod`) & `moderation_sfn` | `feat/phase-04-task-02-terraform-websocket-and-sfn` | complete (implementation/local) | — |
 | **Phase 5** | **Task 5.1** | Next.js static, Google-only qua Cognito PKCE, Landing/Login/Callback theo Doodle & Sketch UI | `feat/phase-05-task-01-nextjs-auth-and-pages` | ⏳ Pending (auth/UI); scaffold đã kiểm | [PR #70 — scaffold/static export](https://github.com/TrieuNguyenPhu/shorten-link/pull/70) |
 | **Phase 5** | **Task 5.2** | Dashboard & My Links Doodle & Sketch, API thật & Native WebSocket Hook (`useRealtimeClicks`) | `feat/phase-05-task-02-dashboard-api-and-websocket` | ⏳ Pending | — |
 | **Phase 5** | **Task 5.3** | Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + URL Rewrite) | `feat/phase-05-task-03-terraform-s3-cloudfront-oac` | ⏳ Pending | — |
@@ -171,3 +171,12 @@
 - PR riêng Task4.1: [#76](https://github.com/TrieuNguyenPhu/shorten-link/pull/76), base main6dee1ca, code commit affc345; CI #180 PASS, chờ review, chưa merge. Tree c90b0cf đã đối chiếu local/remote.
 
 - CI [run #180](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41790392763) trên affc345 PASS cả4jobs: backend (race/vet/DynamoDB Local/HTTP-WebSocket E2E/build8ZIP/scan), terraform (fmt/validate/tests/PS offline), packaging-windows và frontend (lint/typecheck/static build/artifact tests/audit). Commit chốt chỉ cập nhật tài liệu; chưa merge/apply.
+
+
+## 16. Phase4 / Task4.2 — 2026-11-04
+- Nhánh riêng từ mainf6e3769 sau PR#76 merge. Module websocket_api tạo native WebSocket proxy connect/disconnect, public code subscription, prod auto-deploy, permission đúng account/API/stage/route/live. Root thêm3Lambda, tổng8roles/aliases và endpoint outputs. Aggregator nhận WS_ENDPOINT và Query GSI1/Delete connection/ManageConnections POST đúng API/prod.
+- Module moderation_sfn render ASL gốc, STANDARD/manual; trust SourceAccount/SourceArn exact machine, role/boundary riêng chỉ invoke moderate-check:live và UpdateItem đúng bảng. Bootstrap thêm output moderation_boundary_arn bắt buộc cho dev; pin websocket_api_ids trước khi cho push/CD.
+- RED module/API missing, quota inline12314>10240 và provider-required permissions; GREEN sau implementation và tách managed Lambda/API/realtime deployment policies. Không mở quyền sửa bootstrap/StartExecution hoặc wildcard push. Provider6.71.0 cần ListStateMachineVersions và plan-time ValidateStateMachineDefinition (Resource* chỉ với RequestedRegion).
+- Terraform1.17.1/provider6.71.0 fmt/init-backend=false-lockfile-readonly/validate PASS;19bootstrap+18dev=37plan/mock tests PASS. Go1.26.10 race/vet/build8ZIP PASS. PS7.5 container network=none parser/Core/OIDC/Pipeline/Realtime negative output/missing-token preflight PASS.
+- Scenario Realtime đã viết cho safe/reject/4attempts-Fail/2real sockets; cleanup chờ terminal trước delete. Chưa chạy AWS scenario/execution history/handshake/IAM/delivery; chưa apply hoặc load test. Docs công bố operator-first pinning, logging Phase6 và ASL upsert limitation.
+- Rà soát thủ công Terraform/IAM/PS: owner conditions/cancellation code cũ giữ nguyên, endpoint/account/resource validation và GetApi ownership trước bearer HTTP/socket. Không có secret/state/tfvars thực/ZIP trong diff. Kế tiếp Task5.1 sau review/merge Task4.2.

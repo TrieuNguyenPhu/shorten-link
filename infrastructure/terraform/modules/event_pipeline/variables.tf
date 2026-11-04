@@ -27,3 +27,20 @@ variable "log_retention_days" {
   type    = number
   default = 14
 }
+
+variable "ws_endpoint" {
+  type    = string
+  default = null
+  validation {
+    condition     = var.ws_endpoint == null ? var.ws_connections_arn == null : try(startswith(var.ws_connections_arn, "arn:aws:execute-api:${split(":", var.table_arn)[3]}:${split(":", var.table_arn)[4]}:") && var.ws_endpoint == "https://${split("/", split(":", var.ws_connections_arn)[5])[0]}.execute-api.${split(":", var.table_arn)[3]}.amazonaws.com/prod", false) && can(regex("^https://[a-z0-9]+[.]execute-api[.][a-z0-9-]+[.]amazonaws[.]com/prod$", var.ws_endpoint))
+    error_message = "Provide the HTTPS prod management endpoint together with its connections ARN."
+  }
+}
+variable "ws_connections_arn" {
+  type    = string
+  default = null
+  validation {
+    condition     = var.ws_connections_arn == null ? true : can(regex("^arn:aws:execute-api:[a-z0-9-]+:[0-9]{12}:[a-z0-9]+/prod/POST/@connections/[*]$", var.ws_connections_arn))
+    error_message = "ManageConnections must be limited to POST /prod/@connections on one API."
+  }
+}

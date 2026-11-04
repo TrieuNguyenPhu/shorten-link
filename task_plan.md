@@ -4,7 +4,7 @@
 Tái hiện hoàn chỉnh hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS theo chuỗi 21 bài và repository `nghiadaulau/serverless-url-shortener-aws`, chuyển đổi sang **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js Static Export (`S3 + CloudFront OAC`)**, với mỗi Task hoàn thành được tạo một **Pull Request riêng** và luôn cập nhật trạng thái hiện tại của dự án.
 
 ## Current Phase
-Phase 4 — in_progress. Task4.1 complete (implementation/local): WebSocket/pusher/moderation/ASL, Go race/vet, DynamoDB Local/E2E và build8ZIP PASS; [PR #76](https://github.com/TrieuNguyenPhu/shorten-link/pull/76) từ main6dee1ca, CI #180 PASS, chờ review. Task4.2 pending sau review/merge; chưa được phép apply AWS.
+Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e3769; Task4.2 có Terraform WebSocket/Step Functions, bounded IAM và E2E scenario, 37plan tests/Go checks/PS offline PASS; chuẩn bị PR riêng. AWS Phase3/4 chưa apply; Task5.1 kế tiếp sau review/merge.
 
 ## Phases & Tasks
 
@@ -31,10 +31,10 @@ Phase 4 — in_progress. Task4.1 complete (implementation/local): WebSocket/push
 - **Status:** complete (implementation/local; AWS pipeline chưa deploy)
 
 ### Phase 4: Realtime WebSocket & Step Functions Moderation
-- **Task hiện tại:** Task 4.1 — complete (implementation/local)
+- **Task hiện tại:** Task 4.2 — complete (implementation/local)
 - [x] **Task 4.1:** Triển khai Go Lambdas `ws-connect`, `ws-disconnect`, `PostToConnection` Pusher (xử lý `410 GoneException`) & `moderate-check` + `statemachine/moderation.asl.json` kèm tests.
-- [ ] **Task 4.2:** Xây dựng Terraform Modules `websocket_api` (`$connect`, `$disconnect`, stage `prod`) & `moderation_sfn` (Step Functions Standard + IAM).
-- **Status:** in_progress
+- [x] **Task 4.2:** Xây dựng Terraform Modules `websocket_api` (`$connect`, `$disconnect`, stage `prod`) & `moderation_sfn` (Step Functions Standard + IAM).
+- **Status:** complete (implementation/local; AWS deployment/E2E pending)
 
 ### Phase 5: Frontend Next.js Dashboard & S3 + CloudFront OAC Hosting
 - [ ] **Task 5.1:** Scaffold static export/CI đã có; Google auth và UI chưa triển khai. Khởi tạo Next.js App Router (`output: "export"`), nút Google qua Cognito PKCE & các trang Landing (`/`), Login (`/login`), Callback (`/auth/callback`) theo Hand-Drawn / Doodle & Sketch UI.

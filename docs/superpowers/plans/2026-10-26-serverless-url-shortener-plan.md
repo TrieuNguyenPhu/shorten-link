@@ -270,9 +270,9 @@
   - Create: `infrastructure/terraform/modules/moderation_sfn/outputs.tf`
   - Modify: `infrastructure/terraform/environments/dev/main.tf`, `infrastructure/terraform/environments/dev/outputs.tf`, `PROJECT_STATUS.md`, `task_plan.md`, `progress.md`, `findings.md`
 - **Steps:**
-  - [ ] **Step 1:** Tạo module `websocket_api` (`ProtocolType = WEBSOCKET`, route `$connect` và `$disconnect`, stage `prod` với `auto_deploy = true`, Lambda permissions) và cấp biến môi trường `WS_ENDPOINT` + quyền `execute-api:ManageConnections` cho `click-aggregator`.
-  - [ ] **Step 2:** Tạo module `moderation_sfn` triển khai `aws_sfn_state_machine` (`type = "STANDARD"`) từ `statemachine/moderation.asl.json` kèm IAM role chỉ cấp quyền `lambda:InvokeFunction` trên `moderate-check` và `dynamodb:UpdateItem` trên bảng DynamoDB.
-  - [ ] **Step 3:** Chạy cổng Terraform fmt/init-backend=false/validate/test ở cuối kế hoạch, cập nhật CI và AWS E2E scenarios.
+  - [x] **Step 1:** Tạo module `websocket_api` (`ProtocolType = WEBSOCKET`, route `$connect` và `$disconnect`, stage `prod` với `auto_deploy = true`, Lambda permissions) và cấp biến môi trường `WS_ENDPOINT` + quyền `execute-api:ManageConnections` cho `click-aggregator`.
+  - [x] **Step 2:** Tạo module `moderation_sfn` triển khai `aws_sfn_state_machine` (`type = "STANDARD"`) từ `statemachine/moderation.asl.json` kèm IAM role chỉ cấp quyền `lambda:InvokeFunction` trên `moderate-check` và `dynamodb:UpdateItem` trên bảng DynamoDB.
+  - [x] **Step 3:** Chạy cổng Terraform fmt/init-backend=false/validate/test ở cuối kế hoạch, cập nhật CI và AWS E2E scenarios.
   - [ ] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 4.2.
 
 ---

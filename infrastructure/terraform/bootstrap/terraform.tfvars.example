@@ -9,3 +9,6 @@ github_environment = "dev"
 
 # Operator provisions the click ESM once, then pins dev click_event_source_mapping_id:
 # click_event_source_mapping_ids = ["12345678-1234-1234-1234-123456789012"]
+
+# Operator provisions WebSocket API, then pins its ID to enable prod POST push:
+# websocket_api_ids = ["actualwebsocketapiid"]

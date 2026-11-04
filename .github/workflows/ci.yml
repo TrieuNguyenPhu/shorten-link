@@ -105,6 +105,6 @@ jobs:
             terraform -chdir="$root" validate -no-color
             terraform -chdir="$root" test -no-color
           done
-      - name: Check Core, OIDC and Pipeline E2E syntax and offline preflight
+      - name: Check Core, OIDC, Pipeline and Realtime E2E syntax and offline preflight
         shell: pwsh
         run: ./tests/e2e/aws-flow.test.ps1

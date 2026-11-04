@@ -131,3 +131,13 @@
 - ASL dùng trực tiếp ModerateCheckArn nên kết quả không có Payload envelope. CheckSafety trả code/target/safe và không fetch URL; substring malware/phishing/evil giữ nguyên case-insensitive như nguồn. Validation input thiếu trả lỗi để Catch/Fail, không ngầm duyệt link.
 - ASL updateItem không condition theo đặc tả nên có thể upsert META không hợp lệ; runbook bắt buộc tạo/kiểm META trước, không xóa song song. Retry3lần nghĩa là tối đa4invocations, chờ1/2/4giây; execution history thật chờ Task4.2 và AWS authorization.
 - Host hiện không có các workflow skills planning-with-files/ponytail/TDD/verification-before-completion; không coi audit cũ là bằng chứng hiện diện. Dùng aws-serverless và quy trình AGENTS/test-first trực tiếp.
+
+
+## 2026-11-04 — Phase4 / Task4.2
+- Root giữ4HTTP Lambdas, thêm3realtime functions, aggregator vẫn event_pipeline. Tách websocket_endpoint wss cho client và management_endpoint https cho SDK; không có dependency cycle vì API không phụ thuộc aggregator. WebSocket native proxy bỏ HTTP2.0 payload, invoke permission pin prod/route/live.
+- State machine STANDARD render cùng ASL; role trust xây ARN từ tên/account/region để không tham chiếu vòng. Boundary riêng chỉInvoke moderate-check:live/UpdateItem table, Lambda không đượcInvoke hoặcStartExecution.
+- Bootstrap mở ManageConnections chỉ khi websocket_api_ids cóIDexact; unknown API không thành wildcardpush. API child/tag permissions hợp nhất pinned HTTP/WS IDs. Operator tạo tài nguyên lần đầu, pinIDs/applybootstrap rồi mới CD/push.
+- Regression fully-pinned inline12314>10240 tái hiện thực; chuyển AppFunctions/API grants sang operator-owned managed policies, giữ policy behavior/tag protections. Test kiểm inlineaggregate và từngmanaged/boundary quota, đủ8Lambda allowlist.
+- Đọc provider6.71.0 source phát hiện ValidateStateMachineDefinition khi plan và ListStateMachineVersions khi refresh; thêm regression RED→GREEN. SAR xác minh Validate không có resource scope, statement* chỉRequestedRegion; ListVersions chỉexactmachine. Không coi mock-provider plan là AWS permissions proof.
+- Autopilot uvx/pip unavailable; dùng SAR fallback và source provider chính thức. ScenarioRealtime validate config/missingtoken offline, thật sẽ kiểm STS/GetApi owner trước khi gửi bearer, đợi GSI/subscriber và execution history; không sửa hạ tầng qua CLI.
+- Runtime logging Lambda/X-Ray giữ module chung; WebSocket account-level logging và SFN CloudWatch execution logging/trace đểPhase6, tránh cấp thêm service-role permissions ngoài contract hai nghiệp vụ ởPhase4.
