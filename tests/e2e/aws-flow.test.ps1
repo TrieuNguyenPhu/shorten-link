@@ -28,3 +28,21 @@ try {
     } finally { $env:E2E_OIDC_ALLOWED_TOKEN = $originalToken }
     Write-Host 'PowerShell parser and Core/OIDC preflight PASS; no AWS requests sent.'
 } finally { Remove-Item -LiteralPath $temporary -Force }
+
+. (Join-Path $PSScriptRoot 'deletion.ps1')
+$script:readCount = 0
+$result = Wait-DeletedLink -DelayMilliseconds 0 -ReadLink {
+    $script:readCount++
+    [pscustomobject]@{ Status = $(if ($script:readCount -lt 3) { 301 } else { 404 }) }
+}
+if ($result.Status -ne 404 -or $script:readCount -ne 3) { throw 'Deletion check must tolerate stale reads and stop at 404.' }
+foreach ($status in @(301, 500)) {
+    $script:readCount = 0
+    $failed = $false
+    try {
+        Wait-DeletedLink -Attempts 3 -DelayMilliseconds 0 -ReadLink { $script:readCount++; [pscustomobject]@{ Status = $status } }
+    } catch { $failed = $true }
+    $expectedReads = if ($status -eq 301) { 3 } else { 1 }
+    if (-not $failed -or $script:readCount -ne $expectedReads) { throw 'Deletion check must bound retries and surface non-consistency errors immediately.' }
+}
+Write-Host 'Deletion consistency, retry budget and error isolation PASS.'

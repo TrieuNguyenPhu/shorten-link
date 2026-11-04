@@ -4,3 +4,5 @@ github_repository = "TrieuNguyenPhu/shorten-link"
 github_environment = "dev"
 # After the first approved app deployment, pin the actual output http_api_id:
 # http_api_ids = ["actualapiid"]
+# Operator provisions the pool once, then pins its ID before CD:
+# cognito_user_pool_ids = ["ap-southeast-1_actualpoolid"]

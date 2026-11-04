@@ -56,12 +56,12 @@ Trust mặc định đúng subject `repo:TrieuNguyenPhu/shorten-link:environment
 
 State role chỉ GetObject/PutObject trên key ứng dụng, thêm DeleteObject cho đúng `.tflock`; ListBucket giới hạn prefix `dev/*`. Backend dành workspace metadata dưới `dev/workspaces`, nhưng object permissions chỉ hỗ trợ state mặc định; không dùng Terraform workspaces để tạo môi trường khác. Không có quyền xóa state, đổi bucket policy, provider trust hoặc boundary. State bucket/versioning có thể chứa Google secret trong state cũ: hạn chế quyền đọc và bảo vệ cả lịch sử phiên bản. `sensitive = true` chỉ che display, không loại secret khỏi state/plan. [HashiCorp S3 backend](https://developer.hashicorp.com/terraform/language/backend/s3).
 
-Deployment role có quyền CRUD đúng loại tài nguyên app. Mỗi execution role cần boundary bootstrap; PassRole chỉ bốn role đã xác định và chỉ cho `lambda.amazonaws.com`. Role có thể quản lý inline policy ứng dụng nhưng boundary chặn quyền ngoài DynamoDB/bus/logs/X-Ray hiện tại; không được bỏ/sửa boundary hoặc cập nhật chính deployment role. Khi thêm aggregator/WebSocket/SFN ở phase sau, phải mở rộng bootstrap boundary/deployment permissions có chủ đích, không cấp trước quyền SQS/Step Functions/ManageConnections.
+Deployment role có quyền CRUD đúng loại tài nguyên app; Cognito pool được operator provision lần đầu và pin cognito_user_pool_ids trước CD. Deployment role không được CreateUserPool hoặc gắn tag để nhận quyền trên pool khác. Mỗi execution role cần boundary bootstrap; PassRole chỉ bốn role đã xác định và chỉ cho `lambda.amazonaws.com`. Role có thể quản lý inline policy ứng dụng nhưng boundary chặn quyền ngoài DynamoDB/bus/logs/X-Ray hiện tại; không được bỏ/sửa boundary hoặc cập nhật chính deployment role. Khi thêm aggregator/WebSocket/SFN ở phase sau, phải mở rộng bootstrap boundary/deployment permissions có chủ đích, không cấp trước quyền SQS/Step Functions/ManageConnections.
 
 ## 4. Scope IAM và vòng đời API
 
 - Create chỉ PutItem bảng; resolve GetItem bảng và PutEvents đúng bus; list Query đúng GSI1 ARN; delete DeleteItem bảng. Mỗi hàm chỉ ghi log group riêng; log group do Terraform tạo trước Lambda, retention14ngày. Active tracing và hai quyền ghi X-Ray có Resource `*` vì không hỗ trợ resource scope.
-- Deployment dùng explicit action lists, role/function names, table/bus ARN, account/region, Cognito resource/request tags. Read-only DescribeLogGroups và DescribeUserPoolDomain cần Resource `*`; domain read còn bị giới hạn RequestedRegion.
+- Deployment dùng explicit action lists, role/function names, table/bus ARN, account/region, Cognito exact pool ARNs sau operator provisioning. Read-only DescribeLogGroups và DescribeUserPoolDomain cần Resource `*`; domain read còn bị giới hạn RequestedRegion.
 - API Gateway v2 không được giả định kế thừa tags từ API xuống route/integration/authorizer. Quyền child CRUD giới hạn bốn loại path trong region. Khi chưa có ID, `http_api_ids = []` dùng wildcard ở đúng vị trí API ID để bootstrap lần đầu; điều này cho phép thao tác child của API khác trong cùng region, nên chỉ dùng cho operator/bootstrap window.
 - Sau lần app apply được phép đầu tiên, lấy `http_api_id`, đặt `http_api_ids = ["<id-thật>"]` trong bootstrap và review/apply cập nhật bằng operator **trước khi bật CD**. Tag endpoints cũng scope theo ID (gồm dạng URL-encoded), không dùng điều kiện ResourceTag trên endpoint không hỗ trợ. Deny ngăn đổi/xóa Project/Environment qua tag endpoints bằng so sánh TagKeys không phân biệt hoa/thường. API replacement cần operator cập nhật allowlist ID tương ứng.
 
@@ -119,3 +119,19 @@ pwsh -NoProfile -File tests/e2e/aws-flow.ps1 -Scenario OIDC -OutputsPath tests/e
 ```
 
 Script kiểm tất cả issuer/expiry/aud/sub trước kết nối, gọi STS AssumeRoleWithWebIdentity bằng POST HTTPS, session900giây. Allowed phải200; wrong audience phải InvalidIdentityToken, các subject/ref/fork sai phải AccessDenied. Không deserialize, ghi hoặc dùng credentials trả về; chỉ xuất check/status. Kiểm parser/role-path/missing-token preflight đã chạy local; chưa có STS execution evidence. Workflow thu thập token và vận hành sandbox được nối đầy đủ ở Task6.2 khi được phép.
+
+
+## 8. Final review fixes và lần apply được phép
+
+Người dùng đã yêu cầu sửa lỗi và apply sau final review ngày2026-11-04. Triển khai bằng operator trước, sau đó pin cả http_api_ids/cognito_user_pool_ids và cập nhật bootstrap trước khi role CD được dùng. CreateUserPool không được cấp cho deployment role; quyền Tag/Untag pool chỉ trên ARN được pin và bị deny ownership keys. Thêm quyền đọc GetFunctionCodeSigningConfig cho các function ARN hiện có.
+
+AWS Core kiểm delete bằng Wait-DeletedLink (tối đa10 reads, cách250ms, chỉ retry301; status khác fail ngay), phù hợp eventual reads. API list dùng cursor contract đã được người dùng chốt, xem architecture3.2. Saved plan/state/input OAuth phải được bảo vệ, không commit hoặc log secret. State/resource output thực sẽ ghi trong PROJECT_STATUS sau apply thành công; không coi fixture/mock test là bằng chứng AWS.
+
+
+## 9. Bằng chứng triển khai 2026-11-04
+
+Theo yêu cầu apply rõ ràng của người dùng, account654822777701/ap-southeast-1 đã nhận10bootstrap +42core resources; policy deployment sau đó update1lần để pin API txnaexyh3d và pool ap-southeast-1_SGj2otrc0. Không có destroy. Endpoint https://txnaexyh3d.execute-api.ap-southeast-1.amazonaws.com . Cấu hình OAuth đọc trực tiếp từ JSON local, callback hiện http://localhost:3000/auth/callback/ trước Phase5.
+
+AWS smoke đã xác minh JWT negatives, CRUD/list cursor qua operator Lambda invokes, HTTP301/404, publisher ack và redirect Cognito→Google; đã xóa cả2link thử. Đây chưa phải Core E2E với Google access tokens thật. Bootstrap state backup riêng tại /home/trieunguyen/.local/state/shorten-link/bootstrap-terraform.tfstate, quyền0600; inputs/state/plan không commit.
+
+Cognito tự thêm username mapping và Google endpoint metadata khi read-back. Module ignore đúng các entries tự sinh, giữ client_id/client_secret/authorize_scopes và email/name dưới quản lý Terraform; [source provider6.71.0](https://github.com/hashicorp/terraform-provider-aws/blob/v6.71.0/internal/service/cognitoidp/identity_provider.go) đọc toàn bộ maps. Final bootstrap/core plan đều detailed-exitcode0. IAM Access Analyzer trên policy đã pin không có errors/security warnings. CI170 của PR#73 PASS cả4jobs trước commit chốt evidence/default handling.

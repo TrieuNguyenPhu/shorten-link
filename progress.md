@@ -106,3 +106,13 @@
 - Review core wiring/IAM/boundary/state lock/Google-only/alias ownership/negative auth script hoàn tất; chưa có dữ liệu AWS/account calls. Runbook docs/terraform-core-infrastructure.md ghi bootstrap độc lập, secret/state, Google setup, API ID pinning trước CD và AWS E2E pending. Chuẩn bị PR riêng với title/body tiếng Anh; Task3.1 kế tiếp sau review/merge.
 
 - PR Task2.2: [#72](https://github.com/TrieuNguyenPhu/shorten-link/pull/72), base main158b127. Xuất bản bằng GitHub connector vì Git HTTPS chưa có credential helper; kiểm remote tree271147e trùng local trước đồng bộ branch. Commit/title/body tiếng Anh; chưa merge, CI xem tại PR.
+
+
+## Session 2026-11-04 — Phase 2 final review fixes/deployment
+- Người dùng yêu cầu sửa4finding, review cuối và terraform apply. Nhánh fix/phase-02-final-review từ origin/main634ee88; đang kiểm đầu vào deploy và viết regression tests. Commit/PR tiếp tục tiếng Anh.
+
+- Final review remediation GREEN: Go race/vet/build4ZIP; DynamoDB Local repository/HTTP integration; Terraform fmt/validate với10bootstrap+8core tests; PowerShell parser/preflight/deletion retry PASS. RED đã tái hiện quyền thiếu, cursor API chưa tồn tại và adapter bỏ query. Google OAuth redirect đã đối chiếu; tfvars JSON bổ sung ignore để tránh lộ secret. AWS apply được ủy quyền, chưa chạy tại commit sửa code.
+
+- PR #73 đã mở; code commit b62811f qua CI170 cả4jobs PASS. Apply được ủy quyền: bootstrap10create, core42create, sau đó1inlinepolicy update để pin API txnaexyh3d/pool ap-southeast-1_SGj2otrc0; không destroy. State app remote S3, bootstrap local được backup riêng quyền0600.
+- AWS smoke PASS qua endpoint thật và operator Lambda invokes: JWT negatives, create/list2pages/delete ownership/cursor validation, resolve301/publish ack, cleanup404 và Cognito302Google. Không có access tokens Google nên authenticated Core E2E chưa chạy; không tuyên bố STS trust matrix hoặc X-Ray export PASS.
+- Post-apply RED actual core plan exit2 vì Cognito read-back thêm username mapping/6metadata fields. Đối chiếu provider6.71.0 source; sửa ignore_changes đúng7map entries, không ignore client_id/client_secret/authorize_scopes hay app mapping. GREEN fmt/validate/8core tests và final bootstrap/core plan detailed-exitcode0. Final review không còn finding cần sửa trong phạm vi Phase2.

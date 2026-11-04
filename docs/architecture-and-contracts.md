@@ -175,7 +175,8 @@ Hệ thống giữ nguyên 4 route HTTP cốt lõi trên stage `$default` của 
 - **Quy tắc xử lý:**
   1. Lấy `ownerId` từ `claims["sub"]`. Nếu thiếu trả `401 {"error": "thieu danh tinh nguoi dung"}`.
   2. Thực hiện `Query` trên index `GSI1` với `KeyConditionExpression: "GSI1PK = :u"`, `:u = "USER#" + ownerId`, `ScanIndexForward = false` (sắp xếp theo `GSI1SK = LINK#<createdAt>` giảm dần). Tuyệt đối không dùng `Scan`.
-  3. Tiếp tục `ExclusiveStartKey = LastEvaluatedKey` đến hết trang rồi trả một mảng `links` như cũ; không thêm endpoint hay schema phân trang. GSI chỉ có eventual consistency nên link vừa tạo/xóa hoặc count mới có thể chưa hiện ngay.
+  3. **Delta đã được người dùng chốt ngày 2026-11-04:** `GET /links?limit=25&cursor=<nextCursor>` trả một trang owner-scoped. Limit mặc định25, hợp lệ1–100. Response giữ `links`, thêm `nextCursor` khi có continuation key hoặc cắt theo byte budget; không có trường này khi đã kết thúc. DynamoDB có thể trả continuation key ở biên Limit dù lần đọc tiếp theo rỗng; client phải theo cursor, chấp nhận trang cuối rỗng. Client theo cursor đến hết nếu cần toàn bộ dữ liệu. Không âm thầm cắt danh sách.
+  4. Repository Query một trang DynamoDB (giới hạn1MB của service/Limit). Service giới hạn JSON items ở2.5MiB trừ4KiB reserve để cả Lambda response envelope dưới6MiB, có thể trả ít hơn limit. Khi cắt giữa trang, cursor trỏ item cuối đã trả để lần sau không mất phần chưa trả. Cursor Base64URL chứa khóa PK/SK/GSI1PK/GSI1SK, validate schema/code/timestamp và GSI1PK đúng JWT owner; cursor thiếu/sai/khác owner hoặc limit sai trả400. Cursor là vị trí truy vấn, không phải credential hay snapshot; eventual consistency/new/delete giữa các trang vẫn áp dụng.
 - **Response `200 OK` (`application/json`):**
   ```json
   {
@@ -254,7 +255,7 @@ Theo [AWS PutEvents](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb
 | --- | --- | --- | --- | --- | --- |
 | **AP1** | Tạo link mới | `PutItem` | Bảng chính | `PK = LINK#{code}`, `SK = META`<br/>`ConditionExpression: attribute_not_exists(PK)` | Đảm bảo tính duy nhất của mã ngắn ngay ở tầng lưu trữ; nếu trùng mã sẽ ném `ConditionalCheckFailedException` để Lambda sinh mã khác (tối đa 5 lần). |
 | **AP2** | Redirect & lấy URL đích | `GetItem` | Bảng chính | `PK = LINK#{code}`, `SK = META` | Truy xuất điểm (`O(1)`) độ trễ vài mili-giây theo khóa chính. |
-| **AP3** | Liệt kê link của người dùng | `Query` | Index `GSI1` | `KeyConditionExpression: GSI1PK = :u` (`:u = USER#{ownerId}`), `ScanIndexForward = false` | Đọc hết các trang `LastEvaluatedKey`, giữ thứ tự mới nhất trước và JSON `links`; GSI eventual consistency. |
+| **AP3** | Liệt kê link của người dùng | `Query` | Index `GSI1` | `KeyConditionExpression: GSI1PK = :u` (`:u = USER#{ownerId}`), `ScanIndexForward = false` | Trả từng trang qua `limit`/`cursor`, giữ thứ tự mới nhất trước và JSON `links` + optional `nextCursor`; GSI eventual consistency. |
 | **AP4** | Xóa link của người dùng | `DeleteItem` | Bảng chính | `PK = LINK#{code}`, `SK = META`<br/>`ConditionExpression: attribute_exists(PK) AND ownerId = :me` | Kiểm tra quyền sở hữu và xóa trong một thao tác nguyên tử duy nhất, triệt tiêu lỗ hổng IDOR và race condition giữa bước kiểm tra và bước xóa. |
 | **AP5** | Đếm click nguyên tử & chống trùng hữu hạn | `TransactWriteItems` | Bảng chính | 1. `Update`: `PK=LINK#{code}, SK=META` → `ADD clicks :one`, condition `attribute_exists(PK)`<br/>2. `Update`: `PK=LINK#{code}, SK=STAT#{YYYY-MM-DD}` → `ADD #c :one`<br/>3. `Put`: `PK=CLICK#{eventId}, SK=CLICK, ttl=+24h`, condition `attribute_not_exists(PK)` | Cả 3 cùng thành công hoặc cùng hủy. Dedupe chỉ khi marker còn tồn tại; phân loại lỗi theo mục 5.2. |
 | **AP6** | Lưu kết nối WebSocket khi `$connect` | `PutItem` | Bảng chính | `PK = CONN#{connectionId}`, `SK = META`, `GSI1PK = WSCODE#{code}`, `GSI1SK = CONN#{connectionId}`, `ttl = +2h` | Lưu theo `CONN#{connectionId}` để xóa nhanh khi `$disconnect`, đồng thời chiếu vào `GSI1` dưới phân vùng `WSCODE#{code}`. |
@@ -351,3 +352,12 @@ Next.js `output: "export"`, `trailingSlash: true`, S3 private/OAC; CloudFront re
 Frontend sinh/lưu ngắn hạn `state`, `nonce`, `code_verifier`, xác thực state/nonce và redirect URL allowlist, xử lý callback lỗi/thiếu/lặp code, token hết hạn và logout; dọn dữ liệu tạm sau xử lý. Không mang password demo hoặc nội suy `innerHTML` từ nguồn sang React; hiển thị URL qua React escaping và kiểm tra scheme. E2E dùng hai tài khoản Google thử nghiệm qua browser federation, không dùng `InitiateAuth` password.
 
 **Thiết kế giao diện:** Hand-Drawn / Doodle & Sketch UI trên cả landing, nút Google, dashboard và My Links: giấy sáng màu, nét viền không đều có kiểm soát, nét gạch/chú thích vẽ tay và typography thân thiện. Doodle chỉ là trang trí; thứ bậc nội dung, số click, trạng thái kết nối, loading/error, focus bàn phím, độ tương phản và `prefers-reduced-motion` phải rõ ràng. Giữ responsive, không biến biểu đồ hay số liệu thành mock và không nhúng ảnh chụp bình luận người dùng vào sản phẩm.
+
+
+## 10. Sửa final review Phase 2 — 2026-11-04
+
+- Người dùng đã chốt cursor pagination thay hợp đồng list-all để xử lý giới hạn Lambda payload; các mô tả list-all cũ trong audit lịch sử được thay bằng hợp đồng3.2 khi triển khai tiếp.
+- Bootstrap deployment role không có CreateUserPool hoặc quyền TagResource wildcard. Operator tạo pool ban đầu, sau đó pin cognito_user_pool_ids và http_api_ids vào bootstrap. CD chỉ quản lý đúng ARN pool, không thay/xóa ownership tags. Thay pool cần operator cập nhật scope.
+- Thêm lambda:GetFunctionCodeSigningConfig cho Terraform provider refresh ZIP; không cấp quyền code signing write.
+- AWS E2E sau delete dùng bounded polling 301→404; 5xx/401 hoặc status khác fail ngay, không che lỗi bằng retry vô hạn.
+- Người dùng đã yêu cầu terraform apply sau sửa và final review; authorization này thay giới hạn chưa-deploy của các phiên trước. Google Web client/secret vẫn là đầu vào ngoài AWS, không dùng placeholder để triển khai.

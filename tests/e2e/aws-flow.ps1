@@ -8,6 +8,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'deletion.ps1')
 
 # Tokens are read from process environment, never arguments or evidence output.
 function Read-Claims([string]$Token) {
@@ -182,7 +183,7 @@ try {
     try {
         if ($code) {
             Assert-Status 'cleanup created link' (Invoke-Api DELETE "/links/$code" $tokenA) @(200)
-            Assert-Status 'deleted link no longer resolves' (Invoke-Api GET "/$code" '') @(404)
+            Assert-Status 'deleted link no longer resolves' (Wait-DeletedLink -ReadLink { Invoke-Api GET "/$code" '' }) @(404)
         }
     } finally { $client.Dispose(); $transport.Dispose() }
 }

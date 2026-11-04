@@ -2,7 +2,9 @@ package repository
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/domain"
@@ -64,28 +66,32 @@ func TestGetDecodesStoredMetadataWithoutCodeAttribute(t *testing.T) {
 
 func TestListPaginatesOwnerQueryNewestFirst(t *testing.T) {
 	calls := 0
-	key := map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: "LINK#new"}}
+	key := map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: "LINK#New0001"}, "SK": &types.AttributeValueMemberS{Value: "META"}, "GSI1PK": &types.AttributeValueMemberS{Value: "USER#alice"}, "GSI1SK": &types.AttributeValueMemberS{Value: "LINK#2026-11-04T00:00:00.001Z"}}
 	repo := New(sdkStub{query: func(in *dynamodb.QueryInput) (*dynamodb.QueryOutput, error) {
 		calls++
-		if aws.ToString(in.IndexName) != "GSI1" || aws.ToBool(in.ScanIndexForward) || aws.ToString(in.KeyConditionExpression) != "GSI1PK = :u" || str(in.ExpressionAttributeValues[":u"]) != "USER#alice" {
+		if aws.ToString(in.IndexName) != "GSI1" || aws.ToBool(in.ScanIndexForward) || aws.ToString(in.KeyConditionExpression) != "GSI1PK = :u" || str(in.ExpressionAttributeValues[":u"]) != "USER#alice" || aws.ToInt32(in.Limit) != 25 {
 			t.Fatalf("unsafe query: %+v", in)
 		}
-		code := "new"
+		code := "New0001"
 		out := &dynamodb.QueryOutput{}
 		if calls == 1 {
 			out.LastEvaluatedKey = key
 		} else {
-			code = "old"
-			if str(in.ExclusiveStartKey["PK"]) != "LINK#new" {
+			code = "Old0001"
+			if str(in.ExclusiveStartKey["PK"]) != "LINK#New0001" {
 				t.Fatal("lost cursor")
 			}
 		}
 		out.Items = []map[string]types.AttributeValue{{"PK": &types.AttributeValueMemberS{Value: "LINK#" + code}, "ownerId": &types.AttributeValueMemberS{Value: "alice"}}}
 		return out, nil
 	}}, "url-shortener")
-	links, err := repo.ListUserLinks(context.Background(), "alice")
-	if err != nil || calls != 2 || len(links) != 2 || links[0].Code != "new" || links[1].Code != "old" {
-		t.Fatalf("%+v %v calls=%d", links, err, calls)
+	first, err := repo.ListUserLinks(context.Background(), "alice", 25, "")
+	if err != nil || len(first.Links) != 1 || first.Links[0].Code != "New0001" || first.NextCursor == "" || calls != 1 {
+		t.Fatalf("%+v %v calls=%d", first, err, calls)
+	}
+	second, err := repo.ListUserLinks(context.Background(), "alice", 25, first.NextCursor)
+	if err != nil || len(second.Links) != 1 || second.Links[0].Code != "Old0001" || second.NextCursor != "" || calls != 2 {
+		t.Fatalf("%+v %v calls=%d", second, err, calls)
 	}
 }
 
@@ -111,11 +117,43 @@ func TestRepositoryPropagatesFailuresAndEmptyList(t *testing.T) {
 	if _, err := repo.GetLink(ctx, "missing"); !errors.Is(err, ErrNotFound) {
 		t.Fatal(err)
 	}
-	links, err := repo.ListUserLinks(ctx, "alice")
-	if err != nil || links == nil || len(links) != 0 {
-		t.Fatalf("%v %v", links, err)
+	page, err := repo.ListUserLinks(ctx, "alice", 25, "")
+	if err != nil || page.Links == nil || len(page.Links) != 0 {
+		t.Fatalf("%v %v", page, err)
 	}
 	if err := repo.DeleteUserLink(ctx, "x", "alice"); !errors.Is(err, failure) {
+		t.Fatal(err)
+	}
+}
+
+func TestCursorCannotSelectAnotherOwner(t *testing.T) {
+	link := domain.Link{Code: "Abc1234", CreatedAt: "2026-11-04T00:00:00.000Z"}
+	cursor, err := CursorForLink("bob", link)
+	if err != nil {
+		t.Fatal(err)
+	}
+	repo := New(sdkStub{}, "table")
+	if _, err := repo.ListUserLinks(context.Background(), "alice", 25, cursor); !errors.Is(err, ErrInvalidPagination) {
+		t.Fatalf("cross-owner cursor: %v", err)
+	}
+}
+
+func TestCursorRejectsForgedKeyShapes(t *testing.T) {
+	valid := `{"pk":"LINK#Abc1234","sk":"META","owner":"USER#alice","sort":"LINK#2026-11-04T00:00:00.000Z"}`
+	for _, raw := range []string{
+		strings.Replace(valid, "META", "STAT#2026-11-04", 1),
+		strings.Replace(valid, "Abc1234", "../bad!", 1),
+		strings.Replace(valid, ".000Z", ".12Z", 1),
+		strings.Replace(valid, "USER#alice", "USER#bob", 1),
+		strings.TrimSuffix(valid, "}") + `,"extra":"ignored?"}`,
+		valid + ` null`,
+	} {
+		encoded := base64.RawURLEncoding.EncodeToString([]byte(raw))
+		if _, err := New(sdkStub{}, "table").ListUserLinks(context.Background(), "alice", 25, encoded); !errors.Is(err, ErrInvalidPagination) {
+			t.Fatalf("accepted cursor %s: %v", raw, err)
+		}
+	}
+	if _, err := New(sdkStub{}, "table").ListUserLinks(context.Background(), "alice", 25, strings.Repeat("a", 2049)); !errors.Is(err, ErrInvalidPagination) {
 		t.Fatal(err)
 	}
 }
