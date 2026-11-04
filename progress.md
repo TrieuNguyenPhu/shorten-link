@@ -168,3 +168,7 @@
 - Phase4 complete implementation/local, Task5.1 tiếp theo sau Task4.2 review/merge. Chuẩn bị PR riêng; commit/title/bodytiếngAnh.
 
 - Kiểm tra cuối: 34 liên kết Markdown nội bộ,9ví dụJSON, cú pháp shell runbook, CI YAML và git diff --check PASS. Không chạy lại ứng dụng frontend tại local vì không sửa frontend; CI toàn repo sẽ kiểm tra hồi quy.
+
+- PR riêng Task4.2: [#77](https://github.com/TrieuNguyenPhu/shorten-link/pull/77), base mainf6e3769 → db716ad; tree af3e6d7 đã đối chiếu local/remote. Xuất bản bằng GitHub connector vì host thiếu gh/Git author/HTTPS helper; checkout đã đồng bộ. Không tự merge; CI đang chạy.
+
+- CI [run #183](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41793539394) trên db716ad PASS cả4jobs: backend gồm DynamoDB Local/HTTP-WebSocket E2E/build8ZIP/scan, Terraform37plan tests/PS preflight, Windows packaging và frontend lint/typecheck/static build/tests/audit. Commit chốt chỉ tài liệu và URL/evidence; không merge/apply.
