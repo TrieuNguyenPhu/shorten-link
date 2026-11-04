@@ -23,12 +23,14 @@ import (
 	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/service"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/apigatewaymanagementapi"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 // This exercises real HTTP, SDK serialization, DynamoDB and business code.
-// Only the external EventBridge service is replaced at its HTTP boundary.
+// External EventBridge and Management API services use HTTP boundary fixtures.
 func TestLocalHTTPEndToEnd(t *testing.T) {
 	var fail atomic.Bool
 	var publications atomic.Int64
@@ -131,6 +133,48 @@ func TestLocalHTTPEndToEnd(t *testing.T) {
 	if err := json.Unmarshal([]byte(created), &link); err != nil || len(link.Code) != 7 || link.ShortURL != "http://127.0.0.1:8080/"+link.Code {
 		t.Fatal(created, err)
 	}
+	repo := repository.New(ddb, cfg.TableName)
+	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	ws := service.NewWebSocket(repo, logger)
+	for id, code := range map[string]string{"a-live": link.Code, "b-gone": link.Code, "c-denied": link.Code, "other-code": "Other01"} {
+		response, err := ws.Connect(ctx, events.APIGatewayWebsocketProxyRequest{QueryStringParameters: map[string]string{"code": code}, RequestContext: events.APIGatewayWebsocketProxyRequestContext{ConnectionID: id}})
+		if err != nil || response.StatusCode != 200 {
+			t.Fatal(response, err)
+		}
+	}
+	var livePushes, gonePushes, deniedPushes atomic.Int64
+	management := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var payload struct {
+			Code   string
+			Clicks int64
+		}
+		if r.Method != "POST" || !strings.HasPrefix(r.Header.Get("Authorization"), "AWS4-HMAC-SHA256 ") || json.NewDecoder(r.Body).Decode(&payload) != nil || payload.Code != link.Code || payload.Clicks != 1 {
+			t.Error("invalid signed push", r.Method, r.URL, payload)
+			http.Error(w, "bad request", 400)
+			return
+		}
+		switch r.URL.Path {
+		case "/prod/@connections/a-live":
+			livePushes.Add(1)
+			w.WriteHeader(200)
+		case "/prod/@connections/b-gone":
+			gonePushes.Add(1)
+			w.Header().Set("X-Amzn-Errortype", "GoneException")
+			w.WriteHeader(410)
+			_, _ = io.WriteString(w, `{"message":"gone"}`)
+		case "/prod/@connections/c-denied":
+			deniedPushes.Add(1)
+			w.Header().Set("X-Amzn-Errortype", "ForbiddenException")
+			w.WriteHeader(403)
+			_, _ = io.WriteString(w, `{"message":"denied"}`)
+		default:
+			t.Error("push escaped code subscription", r.URL)
+			w.WriteHeader(400)
+		}
+	}))
+	defer management.Close()
+	managementClient := apigatewaymanagementapi.NewFromConfig(aws.Config{Region: "ap-southeast-1", Credentials: credentials.NewStaticCredentialsProvider("local", "local", ""), Retryer: func() aws.Retryer { return aws.NopRetryer{} }}, func(o *apigatewaymanagementapi.Options) { o.BaseEndpoint = aws.String(management.URL + "/prod") })
+	pusher := appevents.NewWSPusher(repo, managementClient, logger)
 	if list := call("GET", "/links", "alice", "", 200); !strings.Contains(list, link.Code) || strings.Contains(list, "ownerId") {
 		t.Fatal(list)
 	}
@@ -173,8 +217,7 @@ func TestLocalHTTPEndToEnd(t *testing.T) {
 		t.Fatal("click not published")
 	}
 	message := <-delivered
-	repo := repository.New(ddb, cfg.TableName)
-	aggregator := service.NewAggregator(repo, nil, slog.New(slog.NewJSONHandler(io.Discard, nil)), io.Discard)
+	aggregator := service.NewAggregator(repo, pusher, logger, io.Discard)
 	batchResponse, err := aggregator.HandleBatch(ctx, events.SQSEvent{Records: []events.SQSMessage{message, {MessageId: "duplicate-delivery", Body: message.Body}, {MessageId: "malformed", Body: "{"}}})
 	if err != nil || len(batchResponse.BatchItemFailures) != 1 || batchResponse.BatchItemFailures[0].ItemIdentifier != "malformed" {
 		t.Fatal(batchResponse, err)
@@ -182,6 +225,21 @@ func TestLocalHTTPEndToEnd(t *testing.T) {
 	counted, err := repo.GetLink(ctx, link.Code)
 	if err != nil || counted.Clicks != 1 {
 		t.Fatal("published click not committed exactly once while marker exists", counted, err)
+	}
+	if livePushes.Load() != 1 || gonePushes.Load() != 1 || deniedPushes.Load() != 1 {
+		t.Fatal("missing broadcast or duplicate push", livePushes.Load(), gonePushes.Load(), deniedPushes.Load())
+	}
+	for id, present := range map[string]bool{"a-live": true, "b-gone": false, "c-denied": true, "other-code": true} {
+		out, err := ddb.GetItem(ctx, &dynamodb.GetItemInput{TableName: aws.String(cfg.TableName), Key: map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: "CONN#" + id}, "SK": &types.AttributeValueMemberS{Value: "META"}}, ConsistentRead: aws.Bool(true)})
+		if err != nil || (len(out.Item) > 0) != present {
+			t.Fatal("incorrect connection cleanup", id, out, err)
+		}
+	}
+	for range 2 {
+		response, err := ws.Disconnect(ctx, events.APIGatewayWebsocketProxyRequest{RequestContext: events.APIGatewayWebsocketProxyRequestContext{ConnectionID: "a-live"}})
+		if err != nil || response.StatusCode != 200 {
+			t.Fatal(response, err)
+		}
 	}
 	var event struct {
 		ID     string

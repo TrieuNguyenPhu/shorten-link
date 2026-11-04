@@ -4,7 +4,7 @@
 Tái hiện hoàn chỉnh hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS theo chuỗi 21 bài và repository `nghiadaulau/serverless-url-shortener-aws`, chuyển đổi sang **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js Static Export (`S3 + CloudFront OAC`)**, với mỗi Task hoàn thành được tạo một **Pull Request riêng** và luôn cập nhật trạng thái hiện tại của dự án.
 
 ## Current Phase
-Phase 3 — complete (implementation/local). Task3.1/PR #74 đã merge main113d969; Task3.2 đã có module/event pipeline và27plan tests, Go checks/PS offline regressions PASS, [PR #75](https://github.com/TrieuNguyenPhu/shorten-link/pull/75) CI #177 PASS; chờ review. AWS pipeline apply/delivery/ESM/DLQ E2E pending. Task4.1 kế tiếp sau Task3.2 merge.
+Phase 4 — in_progress. Task4.1 complete (implementation/local): WebSocket/pusher/moderation/ASL, Go race/vet, DynamoDB Local/E2E và build8ZIP PASS; [PR #76](https://github.com/TrieuNguyenPhu/shorten-link/pull/76) từ main6dee1ca, CI #180 PASS, chờ review. Task4.2 pending sau review/merge; chưa được phép apply AWS.
 
 ## Phases & Tasks
 
@@ -25,15 +25,16 @@ Phase 3 — complete (implementation/local). Task3.1/PR #74 đã merge main113d9
 - **Status:** complete (implementation + AWS core apply/smoke; Google authenticated E2E pending)
 
 ### Phase 3: Event-Driven Analytics (EventBridge, SQS + DLQ, ClickAggregator)
-- **Task hiện tại:** Task 3.2 — complete (implementation/local; PR #75 CI #177 PASS; chờ review)
+- **Task hiện tại:** Task 3.2 — complete (PR #75 đã merge main6dee1ca; AWS pipeline chưa deploy)
 - [x] **Task 3.1:** Triển khai Go Lambda `click-aggregator` (`TransactWriteItems` 3 thao tác, phân biệt chính xác `CancellationReasons`, `ReportBatchItemFailures`) kèm unit/integration tests.
 - [x] **Task 3.2:** Xây dựng Terraform Module `event_pipeline` nhận custom bus từ Task 2.2, thêm rule `link.clicked`, SQS `ClickQueue` + `ClickDLQ` 14d, Event Source Mapping.
 - **Status:** complete (implementation/local; AWS pipeline chưa deploy)
 
 ### Phase 4: Realtime WebSocket & Step Functions Moderation
-- [ ] **Task 4.1:** Triển khai Go Lambdas `ws-connect`, `ws-disconnect`, `PostToConnection` Pusher (xử lý `410 GoneException`) & `moderate-check` + `statemachine/moderation.asl.json` kèm tests.
+- **Task hiện tại:** Task 4.1 — complete (implementation/local)
+- [x] **Task 4.1:** Triển khai Go Lambdas `ws-connect`, `ws-disconnect`, `PostToConnection` Pusher (xử lý `410 GoneException`) & `moderate-check` + `statemachine/moderation.asl.json` kèm tests.
 - [ ] **Task 4.2:** Xây dựng Terraform Modules `websocket_api` (`$connect`, `$disconnect`, stage `prod`) & `moderation_sfn` (Step Functions Standard + IAM).
-- **Status:** pending
+- **Status:** in_progress
 
 ### Phase 5: Frontend Next.js Dashboard & S3 + CloudFront OAC Hosting
 - [ ] **Task 5.1:** Scaffold static export/CI đã có; Google auth và UI chưa triển khai. Khởi tạo Next.js App Router (`output: "export"`), nút Google qua Cognito PKCE & các trang Landing (`/`), Login (`/login`), Callback (`/auth/callback`) theo Hand-Drawn / Doodle & Sketch UI.

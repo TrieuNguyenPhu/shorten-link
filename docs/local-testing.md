@@ -89,7 +89,7 @@ Go 1.26.10/Linux amd64 và DynamoDB Local 3.3.0 (digest bên trên): unit/race, 
 
 ## 7. Click aggregator — Task 3.1
 
-Các lệnh unit/race, integration và build ở mục2 tự bao gồm `click-aggregator`; output hiện có năm ZIP. `TABLE_NAME` là cấu hình bắt buộc. Lambda dùng SDK v2 được instrument X-Ray, retry SDK tối đa2attempts/backoff100ms, deadline cả batch4s dưới timeout Lambda5s. Record chưa xử lý khi deadline đã hết nằm trong `batchItemFailures`; không fail toàn batch vì một record lỗi. ESM `ReportBatchItemFailures` sẽ được cấu hình trong Task3.2, không thể suy ra từ unit test.
+Các lệnh unit/race, integration và build ở mục2 tự bao gồm `click-aggregator`; output hiện có tám ZIP sau Task4.1. `TABLE_NAME` là cấu hình bắt buộc. Lambda dùng SDK v2 được instrument X-Ray, retry SDK tối đa2attempts/backoff100ms, deadline cả batch4s dưới timeout Lambda5s. Record chưa xử lý khi deadline đã hết nằm trong `batchItemFailures`; không fail toàn batch vì một record lỗi. ESM `ReportBatchItemFailures` sẽ được cấu hình trong Task3.2, không thể suy ra từ unit test.
 
 Consumer nhận EventBridge envelope có `source=urlshortener`, `detail-type=link.clicked`, `id`/`detail.code` không rỗng và `detail.at` là RFC3339. JSON/envelope/timestamp không hợp lệ phải retry rồi vào DLQ theo ESM, không được ack âm thầm. `STAT` dùng ngày UTC của `detail.at`, marker TTL dùng thời điểm xử lý+86400giây; producer thật luôn phát timestamp UTC. Không dùng thời điểm nhận SQS để chuyển click trễ sang ngày khác.
 
@@ -99,6 +99,17 @@ Transaction giữ đúng thứ tự META Update có `attribute_exists(PK)`, STAT
 
 `TestLocalHTTPEndToEnd` dùng request HTTP thật → handler/service → SDK PutEvents tại protocol fixture. Fixture giữ nguyên detail và EventId được ack, đóng envelope rồi gọi aggregator thật với hai delivery cùng event và một record JSON lỗi. Kiểm chỉ record lỗi được trả về, `META.clicks=1`, `STAT.count=1`, marker tồn tại; replay sau delete không tạo lại META. Kết quả này không chứng minh rule/EventBridge/SQS/ESM/IAM/redrive trên AWS.
 
-Notifier là dependency best-effort sau commit, budget200ms và giữ deadline cha. Lỗi notifier/EMF chỉ log, không đưa record đã commit vào retry; duplicate/deleted không push lại. Runtime chưa gắn WebSocket notifier; triển khai pusher/`WS_ENDPOINT` thuộc Phase4.
+Notifier là dependency best-effort sau commit, budget200ms và giữ deadline cha. Lỗi notifier/EMF chỉ log, không đưa record đã commit vào retry; duplicate/deleted không push lại. Từ Task4.1, runtime gắn pusher khi có `WS_ENDPOINT`; biến endpoint/IAM/WebSocket API sẽ được Terraform cung cấp ở Task4.2.
 
 Marker24h là cửa sổ hữu hạn, ClickDLQ14ngày nằm ngoài cửa sổ này. Trước khi redrive phải kiểm tuổi event, nguyên nhân và đối soát counter; replay sau khi marker biến mất có thể đếm lại. Không redrive hàng loạt dữ liệu cũ mà không đối soát. Hướng dẫn API: [AWS transaction reasons](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_TransactWriteItems.html), [AWS partial batch failures](https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-errorhandling.html).
+
+
+## 8. WebSocket và moderation — Task4.1
+
+Cùng lệnh integration ở mục2 chạy cả `TestLocalWebSocketSubscriptionsAcrossOneMBPages`: handler connect thật ghi sáu item qua SDK tới DynamoDB Local, thêm padding thử nghiệm để vượt1MB, xác nhận service trả LastEvaluatedKey và repository vẫn duyệt đủ sáu subscriber, TTL=now+7200. Padding chỉ tồn tại trong test, không nằm trong schema production.
+
+`TestLocalHTTPEndToEnd` nay gọi connect/disconnect service thật cùng repository/aggregator/pusher. Management API HTTP fixture kiểm request SigV4, path `/prod/@connections/<id>` và payload count1; trả200/410/403. Test xác nhận đúng code nhận một push, duplicate không push lại, chỉ410 xóa item,403 giữ item, lỗi push không thêm SQS failure và disconnect lặp vẫn200. Fixture không mở WebSocket server hoặc mô phỏng API Gateway handshake; AWS delivery/IAM chưa được kiểm.
+
+Unit/race tests kiểm Get/Query/Post/cleanup failure của pusher thật qua aggregator vẫn ack record đã commit và ghi log. Runtime test kiểm `WS_ENDPOINT` được SDK dùng đúng stage, DynamoDB count read consistent và PostToConnection được ký. `moderate-check` kiểm ba từ khóa không phân biệt hoa/thường, giữ code/target và lỗi input; ASL contract tests kiểm trực tiếp Lambda ARN, Choice, Retry/Catch/Fail và update status. Test ASL không thực thi dịch vụ Step Functions.
+
+Runbook safe/reject/retry/Fail và giới hạn upsert nằm ở [WebSocket và moderation](./websocket-and-moderation.md). Toàn bộ tám ZIP đã build thật; execution history, handshake, realtime AWS giữ pending tới khi Task4.2 được triển khai theo yêu cầu.

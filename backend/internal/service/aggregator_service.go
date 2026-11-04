@@ -20,7 +20,7 @@ type ClickRepository interface {
 	RecordClickTransaction(context.Context, string, string, time.Time, time.Time) (repository.ClickOutcome, error)
 }
 
-// ClickNotifier reads the committed count before broadcasting it (Phase 4).
+// ClickNotifier reads the committed count before broadcasting it.
 type ClickNotifier interface {
 	NotifyClick(context.Context, string) error
 }
