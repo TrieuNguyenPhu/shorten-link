@@ -28,7 +28,7 @@ bash scripts/build-lambdas.sh
 
 Hoặc dùng `DYNAMODB_ENDPOINT=http://127.0.0.1:8000 make test-integration`. Không bỏ qua integration khi thiếu endpoint: test báo lỗi rõ ràng. Test từ chối endpoint ngoài loopback, dùng credentials cố định `local/local`, tạo bảng tên duy nhất và xóa riêng bảng đó khi kết thúc. Không đọc credential chain của operator.
 
-Integration repository kiểm collision bằng conditional PutItem, chống IDOR bằng conditional DeleteItem, đọc GetItem, list đúng owner, timestamp trong cùng giây và pagination thực với 6 item khoảng 220 KB/item (vượt giới hạn 1 MB/trang). Delete chỉ xóa META, giữ STAT và CLICK marker.
+Integration repository kiểm collision bằng conditional PutItem, chống IDOR bằng conditional DeleteItem, đọc GetItem, list đúng owner, timestamp trong cùng giây và pagination cursor thực với 6 item khoảng 220 KB/item (vượt giới hạn 1 MB/trang). Delete chỉ xóa META, giữ STAT và CLICK marker.
 
 HTTP E2E dựng server adapter thật, chạy bốn route qua net/http và SDK v2; kiểm unauthenticated 401, JSON null/nonstring/URL sai 400, create 201, danh sách theo tenant, delete khác owner/missing cùng 404, redirect 301 có Location/body rỗng, publish bị từ chối trả 502 và link đã xóa trả 404. Redirect client tắt tự follow.
 
@@ -73,10 +73,15 @@ Request production được giới hạn 4 giây, thấp hơn timeout Lambda 5 g
 
 Resolve missing phát LinkNotFound; publish lỗi phát ClickPublishFailed, trả error từ Lambda (adapter local ánh xạ 502); chỉ publish được chấp nhận mới phát LinkResolved và trả 301. Lỗi metric được log nhưng không làm publish lại. Moderation status không chặn redirect theo đặc tả hiện tại.
 
-Body create tối đa 16 KiB sau giải mã base64, phải là một object JSON với URL string hợp lệ. List trả đúng bốn trường code/target/clicks/createdAt, đọc hết GSI pages, không có pagination API mới. GSI eventual consistency và browser cache 301 vẫn áp dụng.
+Body create tối đa 16 KiB sau giải mã base64, phải là một object JSON với URL string hợp lệ. List giữ bốn trường item code/target/clicks/createdAt, trả trang theo limit/cursor và optional nextCursor; client theo cursor đến hết nếu cần toàn bộ danh sách. GSI eventual consistency và browser cache 301 vẫn áp dụng.
 
 Kết quả local không chứng minh Cognito Google federation/access-token scopes, JWT authorizer, IAM, trace export, bus/rule delivery, SQS/ESM/DLQ hoặc canary. AWS E2E giữ pending cho đến khi được phép triển khai; không chạy terraform apply hoặc load test AWS trong Task 2.1.
 
 ## 5. Bằng chứng ngày 2026-11-04
 
 Go 1.26.10/Linux amd64 và DynamoDB Local 3.3.0 (digest bên trên): unit/race, vet, mod verify, repository integration và HTTP E2E đều exit 0. Lệnh integration dùng `-race -tags=integration -count=1 -v` như mục 2; hai test TestDynamoDBLocalCRUDIsolationAndPagination và TestLocalHTTPEndToEnd PASS. Artifact build nằm tại `backend/dist/{create-link,resolve-link,list-links,delete-link}.zip` (ignored, không commit); mỗi ZIP chứa bootstrap Linux arm64. CI thêm cùng integration/E2E và build bốn archive. Chưa có bằng chứng AWS deployment.
+
+
+## 6. Cursor pagination sau final review
+
+`GET /links?limit=25&cursor=<nextCursor>`: limit1–100, mặc định25, cursor trả400 nếu malformed hoặc thuộc owner khác. Khi còn dữ liệu, response có nextCursor; trang cuối chỉ có links. Mỗi trang được giới hạn byte budget trước JSON Lambda envelope; không silently truncate. Local HTTP harness chuyển query parameters thật vào handler. Unit regression duyệt450link với URL dài/nhiều ký tự cần escape, kiểm tất cả response<6MiB và không mất/trùng code. Integration kiểm limit1 qua2 trang, hết cursor và cross-owner400 bằng DynamoDB Local.

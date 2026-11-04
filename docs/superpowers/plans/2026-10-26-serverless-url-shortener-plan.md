@@ -149,7 +149,7 @@
     - User A chỉ xem được danh sách link của User A (mới nhất trước)
     - User B xóa link của User A → bị chặn bởi `ConditionExpression`, trả `404`
     - Resolve thành công chỉ 301 sau EventId hợp lệ; missing link404; publish HTTP200/FailedEntryCount1, nonretryable, retry success/exhausted, entry thiếu/sai theo hợp đồng 3.4
-    - List paginate đến hết LastEvaluatedKey; giữ JSON links, thứ tự và owner scope
+    - List cursor pagination theo delta2026-11-04; giữ JSON links và optional nextCursor, thứ tự và owner scope, byte budget<Lambda limit
   - [x] **Step 2:** Triển khai `dynamodb.go`, `link_service.go`, `httpapi/handler.go`, EventBridge publisher và 4 `cmd/*/main.go` theo đặc tả; tạo local HTTP harness dùng handler/repository thật và DynamoDB Local, không production memory storage. Unit mock chỉ tại ranh giới SDK/publisher; harness không chứng minh JWT authorizer/IAM AWS.
   - [x] **Step 3:** Chạy Go race/vet, integration DynamoDB Local và build 4 ZIP arm64; ghi lệnh khởi động harness, cấu hình test và bằng chứng vào `docs/local-testing.md`, mở rộng CI tương ứng.
   - [x] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 2.1.
@@ -394,3 +394,8 @@ Các lệnh dưới đây là hợp đồng đầu ra cho task tương ứng; fi
 | 6.2: `tests/load/redirect.k6.js` | `k6 run -e MODE=smoke tests/load/redirect.k6.js` (base URL/code từ cấu hình); redirects0 | AWS được phép hoặc local harness; tách status301/429/5xx, failed và successful RPS; stress cần yêu cầu riêng |
 
 Task sở hữu hành vi chịu trách nhiệm thêm test/file trong ma trận ngay khi triển khai; Task6.2 nối các kịch bản AWS thành runbook thống nhất. Phase0 chỉ chạy kiểm tra diff/liên kết/ví dụ JSON, không chạy các lệnh app/Terraform chưa có implementation.
+
+
+## Delta final review Phase 2 — 2026-11-04
+
+Task remediation trên fix/phase-02-final-review: sửa Cognito scope/ownership và Lambda provider read permission; cursor pagination được người dùng chốt thay list-all; bounded E2E deletion wait. Final review/local checks rồi apply bootstrap+dev bằng operator theo yêu cầu rõ ràng của người dùng. Pin API/pool IDs trong bootstrap và ghi bằng chứng AWS riêng. Frontend Task5.2 phải theo nextCursor khi cần toàn bộ links và xử lý page-local/reconnect state phù hợp.

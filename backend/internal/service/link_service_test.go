@@ -13,7 +13,7 @@ import (
 type repoStub struct {
 	create func(domain.Link) error
 	get    func(string) (domain.Link, error)
-	list   func(string) ([]domain.Link, error)
+	list   func(string, int, string) (domain.LinkPage, error)
 	delete func(string, string) error
 }
 
@@ -21,7 +21,9 @@ func (r repoStub) CreateLink(_ context.Context, l domain.Link) error { return r.
 
 func (r repoStub) GetLink(_ context.Context, c string) (domain.Link, error) { return r.get(c) }
 
-func (r repoStub) ListUserLinks(_ context.Context, u string) ([]domain.Link, error) { return r.list(u) }
+func (r repoStub) ListUserLinks(_ context.Context, u string, limit int, cursor string) (domain.LinkPage, error) {
+	return r.list(u, limit, cursor)
+}
 
 func (r repoStub) DeleteUserLink(_ context.Context, c, u string) error { return r.delete(c, u) }
 

@@ -106,3 +106,9 @@
 - Review core wiring/IAM/boundary/state lock/Google-only/alias ownership/negative auth script hoàn tất; chưa có dữ liệu AWS/account calls. Runbook docs/terraform-core-infrastructure.md ghi bootstrap độc lập, secret/state, Google setup, API ID pinning trước CD và AWS E2E pending. Chuẩn bị PR riêng với title/body tiếng Anh; Task3.1 kế tiếp sau review/merge.
 
 - PR Task2.2: [#72](https://github.com/TrieuNguyenPhu/shorten-link/pull/72), base main158b127. Xuất bản bằng GitHub connector vì Git HTTPS chưa có credential helper; kiểm remote tree271147e trùng local trước đồng bộ branch. Commit/title/body tiếng Anh; chưa merge, CI xem tại PR.
+
+
+## Session 2026-11-04 — Phase 2 final review fixes/deployment
+- Người dùng yêu cầu sửa4finding, review cuối và terraform apply. Nhánh fix/phase-02-final-review từ origin/main634ee88; đang kiểm đầu vào deploy và viết regression tests. Commit/PR tiếp tục tiếng Anh.
+
+- Final review remediation GREEN: Go race/vet/build4ZIP; DynamoDB Local repository/HTTP integration; Terraform fmt/validate với10bootstrap+8core tests; PowerShell parser/preflight/deletion retry PASS. RED đã tái hiện quyền thiếu, cursor API chưa tồn tại và adapter bỏ query. Google OAuth redirect đã đối chiếu; tfvars JSON bổ sung ignore để tránh lộ secret. AWS apply được ủy quyền, chưa chạy tại commit sửa code.

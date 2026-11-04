@@ -75,3 +75,27 @@ run "http_api_tag_permissions" {
     error_message = "API tag endpoints need ID/path scope and protection against changing ownership tags."
   }
 }
+
+run "cognito_has_no_provisioning_or_retag_escape" {
+  command = plan
+  assert {
+    condition     = alltrue([for s in jsondecode(aws_iam_role_policy.deployment.policy).Statement : !contains(s.Action, "cognito-idp:CreateUserPool") && (!contains(s.Action, "cognito-idp:TagResource") || !contains(s.Resource, "*"))])
+    error_message = "Deployment must not provision arbitrary pools or claim foreign pools through request tags."
+  }
+  assert {
+    condition     = contains(one([for s in jsondecode(aws_iam_role_policy.deployment.policy).Statement : s if s.Sid == "AppFunctions"]).Action, "lambda:GetFunctionCodeSigningConfig")
+    error_message = "The pinned AWS provider requires GetFunctionCodeSigningConfig when refreshing ZIP Lambdas."
+  }
+}
+run "cognito_maintenance_is_pinned" {
+  command = plan
+  variables { cognito_user_pool_ids = ["ap-southeast-1_owned123"] }
+  assert {
+    condition     = one([for s in jsondecode(aws_iam_role_policy.deployment.policy).Statement : s if s.Sid == "AppUserPool"]).Resource == ["arn:aws:cognito-idp:ap-southeast-1:111111111111:userpool/ap-southeast-1_owned123"]
+    error_message = "Cognito maintenance must use the exact operator-provisioned pool ARN."
+  }
+  assert {
+    condition     = one([for s in jsondecode(aws_iam_role_policy.deployment.policy).Statement : s if s.Sid == "ProtectCognitoOwnershipTags"]).Condition["ForAnyValue:StringEqualsIgnoreCase"]["aws:TagKeys"] == ["Project", "Environment"]
+    error_message = "The deployment role must not rewrite ownership tags on its pool."
+  }
+}

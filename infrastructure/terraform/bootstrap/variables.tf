@@ -78,3 +78,13 @@ variable "http_api_ids" {
     error_message = "Use actual HTTP API IDs, without wildcard characters."
   }
 }
+
+variable "cognito_user_pool_ids" {
+  type        = set(string)
+  default     = []
+  description = "Exact user pool IDs provisioned by the operator; deployment cannot create or claim other pools."
+  validation {
+    condition     = alltrue([for id in var.cognito_user_pool_ids : startswith(id, "${var.aws_region}_") && can(regex("^[a-z0-9-]+_[A-Za-z0-9]+$", id))])
+    error_message = "Use actual Cognito pool IDs from this region, without wildcards."
+  }
+}

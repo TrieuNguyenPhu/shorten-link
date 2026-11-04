@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"strconv"
 	"strings"
 
 	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/middleware"
@@ -95,7 +96,19 @@ func (h *Handler) List(ctx context.Context, req events.APIGatewayV2HTTPRequest) 
 	if owner == "" {
 		return failure(401, "thieu danh tinh nguoi dung")
 	}
-	links, err := h.service.List(ctx, owner)
+	limit := 25
+	if raw := req.QueryStringParameters["limit"]; raw != "" {
+		value, err := strconv.Atoi(raw)
+		if err != nil || value < 1 || value > 100 {
+			return failure(400, "tham so phan trang khong hop le")
+		}
+		limit = value
+	}
+	page, err := h.service.List(ctx, owner, limit, req.QueryStringParameters["cursor"])
+	if errors.Is(err, repository.ErrInvalidPagination) {
+		return failure(400, "tham so phan trang khong hop le")
+	}
+	links := page.Links
 	if err != nil {
 		h.log(ctx, req).Error("list links failed", "error", err)
 		return failure(500, "loi he thong")
@@ -111,8 +124,9 @@ func (h *Handler) List(ctx context.Context, req events.APIGatewayV2HTTPRequest) 
 		items = append(items, item{link.Code, link.Target, link.Clicks, link.CreatedAt})
 	}
 	return jsonResponse(200, struct {
-		Links []item `json:"links"`
-	}{items})
+		Links      []item `json:"links"`
+		NextCursor string `json:"nextCursor,omitempty"`
+	}{items, page.NextCursor})
 }
 
 func (h *Handler) Delete(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {

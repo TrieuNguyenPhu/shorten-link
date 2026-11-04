@@ -37,3 +37,9 @@ func FormatCreatedAt(at time.Time) string {
 	// Fixed milliseconds preserve chronological ordering in GSI1 sort keys.
 	return at.UTC().Format("2006-01-02T15:04:05.000Z")
 }
+
+// LinkPage is an owner-scoped page. An empty cursor marks the end of the query.
+type LinkPage struct {
+	Links      []Link
+	NextCursor string
+}

@@ -71,7 +71,8 @@ func TestAdapterRejectsUntrustedIdentityAndInvalidRoutes(t *testing.T) {
 		method, path, user, body string
 		status                   int
 	}{
-		{"GET", "/links", "", "", 401}, {"GET", "/links", "mallory", "", 401},
+		{"GET", "/links", "", "", 401},
+		{"GET", "/links?limit=0", "alice", "", 400}, {"GET", "/links", "mallory", "", 401},
 		{"POST", "/links", "alice", `null`, 400}, {"PATCH", "/links", "alice", "", 404},
 		{"GET", "/unknown/path", "alice", "", 404}, {"POST", "/links", "alice", strings.Repeat("x", 20000), 400},
 	} {

@@ -1,6 +1,6 @@
 # PROJECT_STATUS.md — Trạng Thái Hiện Tại Của Dự Án
 
-> **Cập nhật lần cuối:** 2026-11-04 (**Phase 2 complete về implementation; Task 2.2 chờ review/merge, AWS E2E pending**)
+> **Cập nhật lần cuối:** 2026-11-04 (**Phase 2 final review fixes in_progress; người dùng đã yêu cầu apply AWS**)
 > **Quy tắc bắt buộc:** File này luôn được cập nhật ngay sau khi hoàn thành mỗi Task trước khi mở Pull Request tương ứng.
 
 ---
@@ -10,7 +10,7 @@
 | Hạng mục | Trạng thái | Chi tiết |
 | --- | --- | --- |
 | **Giai đoạn hiện tại (Current Phase)** | **Phase 2 — `complete` (implementation)** | Task 2.1 đã merge #71; Task 2.2 kiểm tra local PASS, chờ review/merge; AWS E2E pending |
-| **Task hiện tại** | **Task 2.2 — `complete` (local)** | Bootstrap/core modules, 16 plan tests và PowerShell preflight PASS; chờ review/merge |
+| **Task hiện tại** | **Phase 2 final review — `in_progress`** | Bootstrap/core modules, 16 plan tests và PowerShell preflight PASS; chờ review/merge |
 | **Task tiếp theo (Next Up)** | **Task 3.1 (Phase 3)** | Click aggregator sau Phase 2 |
 | **Trạng thái AWS Cloud** | **Đã dọn theo xác nhận người dùng** | Người dùng xác nhận ngày 2026-10-26 đã xóa toàn bộ tài nguyên triển khai trước đó; phiên hoàn thiện Phase 0 không kiểm kê AWS hay xác nhận hóa đơn |
 | **13 Bộ Skills & `AGENTS.md`** | **Đã kiểm tra file/config** | Đủ 13 file skill đại diện; 314 thư mục cấp đầu có `SKILL.md`. Có cấu hình trỏ `~/.agents/skills`; không suy ra mọi host đều tự nạp |
@@ -122,3 +122,9 @@
 - CI thêm Terraform fmt/init/validate/16 plan tests và PowerShell parser/preflight; setup-terraform action pin SHA. Rà soát diff/IAM/boundary/alias/secret state và liên kết trước commit; chưa có AWS JWT/IAM/STS/X-Ray/pipeline evidence. Phase2 complete về implementation, kế tiếp Task3.1 sau review/merge Task2.2.
 
 - PR riêng Task2.2: [#72](https://github.com/TrieuNguyenPhu/shorten-link/pull/72), base main sau #71, title/body và commits tiếng Anh. Trạng thái CI hiện tại xem tại PR; chưa merge.
+
+
+## 12. Sửa final review và triển khai Phase 2 — 2026-11-04
+- Người dùng đã yêu cầu sửa bốn phát hiện, review cuối rồi terraform apply. Đây là authorization triển khai mới; không yêu cầu xác nhận apply lần nữa. Đang kiểm credentials/Google OAuth inputs, chưa apply. #71/#72 đã merge main634ee88; nhánh fix/phase-02-final-review từ main.
+
+- Đã sửa bốn finding: Cognito maintenance pin pool ARN và cấm retag ownership, thêm GetFunctionCodeSigningConfig; cursor pagination được người dùng chốt và cập nhật đặc tả; bounded deletion wait. Go race/vet/build4ZIP, DynamoDB Local integration/HTTP E2E, Terraform validate/fmt/18 plan tests và PowerShell preflight/deletion tests PASS. Final diff review không còn finding cần sửa; đang triển khai AWS được người dùng yêu cầu. Google Web client JSON đã được đọc trực tiếp từ file local, không commit/log secret.

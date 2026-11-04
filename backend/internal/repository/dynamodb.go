@@ -21,7 +21,7 @@ var (
 type LinkRepository interface {
 	CreateLink(context.Context, domain.Link) error
 	GetLink(context.Context, string) (domain.Link, error)
-	ListUserLinks(context.Context, string) ([]domain.Link, error)
+	ListUserLinks(context.Context, string, int, string) (domain.LinkPage, error)
 	DeleteUserLink(context.Context, string, string) error
 }
 
@@ -87,29 +87,37 @@ func (r *DynamoDB) GetLink(ctx context.Context, code string) (domain.Link, error
 	return decodeLink(out.Item)
 }
 
-func (r *DynamoDB) ListUserLinks(ctx context.Context, owner string) ([]domain.Link, error) {
-	links := make([]domain.Link, 0)
-	in := &dynamodb.QueryInput{TableName: aws.String(r.table), IndexName: aws.String("GSI1"), KeyConditionExpression: aws.String("GSI1PK = :u"), ExpressionAttributeValues: map[string]types.AttributeValue{":u": &types.AttributeValueMemberS{Value: "USER#" + owner}}, ScanIndexForward: aws.Bool(false)}
-	for {
-		out, err := r.client.Query(ctx, in)
-		if err != nil {
-			return nil, err
-		}
-		if out == nil {
-			return nil, errors.New("empty DynamoDB query response")
-		}
-		for _, item := range out.Items {
-			link, err := decodeLink(item)
-			if err != nil {
-				return nil, err
-			}
-			links = append(links, link)
-		}
-		if len(out.LastEvaluatedKey) == 0 {
-			return links, nil
-		}
-		in.ExclusiveStartKey = out.LastEvaluatedKey
+func (r *DynamoDB) ListUserLinks(ctx context.Context, owner string, limit int, cursor string) (domain.LinkPage, error) {
+	if limit < 1 || limit > 100 {
+		return domain.LinkPage{}, ErrInvalidPagination
 	}
+	key, err := decodeCursor(owner, cursor)
+	if err != nil {
+		return domain.LinkPage{}, err
+	}
+	in := &dynamodb.QueryInput{TableName: aws.String(r.table), IndexName: aws.String("GSI1"), KeyConditionExpression: aws.String("GSI1PK = :u"), ExpressionAttributeValues: map[string]types.AttributeValue{":u": &types.AttributeValueMemberS{Value: "USER#" + owner}}, ScanIndexForward: aws.Bool(false), Limit: aws.Int32(int32(limit)), ExclusiveStartKey: key}
+	out, err := r.client.Query(ctx, in)
+	if err != nil {
+		return domain.LinkPage{}, err
+	}
+	if out == nil {
+		return domain.LinkPage{}, errors.New("empty DynamoDB query response")
+	}
+	page := domain.LinkPage{Links: make([]domain.Link, 0, len(out.Items))}
+	for _, item := range out.Items {
+		link, err := decodeLink(item)
+		if err != nil {
+			return domain.LinkPage{}, err
+		}
+		page.Links = append(page.Links, link)
+	}
+	if len(out.LastEvaluatedKey) > 0 {
+		page.NextCursor, err = encodeCursor(owner, out.LastEvaluatedKey)
+		if err != nil {
+			return domain.LinkPage{}, err
+		}
+	}
+	return page, nil
 }
 
 func (r *DynamoDB) DeleteUserLink(ctx context.Context, code, owner string) error {

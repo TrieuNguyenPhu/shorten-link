@@ -4,6 +4,8 @@
 Tái hiện hoàn chỉnh hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS theo chuỗi 21 bài và repository `nghiadaulau/serverless-url-shortener-aws`, chuyển đổi sang **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js Static Export (`S3 + CloudFront OAC`)**, với mỗi Task hoàn thành được tạo một **Pull Request riêng** và luôn cập nhật trạng thái hiện tại của dự án.
 
 ## Current Phase
+Phase 2 final review/deployment — in_progress: sửa IAM, Lambda response budget và E2E consistency; người dùng đã yêu cầu apply sau final review.
+
 Phase 2 — complete về implementation. Task 2.1 đã merge #71; Task 2.2 hoàn tất local trên nhánh từ main158b127, chờ review/merge. AWS E2E pending, chưa apply.
 
 ## Phases & Tasks

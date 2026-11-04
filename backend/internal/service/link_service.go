@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -67,8 +68,34 @@ func (s *LinkService) Resolve(ctx context.Context, code string) (string, error) 
 	return link.Target, nil
 }
 
-func (s *LinkService) List(ctx context.Context, owner string) ([]domain.Link, error) {
-	return s.repo.ListUserLinks(ctx, owner)
+func (s *LinkService) List(ctx context.Context, owner string, limit int, cursor string) (domain.LinkPage, error) {
+	page, err := s.repo.ListUserLinks(ctx, owner, limit, cursor)
+	if err != nil {
+		return domain.LinkPage{}, err
+	}
+	// Leave room for JSON escaping in the Lambda response envelope (at most 2x),
+	// cursor fields and headers, below the synchronous 6 MiB invocation limit.
+	const pageBudget = 5 * 1024 * 1024 / 2
+	size := 4096
+	for i, link := range page.Links {
+		encoded, err := json.Marshal(link)
+		if err != nil {
+			return domain.LinkPage{}, err
+		}
+		size += len(encoded) + 1
+		if size > pageBudget {
+			if i == 0 {
+				return domain.LinkPage{}, errors.New("stored link exceeds response budget")
+			}
+			page.NextCursor, err = repository.CursorForLink(owner, page.Links[i-1])
+			if err != nil {
+				return domain.LinkPage{}, err
+			}
+			page.Links = page.Links[:i]
+			break
+		}
+	}
+	return page, nil
 }
 
 func (s *LinkService) Delete(ctx context.Context, code, owner string) error {

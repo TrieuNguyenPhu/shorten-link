@@ -92,3 +92,10 @@
 - Execution roles bị runtime boundary bootstrap giới hạn, deployment không được sửa boundary/trust/bootstrap hay xóa boundary khỏi role. PassRole exact4 role ARNs và PassedToService Lambda; business actions tách theo từng handler. Resolve live alias ignore_changes, private aliases vẫn cập nhật version bình thường.
 - IAM Autopilot unavailable: uvx không có, python venv thiếu ensurepip và python pip không có; fallback theo skill qua AWS Service Authorization Reference kiểm104 action names/capabilities, không giả vờ đã chạy Autopilot. Command tái tạo baseline được lưu runbook; không upload IAM.
 - Host thiếu make; direct recipe commands PASS, CI không phụ thuộc make. PowerShell7.5 official container parse/preflight invalid endpoint PASS không mạng AWS; AWS Core/OIDC script giữ token trong environment, xác nhận type/issuer/client/expiry, không follow redirect và cleanup chỉ link vừa tạo đúng target ngẫu nhiên. E2E Google/JWT/IAM/STS/X-Ray còn pending.
+
+
+## Final review Phase 2 — 2026-11-04
+- RequestTag không xác lập ownership của Cognito pool: loại wildcard TagResource/CreateUserPool khỏi deployment role. Operator tạo pool lần đầu qua Terraform rồi pin ID vào bootstrap; maintenance chỉ ARN đã pin, deny sửa Project/Environment bất kể hoa/thường.
+- AWS provider6.71.0 refresh ZIP Lambda gọi GetFunctionCodeSigningConfig cả khi không cấu hình code signing; bổ sung exact function ARNs.
+- Người dùng chốt cursor pagination thay list-all. Một DynamoDB query mỗi request, limit25 mặc định/100 tối đa; cursor owner-bound và validate key shape. Budget2.5MiB inner JSON dự phòng escape của Lambda envelope; test450 URL dài qua real handler kiểm dưới6MiB và không mất/trùng item. GSI eventual consistency, page cuối có thể rỗng khi Limit đúng biên.
+- E2E sau delete chỉ retry301, tối đa10lần/250ms;404 kết thúc, status khác fail ngay. Không thêm sleep tùy ý hoặc che500.

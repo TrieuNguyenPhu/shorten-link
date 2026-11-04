@@ -66,7 +66,7 @@ func TestDynamoDBLocalCRUDIsolationAndPagination(t *testing.T) {
 	if err != nil || link.OwnerID != "alice" || link.CreatedAt != "2026-11-04T00:00:00.000Z" {
 		t.Fatal(link, err)
 	}
-	links, err := repo.ListUserLinks(ctx, "alice")
+	links, err := collectUserLinks(ctx, repo, "alice")
 	if err != nil || len(links) != 6 {
 		t.Fatalf("pagination len=%d err=%v", len(links), err)
 	}
@@ -75,7 +75,7 @@ func TestDynamoDBLocalCRUDIsolationAndPagination(t *testing.T) {
 			t.Fatalf("order or owner at %d: %s %s", i, l.Code, l.OwnerID)
 		}
 	}
-	bob, err := repo.ListUserLinks(ctx, "bob")
+	bob, err := collectUserLinks(ctx, repo, "bob")
 	if err != nil || len(bob) != 1 || bob[0].Code != "Bob0001" {
 		t.Fatal(bob, err)
 	}
@@ -98,6 +98,22 @@ func TestDynamoDBLocalCRUDIsolationAndPagination(t *testing.T) {
 		out, err := client.GetItem(ctx, &dynamodb.GetItemInput{TableName: aws.String(table), Key: key, ConsistentRead: aws.Bool(true)})
 		if err != nil || len(out.Item) == 0 {
 			t.Fatal("deleted unrelated item", err)
+		}
+	}
+}
+
+func collectUserLinks(ctx context.Context, repo *DynamoDB, owner string) ([]domain.Link, error) {
+	var links []domain.Link
+	cursor := ""
+	for {
+		page, err := repo.ListUserLinks(ctx, owner, 100, cursor)
+		if err != nil {
+			return nil, err
+		}
+		links = append(links, page.Links...)
+		cursor = page.NextCursor
+		if cursor == "" {
+			return links, nil
 		}
 	}
 }

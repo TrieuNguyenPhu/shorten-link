@@ -103,6 +103,32 @@ func TestLocalHTTPEndToEnd(t *testing.T) {
 	if list := call("GET", "/links", "bob", "", 200); list != `{"links":[]}` {
 		t.Fatal(list)
 	}
+	secondJSON := call("POST", "/links", "alice", `{"url":"https://example.org/path"}`, 201)
+	var second struct{ Code string }
+	if err := json.Unmarshal([]byte(secondJSON), &second); err != nil {
+		t.Fatal(err)
+	}
+	var firstPage, lastPage struct {
+		Links      []struct{ Code string }
+		NextCursor string
+	}
+	if err := json.Unmarshal([]byte(call("GET", "/links?limit=1", "alice", "", 200)), &firstPage); err != nil || len(firstPage.Links) != 1 || firstPage.NextCursor == "" {
+		t.Fatal("missing cursor", err)
+	}
+	if err := json.Unmarshal([]byte(call("GET", "/links?limit=1&cursor="+firstPage.NextCursor, "alice", "", 200)), &lastPage); err != nil || len(lastPage.Links) != 1 || firstPage.Links[0].Code == lastPage.Links[0].Code {
+		t.Fatal("invalid next page", err)
+	}
+	if lastPage.NextCursor != "" {
+		var endPage struct {
+			Links      []struct{ Code string }
+			NextCursor string
+		}
+		if err := json.Unmarshal([]byte(call("GET", "/links?limit=1&cursor="+lastPage.NextCursor, "alice", "", 200)), &endPage); err != nil || len(endPage.Links) != 0 || endPage.NextCursor != "" {
+			t.Fatal("invalid end page", err)
+		}
+	}
+	call("GET", "/links?limit=1&cursor="+firstPage.NextCursor, "bob", "", 400)
+	call("DELETE", "/links/"+second.Code, "alice", "", 200)
 	denied := call("DELETE", "/links/"+link.Code, "bob", "", 404)
 	missing := call("DELETE", "/links/missing", "bob", "", 404)
 	if denied != missing {

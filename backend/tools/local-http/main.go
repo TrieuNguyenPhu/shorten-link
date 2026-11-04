@@ -116,7 +116,11 @@ func newAdapter(handler *httpapi.Handler, c localConfig) http.Handler {
 				http.Error(w, "invalid body", 400)
 				return
 			}
-			req := events.APIGatewayV2HTTPRequest{Version: "2.0", Body: string(body), PathParameters: map[string]string{"code": r.PathValue("code")}, RequestContext: events.APIGatewayV2HTTPRequestContext{DomainName: c.Listen, RequestID: rand.Text()}}
+			query := make(map[string]string)
+			for key := range r.URL.Query() {
+				query[key] = r.URL.Query().Get(key)
+			}
+			req := events.APIGatewayV2HTTPRequest{QueryStringParameters: query, Version: "2.0", Body: string(body), PathParameters: map[string]string{"code": r.PathValue("code")}, RequestContext: events.APIGatewayV2HTTPRequestContext{DomainName: c.Listen, RequestID: rand.Text()}}
 			user := r.Header.Get("X-Local-User")
 			for _, allowed := range c.Users {
 				if user == allowed {
