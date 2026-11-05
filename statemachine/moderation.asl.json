@@ -7,7 +7,7 @@
       "Resource": "${ModerateCheckArn}",
       "Retry": [
         {
-          "ErrorEquals": ["Lambda.ServiceException", "Lambda.TooManyRequestsException", "States.TaskFailed"],
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "Lambda.TooManyRequestsException"],
           "IntervalSeconds": 1,
           "MaxAttempts": 3,
           "BackoffRate": 2
@@ -27,6 +27,7 @@
       "Parameters": {
         "TableName": "${TableName}",
         "Key": {"PK": {"S.$": "States.Format('LINK#{}', $.code)"}, "SK": {"S": "META"}},
+        "ConditionExpression": "attribute_exists(PK)",
         "UpdateExpression": "SET #s = :active",
         "ExpressionAttributeNames": {"#s": "status"},
         "ExpressionAttributeValues": {":active": {"S": "active"}}
@@ -39,6 +40,7 @@
       "Parameters": {
         "TableName": "${TableName}",
         "Key": {"PK": {"S.$": "States.Format('LINK#{}', $.code)"}, "SK": {"S": "META"}},
+        "ConditionExpression": "attribute_exists(PK)",
         "UpdateExpression": "SET #s = :rejected",
         "ExpressionAttributeNames": {"#s": "status"},
         "ExpressionAttributeValues": {":rejected": {"S": "rejected"}}

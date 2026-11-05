@@ -26,11 +26,10 @@ func NewWebSocket(repo ConnectionRepository, logger *slog.Logger) *WebSocketServ
 	return &WebSocketService{repo: repo, logger: logger, now: time.Now}
 }
 
-// Connect intentionally implements the public code-based subscription contract.
 func (s *WebSocketService) Connect(ctx context.Context, req events.APIGatewayWebsocketProxyRequest) (events.APIGatewayProxyResponse, error) {
-	code, id := req.QueryStringParameters["code"], req.RequestContext.ConnectionID
-	if strings.TrimSpace(code) == "" || strings.TrimSpace(id) == "" {
-		return events.APIGatewayProxyResponse{StatusCode: 400, Body: "code and connectionId are required"}, nil
+	code, id := strings.TrimSpace(req.QueryStringParameters["code"]), strings.TrimSpace(req.RequestContext.ConnectionID)
+	if !domain.IsValidShortCode(code) || id == "" {
+		return events.APIGatewayProxyResponse{StatusCode: 400, Body: "valid code and connectionId are required"}, nil
 	}
 	ctx, cancel := context.WithTimeout(ctx, 4*time.Second)
 	defer cancel()

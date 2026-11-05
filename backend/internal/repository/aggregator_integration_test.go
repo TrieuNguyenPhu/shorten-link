@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -80,14 +79,10 @@ func TestDynamoDBLocalClickAtomicityTTLAndReplay(t *testing.T) {
 	record("event-1", ClickApplied)
 	record("event-1", ClickDuplicate)
 	assertClickNumber(t, readClickItem(t, ctx, client, table, "LINK#Abc1234", "META"), "clicks", "1")
-	stat := readClickItem(t, ctx, client, table, "LINK#Abc1234", "STAT#2026-11-03")
-	assertClickNumber(t, stat, "count", "1")
 	marker := readClickItem(t, ctx, client, table, "CLICK#event-1", "CLICK")
 	assertClickNumber(t, marker, "ttl", "1793840400")
-	for _, item := range []map[string]types.AttributeValue{stat, marker} {
-		if item["GSI1PK"] != nil || item["GSI1SK"] != nil {
-			t.Fatal("analytics must stay sparse", item)
-		}
+	if marker["GSI1PK"] != nil || marker["GSI1SK"] != nil {
+		t.Fatal("marker must stay sparse", marker)
 	}
 	// TTL is asynchronous: an expired item that is still present must still dedupe.
 	_, err := client.UpdateItem(ctx, &dynamodb.UpdateItemInput{TableName: aws.String(table), Key: map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: "CLICK#event-1"}, "SK": &types.AttributeValueMemberS{Value: "CLICK"}}, UpdateExpression: aws.String("SET #ttl = :expired"), ExpressionAttributeNames: map[string]string{"#ttl": "ttl"}, ExpressionAttributeValues: map[string]types.AttributeValue{":expired": &types.AttributeValueMemberN{Value: "1"}}})
@@ -101,7 +96,6 @@ func TestDynamoDBLocalClickAtomicityTTLAndReplay(t *testing.T) {
 	}
 	record("event-1", ClickApplied)
 	assertClickNumber(t, readClickItem(t, ctx, client, table, "LINK#Abc1234", "META"), "clicks", "2")
-	assertClickNumber(t, readClickItem(t, ctx, client, table, "LINK#Abc1234", "STAT#2026-11-03"), "count", "2")
 	if err := repo.DeleteUserLink(ctx, "Abc1234", "alice"); err != nil {
 		t.Fatal(err)
 	}
@@ -110,10 +104,9 @@ func TestDynamoDBLocalClickAtomicityTTLAndReplay(t *testing.T) {
 	if len(readClickItem(t, ctx, client, table, "LINK#Abc1234", "META")) != 0 || len(readClickItem(t, ctx, client, table, "CLICK#late-event", "CLICK")) != 0 {
 		t.Fatal("late click resurrected metadata/marker")
 	}
-	assertClickNumber(t, readClickItem(t, ctx, client, table, "LINK#Abc1234", "STAT#2026-11-03"), "count", "2")
-	// A link that never existed must not create STAT or marker either.
+	// A link that never existed must not create a marker either.
 	outcome, err := repo.RecordClickTransaction(ctx, "never-event", "Missing", now, now)
-	if err != nil || outcome != ClickDeleted || len(readClickItem(t, ctx, client, table, "LINK#Missing", "STAT#2026-11-04")) != 0 || len(readClickItem(t, ctx, client, table, "CLICK#never-event", "CLICK")) != 0 {
+	if err != nil || outcome != ClickDeleted || len(readClickItem(t, ctx, client, table, "CLICK#never-event", "CLICK")) != 0 {
 		t.Fatal(outcome, err)
 	}
 }
@@ -200,7 +193,6 @@ func TestDynamoDBLocalConcurrentClicksAndDeleteRace(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertClickNumber(t, readClickItem(t, ctx, client, table, "LINK#Abc1234", "META"), "clicks", "13")
-	assertClickNumber(t, readClickItem(t, ctx, client, table, "LINK#Abc1234", "STAT#"+time.Now().UTC().Format("2006-01-02")), "count", "13")
 	// Delete and a transaction race. Either the transaction commits entirely first,
 	// or it is discarded entirely; a late retry can never resurrect META.
 	start := make(chan struct{})
@@ -229,13 +221,9 @@ func TestDynamoDBLocalConcurrentClicksAndDeleteRace(t *testing.T) {
 	if len(readClickItem(t, ctx, client, table, "LINK#Abc1234", "META")) != 0 {
 		t.Fatal("metadata resurrected")
 	}
-	want := 13
-	if raced == ClickApplied {
-		want++
-	} else if raced != ClickDeleted {
+	if raced != ClickApplied && raced != ClickDeleted {
 		t.Fatal(raced)
 	}
-	assertClickNumber(t, readClickItem(t, ctx, client, table, "LINK#Abc1234", "STAT#"+time.Now().UTC().Format("2006-01-02")), "count", strconv.Itoa(want))
 	marker := readClickItem(t, ctx, client, table, "CLICK#raced-id", "CLICK")
 	if (len(marker) > 0) != (raced == ClickApplied) {
 		t.Fatal("partial transaction", raced, marker)

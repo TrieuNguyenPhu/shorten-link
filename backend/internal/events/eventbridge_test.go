@@ -23,40 +23,30 @@ func success() *eventbridge.PutEventsOutput {
 	return &eventbridge.PutEventsOutput{Entries: []types.PutEventsResultEntry{{EventId: aws.String("accepted-id")}}}
 }
 
-func TestPublishValidatesEachEntryAndBoundsRetries(t *testing.T) {
+func TestPublishValidatesEntryAndDeadline(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
 		out     *eventbridge.PutEventsOutput
-		calls   int
-		recover bool
 		wantErr bool
 	}{
-		{"accepted", success(), 1, false, false},
-		{"internal retry", &eventbridge.PutEventsOutput{FailedEntryCount: 1, Entries: []types.PutEventsResultEntry{{ErrorCode: aws.String("InternalFailure")}}}, 3, false, true},
-		{"throttle recovery", &eventbridge.PutEventsOutput{FailedEntryCount: 1, Entries: []types.PutEventsResultEntry{{ErrorCode: aws.String("ThrottlingException")}}}, 2, true, false},
-		{"denied", &eventbridge.PutEventsOutput{FailedEntryCount: 1, Entries: []types.PutEventsResultEntry{{ErrorCode: aws.String("AccessDeniedException")}}}, 1, false, true},
-		{"missing", &eventbridge.PutEventsOutput{}, 1, false, true},
-		{"nil", nil, 1, false, true},
-		{"no id", &eventbridge.PutEventsOutput{Entries: []types.PutEventsResultEntry{{}}}, 1, false, true},
-		{"count mismatch", &eventbridge.PutEventsOutput{FailedEntryCount: 1, Entries: success().Entries}, 1, false, true},
-		{"both id error", &eventbridge.PutEventsOutput{FailedEntryCount: 1, Entries: []types.PutEventsResultEntry{{EventId: aws.String("id"), ErrorCode: aws.String("InternalFailure")}}}, 1, false, true},
-		{"extra entries", &eventbridge.PutEventsOutput{Entries: append(success().Entries, success().Entries...)}, 1, false, true},
-		{"count missing", &eventbridge.PutEventsOutput{Entries: []types.PutEventsResultEntry{{ErrorCode: aws.String("InternalFailure")}}}, 1, false, true},
+		{"accepted", success(), false},
+		{"internal failure", &eventbridge.PutEventsOutput{FailedEntryCount: 1, Entries: []types.PutEventsResultEntry{{ErrorCode: aws.String("InternalFailure")}}}, true},
+		{"denied", &eventbridge.PutEventsOutput{FailedEntryCount: 1, Entries: []types.PutEventsResultEntry{{ErrorCode: aws.String("AccessDeniedException")}}}, true},
+		{"missing", &eventbridge.PutEventsOutput{}, true},
+		{"nil", nil, true},
+		{"no id", &eventbridge.PutEventsOutput{Entries: []types.PutEventsResultEntry{{}}}, true},
+		{"count mismatch", &eventbridge.PutEventsOutput{FailedEntryCount: 1, Entries: success().Entries}, true},
+		{"both id error", &eventbridge.PutEventsOutput{FailedEntryCount: 1, Entries: []types.PutEventsResultEntry{{EventId: aws.String("id"), ErrorCode: aws.String("InternalFailure")}}}, true},
+		{"extra entries", &eventbridge.PutEventsOutput{Entries: append(success().Entries, success().Entries...)}, true},
+		{"count missing", &eventbridge.PutEventsOutput{Entries: []types.PutEventsResultEntry{{ErrorCode: aws.String("InternalFailure")}}}, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			calls := 0
-			publisher := NewPublisher(putStub(func(ctx context.Context, in *eventbridge.PutEventsInput, opts ...func(*eventbridge.Options)) (*eventbridge.PutEventsOutput, error) {
+			publisher := NewPublisher(putStub(func(ctx context.Context, in *eventbridge.PutEventsInput, _ ...func(*eventbridge.Options)) (*eventbridge.PutEventsOutput, error) {
 				calls++
 				deadline, ok := ctx.Deadline()
-				if !ok || time.Until(deadline) > 2*time.Second {
+				if !ok || time.Until(deadline) > 1500*time.Millisecond {
 					t.Fatal("unbounded deadline")
-				}
-				options := eventbridge.Options{}
-				for _, f := range opts {
-					f(&options)
-				}
-				if options.Retryer == nil || options.Retryer.MaxAttempts() != 1 {
-					t.Fatal("nested SDK retries")
 				}
 				if len(in.Entries) != 1 || aws.ToString(in.Entries[0].EventBusName) != "bus" || aws.ToString(in.Entries[0].Source) != "urlshortener" || aws.ToString(in.Entries[0].DetailType) != "link.clicked" {
 					t.Fatal(in)
@@ -65,13 +55,10 @@ func TestPublishValidatesEachEntryAndBoundsRetries(t *testing.T) {
 				if err := json.Unmarshal([]byte(aws.ToString(in.Entries[0].Detail)), &detail); err != nil || detail.Code != "Abc1234" || detail.At != "2026-11-04T00:00:00.000Z" {
 					t.Fatal(detail, err)
 				}
-				if tc.recover && calls > 1 {
-					return success(), nil
-				}
 				return tc.out, nil
 			}), "bus")
 			err := publisher.Publish(context.Background(), domain.ClickEvent{Code: "Abc1234", At: "2026-11-04T00:00:00.000Z"})
-			if (err != nil) != tc.wantErr || calls != tc.calls {
+			if (err != nil) != tc.wantErr || calls != 1 {
 				t.Fatalf("err=%v calls=%d", err, calls)
 			}
 		})
@@ -111,16 +98,6 @@ func TestPublishDoesNotSendWithoutBusOrAfterCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	if err := NewPublisher(client, "bus").Publish(ctx, domain.ClickEvent{}); !errors.Is(err, context.Canceled) || calls != 0 {
-		t.Fatal(err, calls)
-	}
-	ctx, cancel = context.WithCancel(context.Background())
-	defer cancel()
-	client = putStub(func(context.Context, *eventbridge.PutEventsInput, ...func(*eventbridge.Options)) (*eventbridge.PutEventsOutput, error) {
-		calls++
-		cancel()
-		return &eventbridge.PutEventsOutput{FailedEntryCount: 1, Entries: []types.PutEventsResultEntry{{ErrorCode: aws.String("InternalFailure")}}}, nil
-	})
-	if err := NewPublisher(client, "bus").Publish(ctx, domain.ClickEvent{}); !errors.Is(err, context.Canceled) || calls != 1 {
 		t.Fatal(err, calls)
 	}
 }

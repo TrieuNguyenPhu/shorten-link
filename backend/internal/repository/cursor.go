@@ -24,13 +24,8 @@ type linkCursor struct {
 
 func (c linkCursor) valid(owner string) bool {
 	code := strings.TrimPrefix(c.PK, "LINK#")
-	if c.OwnerKey != "USER#"+owner || c.SK != "META" || !strings.HasPrefix(c.PK, "LINK#") || len(code) != 7 {
+	if c.OwnerKey != "USER#"+owner || c.SK != "META" || !strings.HasPrefix(c.PK, "LINK#") || !domain.IsValidShortCode(code) {
 		return false
-	}
-	for _, r := range code {
-		if !(r >= '0' && r <= '9' || r >= 'A' && r <= 'Z' || r >= 'a' && r <= 'z') {
-			return false
-		}
 	}
 	if !strings.HasPrefix(c.SortKey, "LINK#") {
 		return false
@@ -72,9 +67,4 @@ func encodeCursor(owner string, key map[string]types.AttributeValue) (string, er
 		return "", err
 	}
 	return base64.RawURLEncoding.EncodeToString(data), nil
-}
-
-// CursorForLink resumes after the last returned item when a byte budget cuts a query page.
-func CursorForLink(owner string, link domain.Link) (string, error) {
-	return encodeCursor(owner, map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: "LINK#" + link.Code}, "SK": &types.AttributeValueMemberS{Value: "META"}, "GSI1PK": &types.AttributeValueMemberS{Value: "USER#" + owner}, "GSI1SK": &types.AttributeValueMemberS{Value: "LINK#" + link.CreatedAt}})
 }

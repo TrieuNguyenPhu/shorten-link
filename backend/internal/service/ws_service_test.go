@@ -32,7 +32,7 @@ func TestWebSocketConnectAndDisconnect(t *testing.T) {
 	s := NewWebSocket(repo, slog.New(slog.NewJSONHandler(io.Discard, nil)))
 	s.now = func() time.Time { return time.Unix(100, 0) }
 	req := events.APIGatewayWebsocketProxyRequest{RequestContext: events.APIGatewayWebsocketProxyRequestContext{ConnectionID: "socket="}}
-	for _, code := range []string{"", "   "} {
+	for _, code := range []string{"", "   ", "short", "../bad!"} {
 		req.QueryStringParameters = map[string]string{"code": code}
 		res, err := s.Connect(context.Background(), req)
 		if err != nil || res.StatusCode != 400 || repo.saved.ConnectionID != "" {

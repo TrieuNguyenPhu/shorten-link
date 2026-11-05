@@ -66,3 +66,70 @@ func NormalizeURL(raw string) (string, error) {
 	}
 	return u.String(), nil
 }
+
+const (
+	ShortCodeLength    = 7
+	MaxTargetURLLength = 2048
+)
+
+func IsValidShortCode(code string) bool {
+	if len(code) != ShortCodeLength {
+		return false
+	}
+	for i := range len(code) {
+		c := code[i]
+		if !(c >= '0' && c <= '9' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z') {
+			return false
+		}
+	}
+	return true
+}
+
+// ValidateTargetURL normalizes a user-supplied destination URL and blocks
+// excessive lengths, localhost/local hostnames, and non-public IP literals.
+func ValidateTargetURL(raw string) (string, error) {
+	if len(strings.TrimSpace(raw)) > MaxTargetURLLength {
+		return "", errors.New("URL exceeds maximum allowed length")
+	}
+	normalized, err := NormalizeURL(raw)
+	if err != nil {
+		return "", err
+	}
+	if len(normalized) > MaxTargetURLLength {
+		return "", errors.New("URL exceeds maximum allowed length")
+	}
+	u, err := url.Parse(normalized)
+	if err != nil {
+		return "", err
+	}
+	host := strings.ToLower(strings.TrimSuffix(u.Hostname(), "."))
+	if host == "localhost" || strings.HasSuffix(host, ".localhost") || strings.HasSuffix(host, ".local") {
+		return "", errors.New("URL host must be publicly routable")
+	}
+	if addr, err := netip.ParseAddr(host); err == nil {
+		addr = addr.Unmap()
+		if addr.IsLoopback() || addr.IsPrivate() || addr.IsLinkLocalUnicast() || addr.IsLinkLocalMulticast() || addr.IsMulticast() || addr.IsUnspecified() {
+			return "", errors.New("URL IP address must be publicly routable")
+		}
+	}
+	return normalized, nil
+}
+
+// IsSafeTargetURL validates the target URL and checks token boundaries for
+// known unsafe keywords without false positives on words like "medieval" or "devil".
+func IsSafeTargetURL(raw string) bool {
+	normalized, err := ValidateTargetURL(raw)
+	if err != nil {
+		return false
+	}
+	tokens := strings.FieldsFunc(strings.ToLower(normalized), func(r rune) bool {
+		return !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9')
+	})
+	for _, token := range tokens {
+		switch token {
+		case "malware", "phishing", "evil":
+			return false
+		}
+	}
+	return true
+}

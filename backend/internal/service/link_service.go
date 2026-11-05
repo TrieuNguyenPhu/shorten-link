@@ -2,9 +2,9 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/domain"
@@ -29,15 +29,15 @@ type LinkService struct {
 }
 
 func New(repo repository.LinkRepository, publisher ClickPublisher) *LinkService {
-	return &LinkService{repo: repo, publisher: publisher, generate: func() (string, error) { return domain.GenerateShortCode(7) }, now: time.Now}
+	return &LinkService{repo: repo, publisher: publisher, generate: func() (string, error) { return domain.GenerateShortCode(domain.ShortCodeLength) }, now: time.Now}
 }
 
 func (s *LinkService) Create(ctx context.Context, owner, rawURL string) (domain.Link, error) {
-	target, err := domain.NormalizeURL(rawURL)
-	if err != nil {
+	target, err := domain.ValidateTargetURL(rawURL)
+	if err != nil || !domain.IsSafeTargetURL(target) {
 		return domain.Link{}, ErrInvalidURL
 	}
-	link := domain.Link{OwnerID: owner, Target: target, CreatedAt: domain.FormatCreatedAt(s.now())}
+	link := domain.Link{OwnerID: owner, Target: target, CreatedAt: domain.FormatCreatedAt(s.now()), Status: "active"}
 	for range 5 {
 		link.Code, err = s.generate()
 		if err != nil {
@@ -55,49 +55,31 @@ func (s *LinkService) Create(ctx context.Context, owner, rawURL string) (domain.
 }
 
 func (s *LinkService) Resolve(ctx context.Context, code string) (string, error) {
+	if !domain.IsValidShortCode(code) {
+		return "", repository.ErrNotFound
+	}
 	link, err := s.repo.GetLink(ctx, code)
 	if err != nil {
 		return "", err
 	}
-	if s.publisher == nil {
-		return "", errors.New("click publisher is required")
+	if strings.EqualFold(link.Status, "rejected") || link.Target == "" {
+		return "", repository.ErrNotFound
 	}
-	if err := s.publisher.Publish(ctx, domain.ClickEvent{Code: code, At: domain.FormatCreatedAt(s.now())}); err != nil {
-		return "", fmt.Errorf("%w: %w", ErrPublish, err)
+	if s.publisher != nil {
+		if err := s.publisher.Publish(ctx, domain.ClickEvent{Code: code, At: domain.FormatCreatedAt(s.now())}); err != nil {
+			return link.Target, fmt.Errorf("%w: %w", ErrPublish, err)
+		}
 	}
 	return link.Target, nil
 }
 
 func (s *LinkService) List(ctx context.Context, owner string, limit int, cursor string) (domain.LinkPage, error) {
-	page, err := s.repo.ListUserLinks(ctx, owner, limit, cursor)
-	if err != nil {
-		return domain.LinkPage{}, err
-	}
-	// Leave room for JSON escaping in the Lambda response envelope (at most 2x),
-	// cursor fields and headers, below the synchronous 6 MiB invocation limit.
-	const pageBudget = 5 * 1024 * 1024 / 2
-	size := 4096
-	for i, link := range page.Links {
-		encoded, err := json.Marshal(link)
-		if err != nil {
-			return domain.LinkPage{}, err
-		}
-		size += len(encoded) + 1
-		if size > pageBudget {
-			if i == 0 {
-				return domain.LinkPage{}, errors.New("stored link exceeds response budget")
-			}
-			page.NextCursor, err = repository.CursorForLink(owner, page.Links[i-1])
-			if err != nil {
-				return domain.LinkPage{}, err
-			}
-			page.Links = page.Links[:i]
-			break
-		}
-	}
-	return page, nil
+	return s.repo.ListUserLinks(ctx, owner, limit, cursor)
 }
 
 func (s *LinkService) Delete(ctx context.Context, code, owner string) error {
+	if !domain.IsValidShortCode(code) {
+		return repository.ErrNotFound
+	}
 	return s.repo.DeleteUserLink(ctx, code, owner)
 }

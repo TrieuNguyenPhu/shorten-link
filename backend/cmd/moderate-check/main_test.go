@@ -58,7 +58,7 @@ func TestModerationStateMachineContract(t *testing.T) {
 		t.Fatal(machine)
 	}
 	retry := check.Retry[0]
-	if !reflect.DeepEqual(retry.ErrorEquals, []string{"Lambda.ServiceException", "Lambda.TooManyRequestsException", "States.TaskFailed"}) || retry.IntervalSeconds != 1 || retry.MaxAttempts != 3 || retry.BackoffRate != 2 || check.Catch[0].Next != "MarkError" || !reflect.DeepEqual(check.Catch[0].ErrorEquals, []string{"States.ALL"}) {
+	if !reflect.DeepEqual(retry.ErrorEquals, []string{"Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "Lambda.TooManyRequestsException"}) || retry.IntervalSeconds != 1 || retry.MaxAttempts != 3 || retry.BackoffRate != 2 || check.Catch[0].Next != "MarkError" || !reflect.DeepEqual(check.Catch[0].ErrorEquals, []string{"States.ALL"}) {
 		t.Fatal(check)
 	}
 	choice := machine.States["IsSafe"]
@@ -67,12 +67,13 @@ func TestModerationStateMachineContract(t *testing.T) {
 	}
 	for name, status := range map[string]string{"Activate": "active", "Reject": "rejected"} {
 		state := machine.States[name]
-		if state.Type != "Task" || state.Resource != "arn:aws:states:::dynamodb:updateItem" || !state.End || state.Parameters["ConditionExpression"] != nil {
+		if state.Type != "Task" || state.Resource != "arn:aws:states:::dynamodb:updateItem" || !state.End {
 			t.Fatal(state)
 		}
 		var params struct {
 			TableName                 string
 			Key                       map[string]map[string]string
+			ConditionExpression       string
 			UpdateExpression          string
 			ExpressionAttributeNames  map[string]string
 			ExpressionAttributeValues map[string]map[string]string
@@ -81,7 +82,7 @@ func TestModerationStateMachineContract(t *testing.T) {
 		if err := json.Unmarshal(encoded, &params); err != nil {
 			t.Fatal(err)
 		}
-		if params.TableName != "${TableName}" || params.Key["PK"]["S.$"] != "States.Format('LINK#{}', $.code)" || params.Key["SK"]["S"] != "META" || params.UpdateExpression != "SET #s = :"+status || params.ExpressionAttributeNames["#s"] != "status" || params.ExpressionAttributeValues[":"+status]["S"] != status {
+		if params.TableName != "${TableName}" || params.Key["PK"]["S.$"] != "States.Format('LINK#{}', $.code)" || params.Key["SK"]["S"] != "META" || params.ConditionExpression != "attribute_exists(PK)" || params.UpdateExpression != "SET #s = :"+status || params.ExpressionAttributeNames["#s"] != "status" || params.ExpressionAttributeValues[":"+status]["S"] != status {
 			t.Fatal(params)
 		}
 	}

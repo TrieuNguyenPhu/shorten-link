@@ -11,19 +11,13 @@ type Link struct {
 	Status    string `json:"status,omitempty" dynamodbav:"status,omitempty"`
 }
 
-type DailyStat struct {
-	Code  string `json:"code"`
-	Date  string `json:"date"`
-	Count int64  `json:"count" dynamodbav:"count"`
-}
-
 type ClickEvent struct {
 	Code string `json:"code"`
 	At   string `json:"at"`
 }
 
 type WSConnection struct {
-	ConnectionID string `json:"connectionId"`
+	ConnectionID string
 	Code         string `json:"code" dynamodbav:"code"`
 	TTL          int64  `json:"ttl" dynamodbav:"ttl"`
 }

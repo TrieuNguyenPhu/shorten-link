@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 )
 
-func TestNewHandlerRequiresTableAndHandlesEmptyBatchWithoutAWS(t *testing.T) {
+func TestNewHandlerRequiresTableAndWSEndpointAndHandlesEmptyBatchWithoutAWS(t *testing.T) {
 	t.Setenv("TABLE_NAME", "")
 	if _, err := newHandler(context.Background()); err == nil {
 		t.Fatal("missing table accepted")
@@ -24,6 +24,10 @@ func TestNewHandlerRequiresTableAndHandlesEmptyBatchWithoutAWS(t *testing.T) {
 	t.Setenv("AWS_ACCESS_KEY_ID", "local")
 	t.Setenv("AWS_SECRET_ACCESS_KEY", "local")
 	t.Setenv("WS_ENDPOINT", "")
+	if _, err := newHandler(context.Background()); err == nil {
+		t.Fatal("missing WS_ENDPOINT accepted")
+	}
+	t.Setenv("WS_ENDPOINT", "https://ws.example.com/prod")
 	handler, err := newHandler(context.Background())
 	if err != nil {
 		t.Fatal(err)

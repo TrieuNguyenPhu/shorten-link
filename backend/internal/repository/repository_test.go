@@ -131,8 +131,7 @@ func TestRepositoryPropagatesFailuresAndEmptyList(t *testing.T) {
 }
 
 func TestCursorCannotSelectAnotherOwner(t *testing.T) {
-	link := domain.Link{Code: "Abc1234", CreatedAt: "2026-11-04T00:00:00.000Z"}
-	cursor, err := CursorForLink("bob", link)
+	cursor, err := encodeCursor("bob", map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: "LINK#Abc1234"}, "SK": &types.AttributeValueMemberS{Value: "META"}, "GSI1PK": &types.AttributeValueMemberS{Value: "USER#bob"}, "GSI1SK": &types.AttributeValueMemberS{Value: "LINK#2026-11-04T00:00:00.000Z"}})
 	if err != nil {
 		t.Fatal(err)
 	}

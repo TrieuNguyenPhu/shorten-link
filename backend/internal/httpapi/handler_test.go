@@ -152,7 +152,7 @@ func TestListReturnsOnlyPublicFieldsAndEmptyArray(t *testing.T) {
 			if res.Body != `{"links":[]}` {
 				t.Fatal(res.Body)
 			}
-		} else if len(out.Links) != 1 || len(out.Links[0]) != 4 || out.Links[0]["clicks"] != float64(4) {
+		} else if len(out.Links) != 1 || len(out.Links[0]) != 5 || out.Links[0]["clicks"] != float64(4) || out.Links[0]["shortUrl"] != "https://redirect.example.org/Abc1234" {
 			t.Fatal(out)
 		}
 	}
@@ -178,18 +178,17 @@ func TestDeleteConditionalFailureUsesSame404(t *testing.T) {
 	}
 }
 
-func TestResolvePublishesBeforeRedirectAndEmitsOutcome(t *testing.T) {
+func TestResolveRedirectsWith302NoStoreAndBestEffortAnalytics(t *testing.T) {
 	for _, tc := range []struct {
 		name                           string
 		missing, publishFail, readFail bool
 		status                         int
 		metric                         string
-		wantErr                        bool
 	}{
-		{name: "accepted", status: 301, metric: "LinkResolved"},
+		{name: "accepted", status: 302, metric: "LinkResolved"},
 		{name: "missing", missing: true, status: 404, metric: "LinkNotFound"},
-		{name: "publish failed", publishFail: true, metric: "ClickPublishFailed", wantErr: true},
-		{name: "read failed", readFail: true, wantErr: true},
+		{name: "publish failed still redirects", publishFail: true, status: 302, metric: "ClickPublishFailed"},
+		{name: "read failed", readFail: true, status: 500},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var metrics bytes.Buffer
@@ -213,17 +212,14 @@ func TestResolvePublishesBeforeRedirectAndEmitsOutcome(t *testing.T) {
 				return nil
 			}, &metrics)
 			res, err := h.Resolve(context.Background(), request(""))
-			if (err != nil) != tc.wantErr || res.StatusCode != tc.status {
+			if err != nil || res.StatusCode != tc.status {
 				t.Fatal(res, err)
 			}
-			if tc.status == 301 && (!published || res.Headers["Location"] != "https://example.org" || res.Body != "") {
+			if tc.status == 302 && (!published || res.Headers["Location"] != "https://example.org" || !strings.Contains(res.Headers["Cache-Control"], "no-store") || res.Body != "") {
 				t.Fatal(res, published)
 			}
 			if tc.metric != "" && !strings.Contains(metrics.String(), `"`+tc.metric+`":1`) {
 				t.Fatal(metrics.String())
-			}
-			if tc.wantErr && strings.Contains(metrics.String(), `"LinkResolved":1`) {
-				t.Fatal("false success metric")
 			}
 			if tc.readFail && strings.Contains(metrics.String(), "ClickPublishFailed") {
 				t.Fatal("read failure counted as publish failure")
@@ -242,7 +238,7 @@ func TestTelemetryFailureDoesNotRepublishOrFailRedirect(t *testing.T) {
 		return &dynamodb.GetItemOutput{Item: map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: "LINK#Abc1234"}, "target": &types.AttributeValueMemberS{Value: "https://example.org"}}}, nil
 	}}, func(context.Context, domain.ClickEvent) error { calls++; return nil }, brokenWriter{})
 	res, err := h.Resolve(context.Background(), request(""))
-	if err != nil || res.StatusCode != 301 || calls != 1 {
+	if err != nil || res.StatusCode != 302 || calls != 1 {
 		t.Fatal(res, err, calls)
 	}
 }

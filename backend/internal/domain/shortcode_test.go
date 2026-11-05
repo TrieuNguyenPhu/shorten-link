@@ -56,6 +56,50 @@ func TestNormalizeURL(t *testing.T) {
 	}
 }
 
+func TestValidateTargetURLBlocksPrivateHostsAndExcessiveLength(t *testing.T) {
+	if got, err := ValidateTargetURL("https://example.com/docs?q=1"); err != nil || got != "https://example.com/docs?q=1" {
+		t.Fatalf("got %q, %v", got, err)
+	}
+	if got, err := ValidateTargetURL("https://8.8.8.8/dns"); err != nil || got != "https://8.8.8.8/dns" {
+		t.Fatalf("got %q, %v", got, err)
+	}
+	blocked := []string{
+		"http://localhost:8080/",
+		"https://sub.localhost/path",
+		"http://internal.local/admin",
+		"http://127.0.0.1/admin",
+		"http://127.0.0.1./admin",
+		"https://[::1]/",
+		"http://169.254.169.254/latest/meta-data/",
+		"http://10.0.0.1/internal",
+		"http://172.16.0.1/internal",
+		"http://192.168.1.1/router",
+		"http://0.0.0.0/",
+		"https://[fe80::1]/",
+		"https://[fd00::1]/",
+		"https://example.com/" + strings.Repeat("a", MaxTargetURLLength),
+	}
+	for _, raw := range blocked {
+		if got, err := ValidateTargetURL(raw); err == nil {
+			t.Fatalf("accepted blocked target URL %q as %q", raw[:min(len(raw), 64)], got)
+		}
+	}
+}
+
+func TestIsValidShortCodeAndIsSafeTargetURL(t *testing.T) {
+	if !IsValidShortCode("Abc1234") || IsValidShortCode("short") || IsValidShortCode("toolong8") || IsValidShortCode("bad-chr") {
+		t.Fatal("invalid short code validation")
+	}
+	if !IsSafeTargetURL("https://devil.com/medieval-history") {
+		t.Fatal("false positive on substring match")
+	}
+	for _, unsafe := range []string{"https://evil.example.org", "https://example.org/malware-kit", "https://phishing.example.org", "http://127.0.0.1/"} {
+		if IsSafeTargetURL(unsafe) {
+			t.Fatalf("accepted unsafe URL %q", unsafe)
+		}
+	}
+}
+
 func TestFormatCreatedAt(t *testing.T) {
 	zone := time.FixedZone("UTC+7", 7*60*60)
 	first := time.Date(2026, 10, 27, 15, 0, 0, 0, zone)
