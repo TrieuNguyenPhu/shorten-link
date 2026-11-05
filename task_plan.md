@@ -109,3 +109,5 @@ Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e37
 - [x] **Status: complete (local)**. Merge main `2b6ed24` vào PR #88 hiện có; bảo toàn implementation UI/PKCE đã kiểm thử.
 
 Task 6.2: [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90), code tree `94d64f2` khớp local/remote. CI đang chạy; chưa merge/dispatch/apply. Merge #89 trước #90; giữ nguyên checkout/diff của người dùng.
+
+Phase6.2: CI [#222](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982111683) PASS cả5jobs trên commit2985818 sau cấu hình environment tường minh. Task6.1 đã harden trust exact SourceAccount/deployment-group ARN, regression RED→GREEN/21 dev tests và kiểm bản ghép focused PASS; không đổi codeTask6.2. AWS apply/canary thật vẫn pending.

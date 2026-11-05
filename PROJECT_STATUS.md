@@ -250,3 +250,5 @@
 - Nhánh `fix/phase-05-ui-review-production` tạo từ `origin/main` (`2253a3c`), kế thừa hai commit sửa PKCE #87 để giữ luồng đăng nhập an toàn. Giữ nguyên các diff có sẵn để rà soát, không tự hoàn nguyên.
 
 Task 6.2: [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90), code tree `94d64f2` khớp local/remote. CI đang chạy; chưa merge/dispatch/apply. Merge #89 trước #90; giữ nguyên checkout/diff của người dùng.
+
+Phase6.2: CI [#222](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982111683) PASS cả5jobs trên commit2985818 sau cấu hình environment tường minh. Task6.1 đã harden trust exact SourceAccount/deployment-group ARN, regression RED→GREEN/21 dev tests và kiểm bản ghép focused PASS; không đổi codeTask6.2. AWS apply/canary thật vẫn pending.
