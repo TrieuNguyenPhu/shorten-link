@@ -227,3 +227,23 @@
 - Chưa kiểm chứng federation sau bước nhập tài khoản Google. Không apply Terraform, thay backend, chạy load test hoặc tạo tài nguyên mới.
 
 - PR vận hành [#86](https://github.com/TrieuNguyenPhu/shorten-link/pull/86) ghi nhận rollout và đồng bộ preflight/smoke routes; chưa merge.
+
+## 2026-11-05 — Sửa callback mất PKCE
+
+- Nhánh `fix/phase-05-preserve-pkce-callback` từ main `2253a3c`. User gửi ảnh state mismatch sau Google; điều tra thứ tự Navbar → callback tìm lỗi cleanup PKCE của `getAccessToken`.
+- RED: hai regression chưa có token/token hết hạn làm mất PKCE; GREEN sau khi chỉ dọn token/expiry. Component integration regular PASS nhưng StrictMode RED vì effect thứ hai xóa phiên; GREEN sau khi memoize promise bằng ref.
+- `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm test` (24/24), `pnpm audit --prod` và `git diff --check` PASS.
+- Browser production trước sửa: start login thật → quay về cùng origin qua SVG để đọc state của phiên kiểm thử → callback dùng state đúng và code chẩn đoán không hợp lệ vẫn báo `OAuth callback state mismatch`, chứng minh lỗi xảy ra trước token endpoint. Không dùng tài khoản người dùng.
+- Bắt đầu rollout qua publisher đã sửa preflight ở PR #86 (đọc script từ branch đó với đường dẫn TF/frontend tường minh), không gộp thay đổi publisher vào PR auth mới. Backup mutable objects trước rollout tại `/tmp/shrnk-frontend-before-callback-fix/`.
+
+- Rollout thành công lên https://d2aamyg2mt28wl.cloudfront.net, invalidation `I32HVUHF141OJMAXY9B68R6FDG` Completed. Hosting smoke và byte comparison callback HTML/toàn bộ JS tham chiếu với artifact PASS. Bundle production dùng callback CloudFront, không có callback localhost hoặc Google secret.
+- Browser production sau sửa: cùng quy trình state đúng/code chẩn đoán không hợp lệ đã đến `/oauth2/token`, nhận HTTP 400 và hiển thị lỗi token exchange như dự kiến, không còn state mismatch. Đây là diagnostic kiểm state, không phải đăng nhập thành công bằng tài khoản Google.
+- Luồng thành công tới dashboard được kiểm bằng components/auth thật trong React DOM; fetch token endpoint là fixture có nonce/verifier đúng. Không dùng fixture/token giả ở website production. Không đổi AWS Cognito, backend, IAM hoặc chạy Terraform apply/load test.
+
+- Đã mở [PR #87](https://github.com/TrieuNguyenPhu/shorten-link/pull/87); local/remote tree đã đối chiếu khớp. Website đã cập nhật, PR chờ review, chưa merge.
+
+
+## 2026-11-05 — Sửa conflict PR #87
+- Merge `origin/main` tại `9fb63e1` vào nhánh PR hiện có trong worktree riêng; giữ toàn bộ ghi nhận rollout #86 và sửa PKCE #87. Không chạm diff người dùng ở checkout chính, không gọi AWS/apply/publish.
+
+- Frontend lint/typecheck/build, 24 tests, `bash -n scripts/publish-frontend.sh` và diff-check PASS. Diff `frontend/` so với head PR #87 rỗng; chỉ kế thừa publisher/hosting routes từ main và hợp nhất tài liệu.

@@ -169,7 +169,10 @@ export function getAccessToken(storage: StorageLike = storageAvailable()!, now =
   const token = storage?.getItem(AUTH_STORAGE_KEYS.accessToken) ?? null;
   const expiresAt = Number(storage?.getItem(AUTH_STORAGE_KEYS.accessTokenExpiresAt));
   if (!token || !Number.isFinite(expiresAt) || now >= expiresAt) {
-    if (storage) clearAuthSession(storage);
+    if (storage) {
+      storage.removeItem(AUTH_STORAGE_KEYS.accessToken);
+      storage.removeItem(AUTH_STORAGE_KEYS.accessTokenExpiresAt);
+    }
     return null;
   }
   return token;

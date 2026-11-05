@@ -7,6 +7,10 @@
 
 ## 1. Tổng Quan Trạng Thái Hiện Tại
 
+- **Đồng bộ PR #87 — complete (local):** merge `main` sau PR #86 (`9fb63e1`); giữ cả lịch sử publish và PKCE. Không đổi implementation auth.
+
+- **OAuth callback state mismatch — `complete (implementation/deployed)` — [PR #87](https://github.com/TrieuNguyenPhu/shorten-link/pull/87):** sửa Navbar token check xóa PKCE và callback effect replay; 24 tests/lint/typecheck/build/audit production PASS. Đã publish lên CloudFront, invalidation `I32HVUHF141OJMAXY9B68R6FDG` Completed. Browser production với state đúng đi đến token endpoint (code chẩn đoán bị Cognito từ chối đúng); chưa kiểm chứng tài khoản Google thật. Nhánh `fix/phase-05-preserve-pkce-callback` từ `origin/main`.
+
 - **Publish frontend — `complete` — [PR #86](https://github.com/TrieuNguyenPhu/shorten-link/pull/86):** đã xuất bản PR #85 (`2253a3c`) lên [website đang chạy](https://d2aamyg2mt28wl.cloudfront.net). CloudFront `EP4W63KC4Y7HZ`, invalidation `I7A20EUFG6A2VDMZ6BOQAM2I67` đã `Completed`. Build production/18 tests, hosting smoke, title/favicon năm route và đối chiếu HTML/icon với artifact đều PASS. Browser production mở được Google qua Cognito; chưa kiểm chứng sau bước nhập tài khoản Google.
 
 - **Google login và metadata — `complete (implementation/local)` — [PR #85](https://github.com/TrieuNguyenPhu/shorten-link/pull/85):** local đã có public env từ Terraform outputs, nút Google mở được `accounts.google.com` qua Cognito; giữ stage WebSocket `/prod`, bỏ chú thích đăng nhập, favicon dùng logo link vàng và title riêng cho từng trang. Nhánh `fix/phase-05-google-login-and-page-metadata` từ `origin/main`.
