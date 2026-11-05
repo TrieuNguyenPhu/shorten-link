@@ -111,3 +111,5 @@ Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e37
 Task 6.1: [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89), code tree `a1706d5` đã đối chiếu local/remote; chưa merge/apply. Git HTTPS thiếu credential, xuất bản qua GitHub connector.
 
 Task 6.1: CI [#218](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41979476998) PASS toàn bộ bốn jobs trên commit36faa086. AWS apply/canary thật vẫn pending; Task6.2 có [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90) riêng từ main.
+
+Chốt Task6.1: CI [#223](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982495610) PASS cả4jobs trên91794cf sau trust hardening. Task6.2 PR#90 có CI#222 PASS5jobs. Commit chốt chỉ tài liệu; cả hai PR chờ review/merge, không apply/dispatch hoặc load test AWS.
