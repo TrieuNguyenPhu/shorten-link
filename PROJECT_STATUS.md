@@ -1,8 +1,9 @@
 # PROJECT_STATUS.md — Trạng Thái Hiện Tại Của Dự Án
 
-## Phase 6 / Task 6.2 — 2026-11-05
+## Phase 6 — 2026-11-05
 
-**Status: complete (implementation/local)**. Task 6.1 đã mở [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89), chưa merge. Task 6.2 trên branch riêng từ main `f5112f1`; pipeline yêu cầu merge/provision Task 6.1 trước sử dụng. Không apply/load test AWS.
+- **Task 6.1:** **complete (đã merge main qua PR #89)**: Terraform Modules `observability` & `codedeploy_canary`.
+- **Task 6.2:** **complete (implementation/local)**: GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), k6 Load Test & Runbook E2E — [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90). Branch đã đồng bộ với `origin/main` sau khi merge PR #89.
 
 
 > **Cập nhật lần cuối:** 2026-11-05 (UI tối giản, review toàn project và production rollout).
@@ -55,7 +56,7 @@
 | **Phase 5** | **Task 5.2** | Dashboard & My Links Doodle & Sketch, API thật & Native WebSocket Hook (`useRealtimeClicks`) | `feat/phase-05-task-02-dashboard-api-and-websocket` | complete (implementation/deployed) | [PR #82](https://github.com/TrieuNguyenPhu/shorten-link/pull/82) và Task 5.5 |
 | **Phase 5** | **Task 5.3** | Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + URL Rewrite) | `feat/phase-05-task-03-terraform-s3-cloudfront-oac-v2` | complete (implementation/local) | [PR #81](https://github.com/TrieuNguyenPhu/shorten-link/pull/81) |
 | **Phase 5** | **Task 5.5** | UI tối giản, font Lobster, lifecycle dashboard và project review/release | `fix/phase-05-ui-review-production` | complete (implementation/deployed) | [PR #88](https://github.com/TrieuNguyenPhu/shorten-link/pull/88) |
-| **Phase 6** | **Task 6.1** | Terraform Modules `observability` (Alarms, SNS, Dashboard, X-Ray) & `codedeploy_canary` (`live` alias) | `feat/phase-06-task-01-observability-and-canary-v2` | complete (implementation/local) | [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89) |
+| **Phase 6** | **Task 6.1** | Terraform Modules `observability` (Alarms, SNS, Dashboard, X-Ray) & `codedeploy_canary` (`live` alias) | `feat/phase-06-task-01-observability-and-canary-v2` | complete (đã merge main qua PR #89) | [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89) |
 | **Phase 6** | **Task 6.2** | GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), k6 Load Test & Runbook E2E | `feat/phase-06-task-02-cicd-k6-and-runbook` | complete (implementation/local) | [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90) |
 
 ---
@@ -249,8 +250,6 @@
 - **Status: complete (implementation/deployed)**. Yêu cầu: đăng nhập về trang chủ; sửa dashboard nhấp nháy; layout chung; menu active/hover; login tối giản; font Lobster; review toàn project, sửa lỗi và triển khai production.
 - Nhánh `fix/phase-05-ui-review-production` tạo từ `origin/main` (`2253a3c`), kế thừa hai commit sửa PKCE #87 để giữ luồng đăng nhập an toàn. Giữ nguyên các diff có sẵn để rà soát, không tự hoàn nguyên.
 
-Task 6.2: [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90), code tree `94d64f2` khớp local/remote. CI đang chạy; chưa merge/dispatch/apply. Merge #89 trước #90; giữ nguyên checkout/diff của người dùng.
+Task 6.1: [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89) đã merge vào `origin/main` (`10b6d7e`). CI [#223](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982495610) PASS cả 4 jobs sau trust hardening.
 
-Phase6.2: CI [#222](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982111683) PASS cả5jobs trên commit2985818 sau cấu hình environment tường minh. Task6.1 đã harden trust exact SourceAccount/deployment-group ARN, regression RED→GREEN/21 dev tests và kiểm bản ghép focused PASS; không đổi codeTask6.2. AWS apply/canary thật vẫn pending.
-
-Phase6 chốt: PR#89 CI [#223](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982495610) PASS4jobs sau trust hardening; PR#90 CI [#222](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982111683) PASS5jobs. Implementation/local complete; review/merge theo thứ tự89→90, protected-environment setup và AWS validation pending. Worktree sạch, diff người dùng ở checkout gốc giữ nguyên.
+Task 6.2: [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90), CI [#222](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982111683) PASS cả 5 jobs trên commit 2985818 sau cấu hình environment tường minh. Branch đã giải quyết merge conflict và đồng bộ với `origin/main`. AWS apply/canary thật vẫn pending.

@@ -349,10 +349,10 @@
   - Create: `infrastructure/terraform/modules/codedeploy_canary/outputs.tf`
   - Modify: `infrastructure/terraform/modules/lambda/main.tf`, `infrastructure/terraform/environments/dev/main.tf`, `infrastructure/terraform/environments/dev/outputs.tf`, `PROJECT_STATUS.md`, `task_plan.md`, `progress.md`, `findings.md`
 - **Steps:**
-  - [ ] **Step 1:** Observability giữ 2 alarms nguồn Sum>=1/60s/1period/notBreaching; bổ sung DLQ alarm và metrics ClickPublishFailed/ClickDiscardedDeleted như delta đích. Dashboard hiển thị Invocations/Errors/Throttles, Duration p50/p99, backlog/DLQ và LinkResolved. Đặt retention Logs, tags; SNS subscription tùy chọn do người dùng cấu hình/confirm, không tự gửi email. SLO chỉ mục tiêu đến khi có evidence.
-  - [ ] **Step 2:** CodeDeploy LambdaCanary10Percent5Minutes dùng ResolveErrorAlarm (thêm throttle alarm là delta đích), auto rollback; tiếp nhận alias live đã tạo Task2.2 với ignore_changes function_version/routing_config. API integration và permission phải dùng alias, lấy CurrentVersion từ alias thật và target published version mới. Một writer, same version no-op, đợi deployment success/rollback kết thúc, không manual alias reset khi lỗi.
-  - [ ] **Step 3:** Chạy cổng Terraform fmt/init-backend=false/validate/test ở cuối kế hoạch, cập nhật CI và canary E2E.
-  - [ ] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 6.1.
+  - [x] **Step 1:** Observability giữ 2 alarms nguồn Sum>=1/60s/1period/notBreaching; bổ sung DLQ alarm và metrics ClickPublishFailed/ClickDiscardedDeleted như delta đích. Dashboard hiển thị Invocations/Errors/Throttles, Duration p50/p99, backlog/DLQ và LinkResolved. Đặt retention Logs, tags; SNS subscription tùy chọn do người dùng cấu hình/confirm, không tự gửi email. SLO chỉ mục tiêu đến khi có evidence.
+  - [x] **Step 2:** CodeDeploy LambdaCanary10Percent5Minutes dùng ResolveErrorAlarm (thêm throttle alarm là delta đích), auto rollback; tiếp nhận alias live đã tạo Task2.2 với ignore_changes function_version/routing_config. API integration và permission phải dùng alias, lấy CurrentVersion từ alias thật và target published version mới. Một writer, same version no-op, đợi deployment success/rollback kết thúc, không manual alias reset khi lỗi.
+  - [x] **Step 3:** Chạy cổng Terraform fmt/init-backend=false/validate/test ở cuối kế hoạch, cập nhật CI và canary E2E.
+  - [x] **Step 4:** Cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 6.1.
 
 #### Task 6.2: GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), k6 Load Test & Tài Liệu Vận Hành E2E
 - **Branch:** `feat/phase-06-task-02-cicd-k6-and-runbook`

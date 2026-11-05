@@ -1,8 +1,9 @@
 # Task Plan: Serverless URL Shortener with Realtime Analytics (Go + Terraform + Next.js)
 
-## Phase 6 / Task 6.2 — 2026-11-05
+## Phase 6 — 2026-11-05
 
-**Status: complete (implementation/local)**. Task 6.1 đã mở [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89), chưa merge. Task 6.2 trên branch riêng từ main `f5112f1`; pipeline yêu cầu merge/provision Task 6.1 trước sử dụng. Không apply/load test AWS.
+- [x] **Task 6.1:** **Status: complete (đã merge main qua PR #89)**: Terraform Modules `observability` & `codedeploy_canary`.
+- [x] **Task 6.2:** **Status: complete (implementation/local)**: GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), k6 Load Test & Runbook E2E — [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90). Branch đã đồng bộ với `origin/main` sau khi PR #89 đã merge.
 
 
 ## Goal
@@ -108,8 +109,6 @@ Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e37
 ## 2026-11-05 — PR #88 sau squash PR #87
 - [x] **Status: complete (local)**. Merge main `2b6ed24` vào PR #88 hiện có; bảo toàn implementation UI/PKCE đã kiểm thử.
 
-Task 6.2: [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90), code tree `94d64f2` khớp local/remote. CI đang chạy; chưa merge/dispatch/apply. Merge #89 trước #90; giữ nguyên checkout/diff của người dùng.
+Task 6.1: [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89) đã merge vào `origin/main` (`10b6d7e`). CI [#223](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982495610) PASS cả 4 jobs sau trust hardening.
 
-Phase6.2: CI [#222](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982111683) PASS cả5jobs trên commit2985818 sau cấu hình environment tường minh. Task6.1 đã harden trust exact SourceAccount/deployment-group ARN, regression RED→GREEN/21 dev tests và kiểm bản ghép focused PASS; không đổi codeTask6.2. AWS apply/canary thật vẫn pending.
-
-Phase6 chốt: PR#89 CI [#223](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982495610) PASS4jobs sau trust hardening; PR#90 CI [#222](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982111683) PASS5jobs. Implementation/local complete; review/merge theo thứ tự89→90, protected-environment setup và AWS validation pending. Worktree sạch, diff người dùng ở checkout gốc giữ nguyên.
+Task 6.2: [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90), CI [#222](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982111683) PASS cả 5 jobs trên commit 2985818 sau cấu hình environment tường minh. Branch đã giải quyết merge conflict và đồng bộ với `origin/main`. AWS apply/canary thật vẫn pending.

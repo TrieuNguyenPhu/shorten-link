@@ -119,3 +119,20 @@ module "moderation_sfn" {
   moderate_check_arn      = module.realtime_functions["moderate-check"].alias_arn
   moderation_boundary_arn = var.moderation_boundary_arn
 }
+
+module "observability" {
+  source                = "../../modules/observability"
+  name_prefix           = var.name_prefix
+  aws_region            = var.aws_region
+  resolve_function_name = module.functions["resolve-link"].function_name
+  queue_name            = "${var.name_prefix}-ClickQueue"
+  dlq_name              = "${var.name_prefix}-ClickDLQ"
+  alarm_email_addresses = var.alarm_email_addresses
+}
+module "codedeploy_canary" {
+  source       = "../../modules/codedeploy_canary"
+  name_prefix  = var.name_prefix
+  function_arn = module.functions["resolve-link"].arn
+  boundary_arn = coalesce(var.canary_boundary_arn, "arn:aws:iam::${var.aws_account_id}:policy/url-shortener/bootstrap/${var.name_prefix}-canary-boundary")
+  alarm_names  = module.observability.canary_alarm_names
+}
