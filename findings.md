@@ -177,9 +177,20 @@
 - Logo và favicon SVG dùng chung `/icon.svg`; ICO dự phòng được rasterize từ cùng SVG. Metadata static có title template `%s | Shrnk`, trang chủ giữ tagline riêng.
 
 
+## 2026-11-05 — Publish website sau PR #85
+
+- Website người dùng yêu cầu cập nhật là CloudFront `d2aamyg2mt28wl.cloudfront.net` hiện hữu, tài nguyên mang tên `dev`; không tạo environment mới hoặc thay backend.
+- Publisher và hosting smoke còn giữ route `/links/` đã được bỏ ở frontend refresh. Đổi preflight/smoke sang `/architecture/`; `bash -n`, publisher thật và hosting smoke PASS.
+- Publisher export env ưu tiên hơn `.env.local`: bundle production đã kiểm callback/logout CloudFront, WebSocket `/prod`, không có callback localhost hoặc Google client secret.
+- Bản mutable objects trước publish được sao lưu ở `/tmp/shrnk-frontend-rollback-20261105/`, hashed assets cũ được giữ trên S3. Không chạy Terraform apply hoặc load test.
+
 ## 2026-11-05 — Nguyên nhân OAuth callback state mismatch
 
 - `getAccessToken()` dùng `clearAuthSession()` khi token chưa có/hết hạn, xóa cả PKCE đang chờ. Navbar được mount trước AuthCallback, nên callback mất state/verifier dù URL chứa state đúng. Tái hiện cả bằng unit test RED và browser production với state đúng của phiên chẩn đoán.
 - Sửa đọc token chỉ dọn hai khóa access-token/expiry; logout và lỗi callback vẫn dọn cả PKCE. Không bỏ kiểm tra state/nonce hay thay storage sang localStorage.
 - Component integration bằng React DOM + jsdom phát hiện thêm StrictMode effect replay: effect thứ hai đọc query đã bị redaction rồi xóa phiên, trong khi request đầu đang chờ. Giữ một promise hoàn tất bằng `useRef`, chỉ đọc query/redact/exchange một lần; effect đang active nhận kết quả.
 - Thêm jsdom ở devDependencies; helper test transpile TSX bằng TypeScript sẵn có và nạp Next components thật. Chỉ mock fetch tại ranh giới token endpoint, không mock Navbar/AuthCallback/auth functions. Tests kiểm code/verifier/redirect, delayed response, redirect dashboard đúng một lần, dọn PKCE sau thành công, state/nonce sai bị từ chối.
+
+
+## 2026-11-05 — Conflict PR #87
+- PR #86 và #87 chèn nội dung tại cùng vị trí trong bốn file trạng thái. Conflict chỉ ở tài liệu; publisher/hosting routes từ main được giữ. Không thay state/nonce/PKCE hoặc callback effect handling.

@@ -218,6 +218,16 @@
 - Đã mở [PR #85](https://github.com/TrieuNguyenPhu/shorten-link/pull/85) với code tree đã đối chiếu local/remote. Git HTTPS local chưa có credential; dùng GitHub connector để xuất bản đúng file đã kiểm tra. PR chờ review, chưa merge.
 
 
+## 2026-11-05 — Publish PR #85 lên website đang chạy
+
+- Người dùng yêu cầu cập nhật lên product; PR #85 đã merge main `2253a3c`. Nhánh vận hành `chore/phase-05-publish-frontend` từ main này; giữ nguyên các thay đổi ngoài phạm vi đang có.
+- Chạy `bash scripts/publish-frontend.sh`: install frozen lockfile, build static với Terraform public outputs, upload S3 hashed assets → data → HTML, invalidate `/*` và wait thành công.
+- Website: https://d2aamyg2mt28wl.cloudfront.net; bucket `url-shortener-dev-654822777701-frontend`; distribution `EP4W63KC4Y7HZ`; invalidation `I7A20EUFG6A2VDMZ6BOQAM2I67` Completed.
+- `pnpm test` 18/18, `bash -n`, production bundle config/secret scan và `tests/e2e/frontend-hosting.mjs` PASS. Đối chiếu byte HTML của năm route và SVG/ICO với build đều khớp; title riêng và favicon đúng. Browser production hiển thị form đã bỏ chú thích, nút Google mở accounts.google.com qua Cognito.
+- Chưa kiểm chứng federation sau bước nhập tài khoản Google. Không apply Terraform, thay backend, chạy load test hoặc tạo tài nguyên mới.
+
+- PR vận hành [#86](https://github.com/TrieuNguyenPhu/shorten-link/pull/86) ghi nhận rollout và đồng bộ preflight/smoke routes; chưa merge.
+
 ## 2026-11-05 — Sửa callback mất PKCE
 
 - Nhánh `fix/phase-05-preserve-pkce-callback` từ main `2253a3c`. User gửi ảnh state mismatch sau Google; điều tra thứ tự Navbar → callback tìm lỗi cleanup PKCE của `getAccessToken`.
@@ -231,3 +241,9 @@
 - Luồng thành công tới dashboard được kiểm bằng components/auth thật trong React DOM; fetch token endpoint là fixture có nonce/verifier đúng. Không dùng fixture/token giả ở website production. Không đổi AWS Cognito, backend, IAM hoặc chạy Terraform apply/load test.
 
 - Đã mở [PR #87](https://github.com/TrieuNguyenPhu/shorten-link/pull/87); local/remote tree đã đối chiếu khớp. Website đã cập nhật, PR chờ review, chưa merge.
+
+
+## 2026-11-05 — Sửa conflict PR #87
+- Merge `origin/main` tại `9fb63e1` vào nhánh PR hiện có trong worktree riêng; giữ toàn bộ ghi nhận rollout #86 và sửa PKCE #87. Không chạm diff người dùng ở checkout chính, không gọi AWS/apply/publish.
+
+- Frontend lint/typecheck/build, 24 tests, `bash -n scripts/publish-frontend.sh` và diff-check PASS. Diff `frontend/` so với head PR #87 rỗng; chỉ kế thừa publisher/hosting routes từ main và hợp nhất tài liệu.
