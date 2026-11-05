@@ -58,7 +58,6 @@ Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e37
 - **Status:** complete (implementation/deployed; Google account E2E chưa thực hiện)
 
 ### Phase 6: Production Operations, Observability, Canary CI/CD & Load Testing
-- **Status:** complete (implementation/local); merge hai PR và AWS validation pending.
 - [x] **Task 6.1:** Xây dựng Terraform Modules `observability` (CloudWatch Alarms, SNS, Dashboard, X-Ray) & `codedeploy_canary` (`LambdaCanary10Percent5Minutes` trên alias `live`).
 - [x] **Task 6.2:** Thiết lập GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), kịch bản `tests/load/redirect.k6.js` & tài liệu vận hành E2E.
 - **Status:** complete (implementation/local); AWS/CD/canary thật pending
