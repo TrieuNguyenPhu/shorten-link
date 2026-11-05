@@ -192,5 +192,25 @@
 - Thêm jsdom ở devDependencies; helper test transpile TSX bằng TypeScript sẵn có và nạp Next components thật. Chỉ mock fetch tại ranh giới token endpoint, không mock Navbar/AuthCallback/auth functions. Tests kiểm code/verifier/redirect, delayed response, redirect dashboard đúng một lần, dọn PKCE sau thành công, state/nonce sai bị từ chối.
 
 
+## 2026-11-05 — UI refinement, project review và production rollout
+
+- **Status: complete (implementation/deployed)**. Yêu cầu: đăng nhập về trang chủ; sửa dashboard nhấp nháy; layout chung; menu active/hover; login tối giản; font Lobster; review toàn project, sửa lỗi và triển khai production.
+- Nhánh `fix/phase-05-ui-review-production` tạo từ `origin/main` (`2253a3c`), kế thừa hai commit sửa PKCE #87 để giữ luồng đăng nhập an toàn. Giữ nguyên các diff có sẵn để rà soát, không tự hoàn nguyên.
+
+- Nguyên nhân nhấp nháy: mọi socket `onopen` gọi reload, `loading=true` unmount bảng, đóng socket rồi remount/kết nối lại. Background reload nay giữ bảng, chia sẻ request đang chạy; `ClickCell` giữ max giữa counter HTTP và push. Regression RED trên code cũ → GREEN, có reconnect thật bằng timer và HTTP lỗi.
+- Race sau xóa: snapshot đã bắt đầu trước DELETE có thể khôi phục row sau khi DELETE thành công. Giữ tập code đã xóa trong vòng đời workspace và lọc snapshot; regression RED → GREEN.
+- Form landing từng bỏ kết quả qua `onCreated` no-op. Kết quả API thật nay hiển thị short URL và Copy, có component integration ở ranh giới fetch/clipboard.
+- Go build ban đầu fail vì dòng `*dest = strings.TrimRight(normalized, "/")` trong config bị xóa ở diff có sẵn. Khôi phục đúng dòng từ baseline; unit config có sẵn xác nhận hai endpoint được gán và bỏ trailing slash. Các diff dọn chú thích backend/Terraform/PowerShell và xóa tài liệu có sẵn được giữ ngoài PR; không tự hoàn nguyên.
+- Terraform test tại root có tfvars AWS thật làm 3 assertion về unpinned API sai fixture. Chạy bản sao sạch không tfvars/backend/state, kèm ASL và ZIP thật: 19 bootstrap + 19 dev PASS. Actual plan chỉ khác filename/hash Lambda do rebuild, không có thay đổi cấu hình/replace/destroy; không apply vì backend behavior không đổi và smoke deployed đã PASS.
+- Lobster TTF đầy đủ hỗ trợ tiếng Việt từ Google Fonts, kèm OFL; `next/font/local` preload/self-host, không gọi dịch vụ font ngoài runtime.
+
 ## 2026-11-05 — Conflict PR #87
 - PR #86 và #87 chèn nội dung tại cùng vị trí trong bốn file trạng thái. Conflict chỉ ở tài liệu; publisher/hosting routes từ main được giữ. Không thay state/nonce/PKCE hoặc callback effect handling.
+
+
+## 2026-11-05 — Conflict PR #88
+- Đồng bộ qua merge head #87 đã chứa main #86 để giữ cùng lịch sử tổ tiên. Conflict ở bốn file trạng thái và vùng preflight publisher; giữ kiểm thử trước upload cùng route architecture. Mã `frontend/` không đổi so với PR #88 đã deploy.
+
+
+## 2026-11-05 — Squash #87 và ancestry của PR #88
+- Main `2b6ed24` có tree giống hệt head #87 `bfb8fdf`, nhưng squash đổi ancestry nên Git báo lại các thay đổi đã tồn tại trong #88. Kiểm tra tree trước khi resolve; giữ head #88 ở bảy file conflict. Sau resolution, toàn bộ staged tree giống head #88 trước merge, không bỏ thay đổi nào từ main.

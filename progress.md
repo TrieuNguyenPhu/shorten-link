@@ -243,7 +243,35 @@
 - Đã mở [PR #87](https://github.com/TrieuNguyenPhu/shorten-link/pull/87); local/remote tree đã đối chiếu khớp. Website đã cập nhật, PR chờ review, chưa merge.
 
 
+## 2026-11-05 — UI refinement, project review và production rollout
+
+- **Status: complete (implementation/deployed)**. Yêu cầu: đăng nhập về trang chủ; sửa dashboard nhấp nháy; layout chung; menu active/hover; login tối giản; font Lobster; review toàn project, sửa lỗi và triển khai production.
+- Nhánh `fix/phase-05-ui-review-production` tạo từ `origin/main` (`2253a3c`), kế thừa hai commit sửa PKCE #87 để giữ luồng đăng nhập an toàn. Giữ nguyên các diff có sẵn để rà soát, không tự hoàn nguyên.
+
+- Kiểm tra: `go -C backend test -race ./...`, `go -C backend vet ./...`, DynamoDB Local `-race -tags=integration -count=1` repository/HTTP-WebSocket E2E và build tám ZIP PASS. `govulncheck@v1.9.0`: 0 symbol/package vulnerabilities, 4 module-only không reachable.
+- Frontend lint/typecheck/static build, 27 tests, audit production dependencies và diff-check PASS. Browser desktop/mobile kiểm logo, Lobster, shared footer và active menu. Callback fixture kiểm redirect `/` đúng một lần, state/nonce sai bị từ chối.
+- Terraform fmt/clean init/validate/38 mock-plan tests, 8 CloudFront rewrite tests và PowerShell parser/preflight/lifecycle offline PASS. AWS operator smoke dùng dữ liệu phiên riêng, cleanup META/STAT/connection, marker TTL tự hết hạn; không sử dụng tài khoản người dùng hay fixture token trong production.
+- Rollout đầu: invalidation `I1G0E6D3QN3D83W0NNAJMRV9MO` Completed; hosting smoke và byte comparison 5 HTML + 14 JS/CSS/font assets PASS. Sau review bổ sung fix deletion race, đã chạy lại checks và rollout cuối `I4OJCY74UTRUNCSQ430QB61MWL` Completed. Browser production mở được Google qua Cognito; chưa nhập tài khoản Google thật.
+
+- Rollout cuối: CloudFront invalidation `I4OJCY74UTRUNCSQ430QB61MWL` Completed; hosting smoke PASS. Không đổi AWS IAM/Cognito hay chạy Terraform apply/load test. Git HTTPS local thiếu credential helper; xuất bản PR qua GitHub connector và đối chiếu tree.
+
+- [PR #88](https://github.com/TrieuNguyenPhu/shorten-link/pull/88) đã mở, GitHub xác nhận mergeable. Code tree local/remote `67be4f3934df20c0a25650d9ecc13a05ceb3e9ad` khớp; CI [#209](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41974976600) PASS cả 4 jobs: frontend, backend, terraform và packaging-windows. Hosting smoke rollout cuối PASS; 5 HTML + 14 JS/CSS/font assets khớp từng byte với artifact.
+
+- Commit chốt chỉ cập nhật URL PR và bằng chứng CI; code production không thay đổi. Không tự merge PR.
+
 ## 2026-11-05 — Sửa conflict PR #87
 - Merge `origin/main` tại `9fb63e1` vào nhánh PR hiện có trong worktree riêng; giữ toàn bộ ghi nhận rollout #86 và sửa PKCE #87. Không chạm diff người dùng ở checkout chính, không gọi AWS/apply/publish.
 
 - Frontend lint/typecheck/build, 24 tests, `bash -n scripts/publish-frontend.sh` và diff-check PASS. Diff `frontend/` so với head PR #87 rỗng; chỉ kế thừa publisher/hosting routes từ main và hợp nhất tài liệu.
+
+
+## 2026-11-05 — Sửa conflict PR #88
+- Hợp nhất lịch sử publish #86, PKCE #87 và UI #88; không deploy lại website hoặc chạy AWS. Giữ nguyên toàn bộ `frontend/`, script chạy test và architecture route của #88.
+
+- Frontend lint/typecheck/build, 27 tests, `bash -n` và diff-check PASS. Diff `frontend/` và `scripts/publish-frontend.sh` so với head #88 trước merge đều rỗng. PR #87 đã push merge main; bản #88 sẽ giữ merge parent tương ứng để không bỏ mất lịch sử chung.
+
+
+## 2026-11-05 — Sửa lại conflict PR #88 sau squash #87
+- Merge main `2b6ed24`; đối chiếu main với head #87 xác nhận cùng tree. Giải quyết bảy file conflict bằng bản #88 đã chứa PKCE và UI mới; staged tree trước ghi chú không có khác biệt với head #88. Không gọi AWS, apply hoặc publish lại.
+
+- Lint/typecheck/build static, 27 frontend tests, `bash -n scripts/publish-frontend.sh` và diff-check PASS. Source `frontend/`, scripts và tests không thay đổi so với #88 trước merge. Push merge commit lên đúng PR #88; không tạo PR mới.

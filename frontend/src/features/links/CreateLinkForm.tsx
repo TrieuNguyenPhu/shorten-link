@@ -13,9 +13,11 @@ function messageFor(error: unknown): string {
   return "Chưa tạo được link. Hãy thử lại.";
 }
 
-type Props = { config: PublicConfig; token: string; onCreated: (link: CreatedLink) => void };
+type Props = { config: PublicConfig; token: string };
 
-export function CreateLinkForm({ config, token, onCreated }: Props) {
+export function CreateLinkForm({ config, token }: Props) {
+  const [created, setCreated] = useState<CreatedLink | null>(null);
+  const [copied, setCopied] = useState(false);
   const [target, setTarget] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +35,8 @@ export function CreateLinkForm({ config, token, onCreated }: Props) {
     setPending(true);
     try {
       const created = await createLink(config, token, target.trim());
-      onCreated(created);
+      setCreated(created);
+      setCopied(false);
       setTarget("");
     } catch (reason) {
       setError(messageFor(reason));
@@ -42,5 +45,31 @@ export function CreateLinkForm({ config, token, onCreated }: Props) {
     }
   }
 
-  return <form className="sketch-card" onSubmit={submit}><div className="flex items-start justify-between gap-4"><div><p className="ink-note">Tạo link mới</p><h2 className="mt-2 font-display text-2xl font-bold">Một URL dài đang chờ được gọn lại.</h2></div></div><label className="mt-6 block text-sm font-bold" htmlFor="target-url">URL đích</label><div className="mt-2 flex flex-col gap-3 sm:flex-row"><input className="min-h-13 flex-1 rounded-xl border-2 border-ink bg-white/70 px-4 text-base outline-none transition focus-visible:border-coral focus-visible:ring-4 focus-visible:ring-coral/20" id="target-url" onChange={(event) => setTarget(event.target.value)} placeholder="https://example.com/article" required type="url" value={target} /><button className="sketch-button justify-center sm:min-w-36" disabled={pending} type="submit">{pending ? "Đang tạo…" : "Rút gọn"}</button></div>{error ? <p aria-live="polite" className="mt-3 text-sm font-bold text-red-700">{error}</p> : <p className="mt-3 text-xs font-semibold text-ink-muted"></p>}</form>;
+  async function copyResult() {
+    if (!created) return;
+    try {
+      await window.navigator.clipboard.writeText(created.shortUrl);
+      setCopied(true);
+    } catch {
+      setError("Chưa sao chép được. Hãy chọn link để sao chép.");
+    }
+  }
+
+  return (
+    <form className="sketch-card" onSubmit={submit}>
+      <h2 className="font-display text-3xl">Tạo link mới</h2>
+      <label className="mt-6 block" htmlFor="target-url">URL đích</label>
+      <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+        <input className="min-h-13 min-w-0 flex-1 rounded-xl border-2 border-ink bg-white/70 px-4 text-base outline-none transition focus-visible:border-coral focus-visible:ring-4 focus-visible:ring-coral/20" id="target-url" onChange={(event) => setTarget(event.target.value)} placeholder="https://example.com/article" required type="url" value={target} />
+        <button className="sketch-button justify-center sm:min-w-36" disabled={pending} type="submit">{pending ? "Đang tạo…" : "Rút gọn"}</button>
+      </div>
+      {error ? <p aria-live="polite" className="mt-3 text-red-700">{error}</p> : null}
+      {created ? (
+        <div aria-live="polite" className="mt-5 flex flex-wrap items-center gap-3 rounded-xl border-2 border-dashed border-ink/40 bg-paper p-4">
+          <a aria-label={`Link mới: ${created.shortUrl}`} className="min-w-0 flex-1 break-all underline decoration-coral underline-offset-4" href={created.shortUrl} rel="noreferrer" target="_blank">{created.shortUrl}</a>
+          <button className="sketch-button sketch-button-secondary sketch-button-small" onClick={() => void copyResult()} type="button">{copied ? "Đã copy" : "Copy"}</button>
+        </div>
+      ) : null}
+    </form>
+  );
 }

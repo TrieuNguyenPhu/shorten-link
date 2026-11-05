@@ -6,7 +6,7 @@ import { clearAuthSession, exchangeCodeForToken, validateCallback } from "@/lib/
 import { getAuthConfig } from "@/lib/config";
 
 export function AuthCallback() {
-  const [message, setMessage] = useState("Đang kiểm tra phiên đăng nhập…");
+  const [message, setMessage] = useState("Đang đăng nhập…");
   const [error, setError] = useState<string | null>(null);
   const completion = useRef<Promise<void> | null>(null);
 
@@ -20,7 +20,7 @@ export function AuthCallback() {
         try {
           if (params.get("error")) throw new Error("Google không hoàn tất đăng nhập");
           const { code } = validateCallback(storage, params);
-          setMessage("Đang đổi mã đăng nhập an toàn…");
+          setMessage("Đang đăng nhập…");
           await exchangeCodeForToken(getAuthConfig(), code, storage);
         } catch (reason) {
           clearAuthSession(storage);
@@ -31,8 +31,8 @@ export function AuthCallback() {
 
     void completion.current.then(() => {
       if (active) {
-        setMessage("Đăng nhập thành công. Đang mở không gian của bạn…");
-        window.location.replace("/dashboard/");
+        setMessage("Đang về trang chủ…");
+        window.location.replace("/");
       }
     }, (reason) => {
       if (active) {
@@ -47,8 +47,7 @@ export function AuthCallback() {
 
   return (
     <section aria-live="polite" className="sketch-card mx-auto w-full max-w-xl text-center">
-      <p className="ink-note">OAuth callback</p>
-      <h1 className="mt-3 font-display text-3xl font-bold">{error ? "Chưa thể đăng nhập" : "Một nét nữa thôi"}</h1>
+      <h1 className="mt-3 font-display text-3xl font-bold">{error ? "Chưa thể đăng nhập" : "Đăng nhập Shrnk"}</h1>
       {message ? <p className="mt-4 text-ink-muted">{message}</p> : null}
       {error ? (
         <>

@@ -112,4 +112,16 @@ Cùng lệnh integration ở mục2 chạy cả `TestLocalWebSocketSubscriptions
 
 Unit/race tests kiểm Get/Query/Post/cleanup failure của pusher thật qua aggregator vẫn ack record đã commit và ghi log. Runtime test kiểm `WS_ENDPOINT` được SDK dùng đúng stage, DynamoDB count read consistent và PostToConnection được ký. `moderate-check` kiểm ba từ khóa không phân biệt hoa/thường, giữ code/target và lỗi input; ASL contract tests kiểm trực tiếp Lambda ARN, Choice, Retry/Catch/Fail và update status. Test ASL không thực thi dịch vụ Step Functions.
 
-Runbook safe/reject/retry/Fail và giới hạn upsert nằm ở [WebSocket và moderation](./websocket-and-moderation.md). Toàn bộ tám ZIP đã build thật; execution history, handshake, realtime AWS giữ pending tới khi Task4.2 được triển khai theo yêu cầu.
+Runbook safe/reject/retry/Fail và giới hạn upsert nằm ở [Vận hành WebSocket và moderation](./operations.md#websocket-và-moderation). Toàn bộ tám ZIP đã build thật; execution history, handshake, realtime AWS giữ pending tới khi Task4.2 được triển khai theo yêu cầu.
+
+
+## 9. Frontend local
+
+Từ root repository, sao chép `frontend/.env.example` thành `frontend/.env.local`. Thay API, WebSocket (giữ `/prod`), Cognito domain và app client ID bằng Terraform outputs tương ứng; callback/logout dùng origin local được Cognito allowlist. Không dùng domain mẫu để đăng nhập.
+
+```sh
+corepack pnpm@10.33.2 --dir frontend install --frozen-lockfile
+corepack pnpm@10.33.2 --dir frontend dev
+```
+
+Địa chỉ mặc định `http://localhost:3000`; callback `http://localhost:3000/auth/callback/`, logout `http://localhost:3000/`. Google client secret không phải public frontend config. Build để deploy dùng `scripts/publish-frontend.sh`, lấy callback CloudFront từ Terraform outputs để tránh đưa callback local lên production.

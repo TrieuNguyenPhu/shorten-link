@@ -5,6 +5,8 @@ Tái hiện hoàn chỉnh hệ thống **Serverless URL Shortener with Realtime 
 
 ## Current Phase
 
+- [x] **[Task 5.5 / PR #88](https://github.com/TrieuNguyenPhu/shorten-link/pull/88) — Status: complete (implementation/deployed):** UI tối giản, shared layout/menu active/hover, Lobster; đăng nhập về Trang chủ; sửa refresh/reconnect/deletion race và hiển thị link mới. Review toàn project và low-volume AWS smoke PASS; rollout cuối `I4OJCY74UTRUNCSQ430QB61MWL` Completed.
+
 - [x] **Sửa callback state mismatch — `Status: complete (implementation/deployed)`:** giữ PKCE khi token chưa có/hết hạn, callback chỉ exchange một lần dù effect replay. 24 tests/checks PASS; đã publish và xác minh production không còn xóa state trước token exchange trong phiên chẩn đoán.
 
 - [x] **Publish frontend — `Status: complete`:** PR #85 (`2253a3c`) đã build với config CloudFront thật, upload S3, invalidation Completed. Hosting smoke/18 tests/title/favicon/HTML artifact comparison và Google redirect trên website thật PASS.
@@ -48,7 +50,7 @@ Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e37
 - [x] **Task 5.1 — complete (implementation/local):** Hoàn thiện Next.js App Router (`output: "export"`), nút Google qua Cognito PKCE & các trang Landing (`/`), Login (`/login`), Callback (`/auth/callback`) theo Hand-Drawn / Doodle & Sketch UI.
 - [x] **Task 5.2:** Xây dựng Dashboard (`/dashboard`), My Links (`/links`) cùng phong cách Doodle & Sketch, tích hợp HTTP API thật & Native WebSocket Hook (`useRealtimeClicks`); phần refresh Shrnk tiếp tục ở PR #82.
 - [x] **Task 5.3 — complete (implementation/local):** Xây dựng Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + CloudFront Function URL rewrite) trên nhánh PR mới từ `origin/main`.
-- **Status:** in_progress (Task 5.2 vẫn pending; Task 5.3 complete implementation/local)
+- **Status:** complete (implementation/deployed; Google account E2E chưa thực hiện)
 
 ### Phase 6: Production Operations, Observability, Canary CI/CD & Load Testing
 - [ ] **Task 6.1:** Xây dựng Terraform Modules `observability` (CloudWatch Alarms, SNS, Dashboard, X-Ray) & `codedeploy_canary` (`LambdaCanary10Percent5Minutes` trên alias `live`).
@@ -85,5 +87,18 @@ Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e37
 - **Status:** implementation/local complete; PR [#82](https://github.com/TrieuNguyenPhu/shorten-link/pull/82) được đồng bộ với `main`.
 
 
+## 2026-11-05 — UI refinement, project review và production rollout
+
+- **Status: complete (implementation/deployed)**. Yêu cầu: đăng nhập về trang chủ; sửa dashboard nhấp nháy; layout chung; menu active/hover; login tối giản; font Lobster; review toàn project, sửa lỗi và triển khai production.
+- Nhánh `fix/phase-05-ui-review-production` tạo từ `origin/main` (`2253a3c`), kế thừa hai commit sửa PKCE #87 để giữ luồng đăng nhập an toàn. Giữ nguyên các diff có sẵn để rà soát, không tự hoàn nguyên.
+
 ## 2026-11-05 — Đồng bộ PR #87
 - **Status: complete (local)**. Sửa conflict bốn file trạng thái với main sau PR #86; giữ lịch sử hai bên và publisher/hosting checks đã merge.
+
+
+## 2026-11-05 — Đồng bộ PR #88
+- **Status: complete (local)**. Merge bản #87 đã đồng bộ main, bảo toàn UI/PKCE và toàn bộ lịch sử rollout.
+
+
+## 2026-11-05 — PR #88 sau squash PR #87
+- [x] **Status: complete (local)**. Merge main `2b6ed24` vào PR #88 hiện có; bảo toàn implementation UI/PKCE đã kiểm thử.

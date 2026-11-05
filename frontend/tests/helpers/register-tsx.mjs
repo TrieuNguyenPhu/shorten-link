@@ -11,7 +11,7 @@ registerHooks({
       const target = nextResolve("next/image.js", context).url;
       return nextResolve(`data:text/javascript,${encodeURIComponent(`import image from ${JSON.stringify(target)}; export default image.default;`)}`, context);
     }
-    if (specifier === "next/link") specifier += ".js";
+    if (specifier === "next/link" || specifier === "next/navigation") specifier += ".js";
     let target;
     if (specifier.startsWith("@/")) target = new URL(specifier.slice(2), sourceRoot);
     else if (specifier.startsWith(".") && context.parentURL?.startsWith(sourceRoot.href)) {

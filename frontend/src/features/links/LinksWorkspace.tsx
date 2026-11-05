@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import NextLink from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getAccessToken } from "@/lib/auth";
 import { ApiError, deleteLink, listAllLinks, type Link } from "@/lib/api";
 import { getPublicConfig, type PublicConfig } from "@/lib/config";
@@ -18,27 +17,35 @@ function errorMessage(error: unknown): string {
   return "Không tải được dữ liệu. Thử lại sau.";
 }
 
-export function LinksWorkspace({ title = "Dashboard" }: { title?: string }) {
+export function LinksWorkspace() {
   const [config, setConfig] = useState<PublicConfig | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [links, setLinks] = useState<Link[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const reload = useCallback(async (currentConfig: PublicConfig, currentToken: string) => {
+  const refresh = useRef<Promise<void> | null>(null);
+  const deletedCodes = useRef(new Set<string>());
+  const reload = useCallback((currentConfig: PublicConfig, currentToken: string) => {
+    if (refresh.current) return refresh.current;
     setError(null);
-    setLoading(true);
-    try {
-      setLinks(await listAllLinks(currentConfig, currentToken));
-    } catch (reason) {
-      if (reason instanceof ApiError && reason.status === 401) {
-        window.location.replace("/login/");
-        return;
+    // Background snapshots must preserve the table and its live subscriptions.
+    refresh.current = (async () => {
+      try {
+        const snapshot = await listAllLinks(currentConfig, currentToken);
+        setLinks(snapshot.filter((link) => !deletedCodes.current.has(link.code)));
+      } catch (reason) {
+        if (reason instanceof ApiError && reason.status === 401) {
+          window.location.replace("/login/");
+          return;
+        }
+        setError(errorMessage(reason));
+      } finally {
+        setLoading(false);
+        refresh.current = null;
       }
-      setError(errorMessage(reason));
-    } finally {
-      setLoading(false);
-    }
+    })();
+    return refresh.current;
   }, []);
 
   useEffect(() => {
@@ -62,11 +69,20 @@ export function LinksWorkspace({ title = "Dashboard" }: { title?: string }) {
     if (!config || !token) return;
     try {
       await deleteLink(config, token, code);
+      deletedCodes.current.add(code);
       setLinks((current) => current.filter((link) => link.code !== code));
     } catch (reason) {
       setError(errorMessage(reason));
     }
   }
 
-  return <div className="paper-shell"><main className="mx-auto w-full max-w-6xl flex-1 px-5 pb-16 pt-10 sm:px-8 sm:pt-14"><header className="mb-8 flex flex-wrap items-end justify-between gap-5"><div><p className="ink-note">{title}</p><h1 className="mt-3 font-display text-4xl font-bold sm:text-5xl">Dữ liệu của bạn, rõ ràng hơn.</h1><p className="mt-3 max-w-2xl text-ink-muted">Theo dõi link và lượt click realtime từ cùng một chỗ.</p></div><NextLink className="sketch-button sketch-button-secondary" href="/">Về trang chủ</NextLink></header>{error ? <div aria-live="polite" className="mb-5 rounded-xl border-2 border-red-300 bg-red-50 p-4 text-sm font-bold text-red-800">{error}</div> : null}<div className="mt-8">{loading ? <section aria-live="polite" className="sketch-card text-center"><p className="font-display text-xl font-bold">Đang tải các link của bạn…</p></section> : config ? <LinksTable apiBaseUrl={config.apiBaseUrl} links={links} onDelete={handleDelete} onReconnect={() => { if (token) void reload(config, token); }} websocketUrl={config.websocketUrl} /> : null}</div></main></div>;
+  return (
+    <main className="mx-auto w-full max-w-6xl flex-1 px-5 pb-16 pt-10 sm:px-8 sm:pt-14" id="main-content">
+      <h1 className="mb-8 font-display text-4xl sm:text-5xl">Dashboard</h1>
+      {error ? <div aria-live="polite" className="mb-5 rounded-xl border-2 border-red-300 bg-red-50 p-4 text-red-800">{error}</div> : null}
+      {loading ? <section aria-live="polite" className="sketch-card text-center">Đang tải…</section> : config ? (
+        <LinksTable apiBaseUrl={config.apiBaseUrl} links={links} onDelete={handleDelete} onReconnect={() => { if (token) void reload(config, token); }} websocketUrl={config.websocketUrl} />
+      ) : null}
+    </main>
+  );
 }

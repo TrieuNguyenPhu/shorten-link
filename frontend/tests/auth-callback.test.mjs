@@ -13,7 +13,7 @@ for (const scenario of [
   { name: "Navbar and callback complete one token exchange", strict: false },
   { name: "Navbar and callback complete one token exchange under StrictMode effect replay", strict: true },
   { name: "StrictMode callback rejects the wrong state without exchanging a code", strict: true, wrongState: true },
-  { name: "StrictMode callback rejects the wrong nonce without opening the dashboard", strict: true, wrongNonce: true },
+  { name: "StrictMode callback rejects the wrong nonce without leaving the callback", strict: true, wrongNonce: true },
 ]) {
   test(scenario.name, async (t) => {
     const dom = new JSDOM("<div id='root'></div>", { url: "https://shortn.dev/auth/callback/" });
@@ -40,7 +40,7 @@ for (const scenario of [
       NEXT_PUBLIC_AUTH_REDIRECT_URI: transaction.redirectUri,
       NEXT_PUBLIC_AUTH_LOGOUT_URI: "https://shortn.dev/",
     });
-    globalThis.window = new Proxy(dom.window, { get: (target, key) => key === "location" ? location : key === "history" ? history : Reflect.get(target, key, target) });
+    globalThis.window = new Proxy(dom.window, { get: (target, key) => key === "location" ? location : key === "history" ? history : ["addEventListener", "removeEventListener"].includes(key) ? target[key].bind(target) : Reflect.get(target, key, target) });
     globalThis.document = dom.window.document;
     globalThis.self = globalThis.window;
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -79,7 +79,7 @@ for (const scenario of [
       assert.equal(getAccessToken(storage), null);
       assert.match(document.body.textContent, scenario.wrongState ? /state mismatch/ : /nonce mismatch/);
     } else {
-      assert.deepEqual(redirects, ["/dashboard/"]);
+      assert.deepEqual(redirects, ["/"]);
       assert.equal(getAccessToken(storage), "fixture-access-token");
       assert.doesNotMatch(document.body.textContent, /state mismatch|missing code|Chưa thể đăng nhập/);
     }
