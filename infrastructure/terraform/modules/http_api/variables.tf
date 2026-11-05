@@ -26,3 +26,13 @@ variable "log_retention_days" {
   type    = number
   default = 14
 }
+
+variable "throttling_burst_limit" {
+  type    = number
+  default = 200
+}
+
+variable "throttling_rate_limit" {
+  type    = number
+  default = 100
+}

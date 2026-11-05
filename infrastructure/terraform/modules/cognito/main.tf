@@ -38,11 +38,10 @@ resource "aws_cognito_identity_provider" "google" {
   provider_details = {
     client_id        = var.google_client_id
     client_secret    = var.google_client_secret
-    authorize_scopes = "openid email profile"
+    authorize_scopes = "openid email"
   }
   attribute_mapping = {
     email = "email"
-    name  = "name"
   }
   # Cognito adds these read-only Google defaults on DescribeIdentityProvider.
   # Keep client credentials, scopes and application attribute mappings managed.
@@ -65,7 +64,7 @@ resource "aws_cognito_user_pool_client" "web" {
   supported_identity_providers         = [aws_cognito_identity_provider.google.provider_name]
   allowed_oauth_flows_user_pool_client = true
   allowed_oauth_flows                  = ["code"]
-  allowed_oauth_scopes                 = ["openid", "email", "profile"]
+  allowed_oauth_scopes                 = ["openid", "email"]
   callback_urls                        = var.callback_urls
   logout_urls                          = var.logout_urls
   explicit_auth_flows                  = ["ALLOW_REFRESH_TOKEN_AUTH"]
@@ -79,8 +78,8 @@ resource "aws_cognito_user_pool_client" "web" {
     id_token      = "minutes"
     refresh_token = "days"
   }
-  read_attributes  = ["email", "email_verified", "name"]
-  write_attributes = ["email", "name"]
+  read_attributes  = ["email", "email_verified"]
+  write_attributes = ["email"]
 }
 resource "aws_cognito_user_pool_domain" "login" {
   domain       = var.cognito_domain_prefix

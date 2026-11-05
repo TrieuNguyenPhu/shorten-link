@@ -22,6 +22,8 @@ variables {
   table_arn            = "arn:aws:dynamodb:ap-southeast-1:111111111111:table/url-shortener"
   runtime_boundary_arn = "arn:aws:iam::111111111111:policy/url-shortener/bootstrap/url-shortener-dev-runtime-boundary"
   aggregator_filename  = "../../../../backend/dist/click-aggregator.zip"
+  ws_endpoint          = "https://ws123.execute-api.ap-southeast-1.amazonaws.com/prod"
+  ws_connections_arn   = "arn:aws:execute-api:ap-southeast-1:111111111111:ws123/prod/POST/@connections/*"
 }
 run "queues_and_redrive" {
   command = plan
@@ -55,8 +57,8 @@ run "aggregator_permissions_and_mapping" {
   command = plan
   module { source = "../../modules/event_pipeline" }
   assert {
-    condition     = local.aggregator_permissions[0].actions == ["dynamodb:UpdateItem", "dynamodb:PutItem", "dynamodb:GetItem"] && local.aggregator_permissions[0].resources == [var.table_arn] && local.aggregator_permissions[1].actions == ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"] && local.aggregator_permissions[1].resources == [aws_sqs_queue.clicks.arn] && length(local.aggregator_permissions) == 2 && module.aggregator.environment_variables == tomap({ TABLE_NAME = "url-shortener" })
-    error_message = "Aggregator needs only transaction actions plus consistent Get on the table and polling on ClickQueue; no invented TransactWriteItems IAM action."
+    condition     = local.aggregator_permissions[0].actions == ["dynamodb:UpdateItem", "dynamodb:PutItem", "dynamodb:GetItem"] && local.aggregator_permissions[0].resources == [var.table_arn] && local.aggregator_permissions[1].actions == ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"] && local.aggregator_permissions[1].resources == [aws_sqs_queue.clicks.arn] && length(local.aggregator_permissions) == 5 && module.aggregator.environment_variables == tomap({ TABLE_NAME = "url-shortener", WS_ENDPOINT = var.ws_endpoint })
+    error_message = "Aggregator needs transaction actions, consistent Get, ClickQueue polling, and WebSocket push permissions; no invented TransactWriteItems IAM action."
   }
   assert {
     condition     = aws_lambda_event_source_mapping.clicks.event_source_arn == aws_sqs_queue.clicks.arn && aws_lambda_event_source_mapping.clicks.function_name == module.aggregator.alias_arn && aws_lambda_event_source_mapping.clicks.batch_size == 10 && aws_lambda_event_source_mapping.clicks.maximum_batching_window_in_seconds == 0 && aws_lambda_event_source_mapping.clicks.function_response_types == toset(["ReportBatchItemFailures"]) && aws_lambda_event_source_mapping.clicks.enabled && length(aws_lambda_event_source_mapping.clicks.filter_criteria) == 0
