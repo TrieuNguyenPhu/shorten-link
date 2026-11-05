@@ -214,3 +214,5 @@
 - Bỏ đoạn mô tả nhỏ dưới tiêu đề đăng nhập; đồng bộ logo/favicon link vàng, title trang chủ/đăng nhập/dashboard/callback/kiến trúc qua Metadata API tĩnh.
 - Test hồi quy WebSocket stage đã chạy RED → GREEN. `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm test` (18/18) và `git diff --check` PASS. Kiểm tra HTML export xác nhận title/icon của cả năm route.
 - Google JSON khớp IdP đang chạy. Không chạy Terraform apply, không publish CloudFront, không load test; Google federation sau bước nhập tài khoản vẫn chưa kiểm chứng. Không sửa các diff backend/Terraform có sẵn.
+
+- Đã mở [PR #85](https://github.com/TrieuNguyenPhu/shorten-link/pull/85) với code tree đã đối chiếu local/remote. Git HTTPS local chưa có credential; dùng GitHub connector để xuất bản đúng file đã kiểm tra. PR chờ review, chưa merge.
