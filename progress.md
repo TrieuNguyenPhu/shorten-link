@@ -229,3 +229,5 @@
 - Rollout thành công lên https://d2aamyg2mt28wl.cloudfront.net, invalidation `I32HVUHF141OJMAXY9B68R6FDG` Completed. Hosting smoke và byte comparison callback HTML/toàn bộ JS tham chiếu với artifact PASS. Bundle production dùng callback CloudFront, không có callback localhost hoặc Google secret.
 - Browser production sau sửa: cùng quy trình state đúng/code chẩn đoán không hợp lệ đã đến `/oauth2/token`, nhận HTTP 400 và hiển thị lỗi token exchange như dự kiến, không còn state mismatch. Đây là diagnostic kiểm state, không phải đăng nhập thành công bằng tài khoản Google.
 - Luồng thành công tới dashboard được kiểm bằng components/auth thật trong React DOM; fetch token endpoint là fixture có nonce/verifier đúng. Không dùng fixture/token giả ở website production. Không đổi AWS Cognito, backend, IAM hoặc chạy Terraform apply/load test.
+
+- Đã mở [PR #87](https://github.com/TrieuNguyenPhu/shorten-link/pull/87); local/remote tree đã đối chiếu khớp. Website đã cập nhật, PR chờ review, chưa merge.

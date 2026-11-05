@@ -7,7 +7,7 @@
 
 ## 1. Tổng Quan Trạng Thái Hiện Tại
 
-- **OAuth callback state mismatch — `complete (implementation/deployed)`:** sửa Navbar token check xóa PKCE và callback effect replay; 24 tests/lint/typecheck/build/audit production PASS. Đã publish lên CloudFront, invalidation `I32HVUHF141OJMAXY9B68R6FDG` Completed. Browser production với state đúng đi đến token endpoint (code chẩn đoán bị Cognito từ chối đúng); chưa kiểm chứng tài khoản Google thật. Nhánh `fix/phase-05-preserve-pkce-callback` từ `origin/main`.
+- **OAuth callback state mismatch — `complete (implementation/deployed)` — [PR #87](https://github.com/TrieuNguyenPhu/shorten-link/pull/87):** sửa Navbar token check xóa PKCE và callback effect replay; 24 tests/lint/typecheck/build/audit production PASS. Đã publish lên CloudFront, invalidation `I32HVUHF141OJMAXY9B68R6FDG` Completed. Browser production với state đúng đi đến token endpoint (code chẩn đoán bị Cognito từ chối đúng); chưa kiểm chứng tài khoản Google thật. Nhánh `fix/phase-05-preserve-pkce-callback` từ `origin/main`.
 
 - **Google login và metadata — `complete (implementation/local)` — [PR #85](https://github.com/TrieuNguyenPhu/shorten-link/pull/85):** local đã có public env từ Terraform outputs, nút Google mở được `accounts.google.com` qua Cognito; giữ stage WebSocket `/prod`, bỏ chú thích đăng nhập, favicon dùng logo link vàng và title riêng cho từng trang. Nhánh `fix/phase-05-google-login-and-page-metadata` từ `origin/main`.
 - Kiểm tra phiên sửa: `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm test` (18/18), `git diff --check` PASS. Google client/secret trong JSON khớp IdP AWS; `.env.local` chỉ chứa public config và bị Git bỏ qua. Chưa xác minh sau bước nhập tài khoản Google; chưa publish CloudFront trong phiên này.
