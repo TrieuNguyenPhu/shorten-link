@@ -6,7 +6,7 @@ import test from "node:test";
 const output = new URL("../out/", import.meta.url);
 
 test("export includes standalone product routes and error HTML pages", async () => {
-  for (const name of ["index.html", "login/index.html", "auth/callback/index.html", "dashboard/index.html", "404.html"]) {
+  for (const name of ["index.html", "login/index.html", "auth/callback/index.html", "dashboard/index.html", "architecture/index.html", "404.html"]) {
     const html = await readFile(new URL(name, output), "utf8");
     assert.match(html, /<html[\s>]/);
     assert.match(html, /<body[\s>]/);
@@ -15,7 +15,7 @@ test("export includes standalone product routes and error HTML pages", async () 
 
 test("export contains product copy without starter or password flow", async () => {
   const html = await readFile(new URL("index.html", output), "utf8");
-  assert.match(html, /Shorten Link|rút gọn link/i);
+  assert.match(html, /Shrnk|rút gọn link/i);
   assert.doesNotMatch(html, /To get started|Deploy Now|vercel\.com|next\.js\/learn/i);
   assert.doesNotMatch(html, /password|sign up|signup/i);
 });

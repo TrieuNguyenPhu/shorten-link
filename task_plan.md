@@ -40,7 +40,7 @@ Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e37
 
 ### Phase 5: Frontend Next.js Dashboard & S3 + CloudFront OAC Hosting
 - [x] **Task 5.1 — complete (implementation/local):** Hoàn thiện Next.js App Router (`output: "export"`), nút Google qua Cognito PKCE & các trang Landing (`/`), Login (`/login`), Callback (`/auth/callback`) theo Hand-Drawn / Doodle & Sketch UI.
-- [ ] **Task 5.2:** Xây dựng Dashboard (`/dashboard`), My Links (`/links`) cùng phong cách Doodle & Sketch, tích hợp HTTP API thật & Native WebSocket Hook (`useRealtimeClicks`).
+- [x] **Task 5.2:** Xây dựng Dashboard (`/dashboard`), My Links (`/links`) cùng phong cách Doodle & Sketch, tích hợp HTTP API thật & Native WebSocket Hook (`useRealtimeClicks`); phần refresh Shrnk tiếp tục ở PR #82.
 - [x] **Task 5.3 — complete (implementation/local):** Xây dựng Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + CloudFront Function URL rewrite) trên nhánh PR mới từ `origin/main`.
 - **Status:** in_progress (Task 5.2 vẫn pending; Task 5.3 complete implementation/local)
 
@@ -73,3 +73,7 @@ Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e37
 - Commit `20caa84` giữ phạm vi Terraform/S3/CloudFront OAC, không đưa thay đổi backend hoặc tài liệu conflict cũ vào branch.
 - `terraform fmt -check -recursive`, `terraform validate` và `terraform test` PASS (19/19).
 - Đã mở [PR #81](https://github.com/TrieuNguyenPhu/shorten-link/pull/81) từ branch mới; GitHub xác nhận không còn conflict với `main`.
+
+## Task 5.4: Shrnk frontend refresh
+- [x] Branding, auth-aware navigation, architecture route, landing create form và analytics-only dashboard.
+- **Status:** implementation/local complete; PR [#82](https://github.com/TrieuNguyenPhu/shorten-link/pull/82) được đồng bộ với `main`.
