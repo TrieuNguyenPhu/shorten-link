@@ -1,6 +1,27 @@
 import Link from "next/link";
 import { HomeCreateLink } from "@/components/HomeCreateLink";
 import { LinkIcon } from "@/components/LinkIcon";
-import { Navbar } from "@/components/Navbar";
-const features = [["01", "Một đường link gọn", "Biến URL dài thành một điểm đến dễ nhớ, dễ chia sẻ."], ["02", "Số liệu thật", "Theo dõi lượt click sau khi hệ thống đã ghi nhận sự kiện."], ["03", "Cập nhật tức thì", "Khi mở dashboard, nhịp click mới sẽ hiện theo thời gian thực."]];
-export default function Home() { return <div className="paper-shell"><Navbar /><main className="mx-auto w-full max-w-6xl flex-1 px-5 pb-16 pt-10 sm:px-8 sm:pt-20"><section className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]"><div><p className="ink-note">Link ngắn, tín hiệu rõ</p><h1 className="mt-5 max-w-3xl font-display text-5xl font-bold leading-[0.98] tracking-[-0.04em] text-ink sm:text-7xl">Chia sẻ điều quan trọng, <span className="relative inline-block text-coral">gọn hơn<span aria-hidden="true" className="scribble-underline" /></span>.</h1><p className="mt-7 max-w-xl text-lg leading-8 text-ink-muted sm:text-xl">Shrnk giúp bạn rút gọn link trong vài giây và nhìn thấy lượt click thật đang chuyển động.</p><div className="mt-9 flex flex-col gap-3 sm:flex-row"><a className="sketch-button" href="https://github.com/TrieuNguyenPhu/shorten-link" rel="noreferrer" target="_blank">Source Code</a><Link className="sketch-button sketch-button-secondary" href="/architecture/">Kiến trúc dự án</Link></div></div><div aria-label="Biểu tượng link Shrnk" className="relative mx-auto w-full max-w-md rotate-[2deg]"><div className="sketch-card bg-sun p-7 shadow-[8px_8px_0_var(--ink)]"><LinkIcon className="h-16 w-16" /><div className="mt-8 space-y-3 font-display text-2xl font-bold"><p className="rounded-xl border-2 border-dashed border-ink/60 bg-paper/60 px-4 py-3">URL dài</p><p className="rounded-xl border-2 border-ink bg-white/70 px-4 py-3">Link ngắn</p><p className="rounded-xl border-2 border-dashed border-ink/60 bg-paper/60 px-4 py-3">Click realtime</p></div></div></div></section><HomeCreateLink /><section className="mt-24"><div className="mb-8"><p className="ink-note">Bản đồ nhỏ</p><h2 className="mt-3 font-display text-3xl font-bold sm:text-4xl">Ít bước, nhiều rõ ràng.</h2></div><div className="grid gap-5 md:grid-cols-3">{features.map(([number, title, copy]) => <article className="sketch-card" key={number}><p className="font-display text-2xl font-bold text-coral">{number}</p><h3 className="mt-8 font-display text-xl font-bold">{title}</h3><p className="mt-3 leading-7 text-ink-muted">{copy}</p></article>)}</div></section></main><footer className="mx-auto flex w-full max-w-6xl justify-between px-5 pb-8 text-sm font-semibold text-ink-muted sm:px-8"><span>Shrnk / 2026</span><span className="font-display">Keep it short. Keep it useful.</span></footer></div>; }
+
+export default function Home() {
+  return (
+    <main className="mx-auto w-full max-w-6xl flex-1 px-5 pb-16 pt-12 sm:px-8 sm:pt-20" id="main-content">
+      <section className="grid items-center gap-12 lg:grid-cols-[1.15fr_0.85fr]">
+        <div>
+          <h1 className="max-w-3xl font-display text-5xl leading-tight sm:text-7xl">Link ngắn.<br /><span className="relative inline-block text-coral">Chia sẻ dễ dàng.<span aria-hidden="true" className="scribble-underline" /></span></h1>
+          <p className="mt-7 text-xl text-ink-muted">Rút gọn link, theo dõi lượt click realtime cùng Shrnk.</p>
+          <div className="mt-9 flex flex-wrap gap-3">
+            <a className="sketch-button" href="https://github.com/TrieuNguyenPhu/shorten-link" rel="noreferrer" target="_blank">Source Code</a>
+            <Link className="sketch-button sketch-button-secondary" href="/architecture/">Kiến trúc dự án</Link>
+          </div>
+        </div>
+        <div aria-label="Biểu tượng link Shrnk" className="relative mx-auto w-full max-w-sm rotate-[2deg]">
+          <div className="sketch-card flex min-h-64 flex-col items-center justify-center gap-6 bg-sun p-8 shadow-[8px_8px_0_var(--ink)]">
+            <LinkIcon className="h-28 w-28" />
+            <span className="text-4xl">Dài thành ngắn.</span>
+          </div>
+        </div>
+      </section>
+      <HomeCreateLink />
+    </main>
+  );
+}

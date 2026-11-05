@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { GoogleLoginButton } from "@/components/GoogleLoginButton";
-import { Navbar } from "@/components/Navbar";
+import { LinkIcon } from "@/components/LinkIcon";
 
 export const metadata: Metadata = { title: "Đăng nhập" };
 
 export default function LoginPage() {
-  return <div className="paper-shell"><Navbar /><main className="mx-auto flex w-full max-w-6xl flex-1 items-center justify-center px-5 pb-20 pt-10 sm:px-8"><section className="sketch-card w-full max-w-md"><p className="ink-note">Cánh cửa nhỏ</p><h1 className="mt-4 font-display text-4xl font-bold">Đăng nhập để bắt đầu.</h1><div className="mt-8"><GoogleLoginButton /></div><Link className="mt-6 inline-block text-sm font-bold underline decoration-coral decoration-2 underline-offset-4" href="/">← Về trang chủ</Link></section></main></div>;
+  return (
+    <main className="mx-auto flex w-full max-w-6xl flex-1 items-center justify-center px-5 py-16 sm:px-8" id="main-content">
+      <section className="sketch-card w-full max-w-md px-6 py-10 text-center sm:px-10">
+        <LinkIcon className="mx-auto h-16 w-16" />
+        <h1 className="mt-6 font-display text-4xl">Đăng nhập Shrnk</h1>
+        <div className="mt-8"><GoogleLoginButton /></div>
+      </section>
+    </main>
+  );
 }

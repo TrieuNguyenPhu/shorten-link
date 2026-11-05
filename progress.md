@@ -231,3 +231,16 @@
 - Luồng thành công tới dashboard được kiểm bằng components/auth thật trong React DOM; fetch token endpoint là fixture có nonce/verifier đúng. Không dùng fixture/token giả ở website production. Không đổi AWS Cognito, backend, IAM hoặc chạy Terraform apply/load test.
 
 - Đã mở [PR #87](https://github.com/TrieuNguyenPhu/shorten-link/pull/87); local/remote tree đã đối chiếu khớp. Website đã cập nhật, PR chờ review, chưa merge.
+
+
+## 2026-11-05 — UI refinement, project review và production rollout
+
+- **Status: complete (implementation/deployed)**. Yêu cầu: đăng nhập về trang chủ; sửa dashboard nhấp nháy; layout chung; menu active/hover; login tối giản; font Lobster; review toàn project, sửa lỗi và triển khai production.
+- Nhánh `fix/phase-05-ui-review-production` tạo từ `origin/main` (`2253a3c`), kế thừa hai commit sửa PKCE #87 để giữ luồng đăng nhập an toàn. Giữ nguyên các diff có sẵn để rà soát, không tự hoàn nguyên.
+
+- Kiểm tra: `go -C backend test -race ./...`, `go -C backend vet ./...`, DynamoDB Local `-race -tags=integration -count=1` repository/HTTP-WebSocket E2E và build tám ZIP PASS. `govulncheck@v1.9.0`: 0 symbol/package vulnerabilities, 4 module-only không reachable.
+- Frontend lint/typecheck/static build, 27 tests, audit production dependencies và diff-check PASS. Browser desktop/mobile kiểm logo, Lobster, shared footer và active menu. Callback fixture kiểm redirect `/` đúng một lần, state/nonce sai bị từ chối.
+- Terraform fmt/clean init/validate/38 mock-plan tests, 8 CloudFront rewrite tests và PowerShell parser/preflight/lifecycle offline PASS. AWS operator smoke dùng dữ liệu phiên riêng, cleanup META/STAT/connection, marker TTL tự hết hạn; không sử dụng tài khoản người dùng hay fixture token trong production.
+- Rollout đầu: invalidation `I1G0E6D3QN3D83W0NNAJMRV9MO` Completed; hosting smoke và byte comparison 5 HTML + 14 JS/CSS/font assets PASS. Sau review bổ sung fix deletion race, đã chạy lại checks và rollout cuối `I4OJCY74UTRUNCSQ430QB61MWL` Completed. Browser production mở được Google qua Cognito; chưa nhập tài khoản Google thật.
+
+- Rollout cuối: CloudFront invalidation `I4OJCY74UTRUNCSQ430QB61MWL` Completed; hosting smoke PASS. Không đổi AWS IAM/Cognito hay chạy Terraform apply/load test. Git HTTPS local thiếu credential helper; xuất bản PR qua GitHub connector và đối chiếu tree.

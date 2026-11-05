@@ -31,7 +31,7 @@ test("login and callback routes exist with no password form", async () => {
 
   assert.match(button, /Tiếp tục với Google/);
   assert.doesNotMatch(`${login}\n${button}`, /<input|password|đăng ký|signup/i);
-  assert.match(callbackComponent, /loading|đang kiểm tra|đang đổi/i);
+  assert.match(callbackComponent, /Đang đăng nhập/i);
   assert.match(callbackComponent, /history\.replaceState/);
 });
 
@@ -41,7 +41,7 @@ test("navigation and dashboard copy support signed-in landing flow", async () =>
   const architecture = await source("app/architecture/page.tsx");
 
   assert.match(navbar, /getAccessToken/);
-  assert.match(navbar, /Đăng xuất/);
+  assert.match(navbar, /LogoutButton/);
   assert.doesNotMatch(workspace, /CreateLinkForm/);
   assert.doesNotMatch(workspace, /My Links/);
   assert.match(architecture, /Kiến trúc dự án/);

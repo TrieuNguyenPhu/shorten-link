@@ -1,11 +1,14 @@
 # PROJECT_STATUS.md — Trạng Thái Hiện Tại Của Dự Án
 
-> **Cập nhật lần cuối:** 2026-11-05 (PR #81 Task 5.3 đã mở từ nhánh sạch trên `main`).
+> **Cập nhật lần cuối:** 2026-11-05 (UI tối giản, review toàn project và production rollout).
 > **Quy tắc bắt buộc:** File này luôn được cập nhật ngay sau khi hoàn thành mỗi Task trước khi mở Pull Request tương ứng.
 
 ---
 
 ## 1. Tổng Quan Trạng Thái Hiện Tại
+
+- **Task 5.5 — UI refinement và project review — complete (implementation/deployed):** đăng nhập về `/`; Navbar/Footer ở root layout; menu Trang chủ/Dashboard khi đăng nhập/Kiến trúc dự án có active/hover; login có logo và tiêu đề căn giữa; Lobster self-hosted; giảm copy. Sửa refresh gây nhấp nháy, giữ click mới trước snapshot cũ, chặn snapshot khôi phục link đã xóa, hiển thị/copy kết quả tạo link. Frontend 27 tests và lint/typecheck/build/audit PASS.
+- **Rà soát hệ thống:** Go 1.26.10 race/vet/build 8 ZIP, DynamoDB Local repository + HTTP/WebSocket E2E, govulncheck, 38 Terraform plan/mock tests (19 bootstrap + 19 dev), CloudFront rewrite và PowerShell offline PASS. Smoke AWS thật xác nhận HTTP JWT negatives; operator Lambda CRUD/owner isolation; 301 → EventBridge/SQS → counter → WebSocket; disconnect cleanup; moderation keyword. Chưa đăng nhập bằng tài khoản Google thật; browser đã tới `accounts.google.com`.
 
 - **OAuth callback state mismatch — `complete (implementation/deployed)` — [PR #87](https://github.com/TrieuNguyenPhu/shorten-link/pull/87):** sửa Navbar token check xóa PKCE và callback effect replay; 24 tests/lint/typecheck/build/audit production PASS. Đã publish lên CloudFront, invalidation `I32HVUHF141OJMAXY9B68R6FDG` Completed. Browser production với state đúng đi đến token endpoint (code chẩn đoán bị Cognito từ chối đúng); chưa kiểm chứng tài khoản Google thật. Nhánh `fix/phase-05-preserve-pkce-callback` từ `origin/main`.
 
@@ -14,10 +17,10 @@
 
 | Hạng mục | Trạng thái | Chi tiết |
 | --- | --- | --- |
-| **Giai đoạn hiện tại (Current Phase)** | **Phase 5 — `in_progress`** | Frontend tĩnh và hosting S3/CloudFront |
-| **Task hiện tại** | **Task 5.3 — complete (implementation/local)** | Private S3, CloudFront OAC và URL rewrite |
-| **Task tiếp theo (Next Up)** | **Task 5.2** | Dashboard, My Links và realtime WebSocket |
-| **Trạng thái AWS Cloud** | **Core đã triển khai ngày 2026-11-04** | Account654822777701, ap-southeast-1; bootstrap10 + core42 tài nguyên mới; pin deployment policy sau apply, không destroy |
+| **Giai đoạn hiện tại (Current Phase)** | **Phase 5 — complete (implementation/deployed)** | Frontend tĩnh và hosting S3/CloudFront; Google account E2E chưa thực hiện |
+| **Task hiện tại** | **Task 5.5 — complete (implementation/deployed)** | UI refinement, dashboard lifecycle và project review |
+| **Task tiếp theo (Next Up)** | **Task 6.1** | Observability nâng cao và CodeDeploy canary |
+| **Trạng thái AWS Cloud** | **Core/pipeline/realtime/hosting đang phục vụ** | Account 654822777701, ap-southeast-1; phiên này publish frontend, không apply Terraform |
 | **13 Bộ Skills & `AGENTS.md`** | **Đã kiểm tra file/config** | Đủ 13 file skill đại diện; 314 thư mục cấp đầu có `SKILL.md`. Có cấu hình trỏ `~/.agents/skills`; không suy ra mọi host đều tự nạp |
 
 ---
@@ -36,8 +39,9 @@
 | **Phase 4** | **Task 4.1** | Go Lambdas `ws-connect`, `ws-disconnect`, `PostToConnection` Pusher (`410 Gone`) & `moderate-check` + ASL | `feat/phase-04-task-01-websocket-and-moderation-lambdas` | complete (đã merge mainf6e3769) | [PR #76](https://github.com/TrieuNguyenPhu/shorten-link/pull/76) |
 | **Phase 4** | **Task 4.2** | Terraform Modules `websocket_api` (`$connect`, `$disconnect`, stage `prod`) & `moderation_sfn` | `feat/phase-04-task-02-terraform-websocket-and-sfn` | complete (đã merge main501c049; review fix riêng) | [PR #77](https://github.com/TrieuNguyenPhu/shorten-link/pull/77); [fix #78](https://github.com/TrieuNguyenPhu/shorten-link/pull/78) |
 | **Phase 5** | **Task 5.1** | Next.js static, Google-only qua Cognito PKCE, Landing/Login/Callback theo Doodle & Sketch UI | `feat/phase-05-task-01-nextjs-auth-and-pages` | complete (implementation/local) | [PR #79](https://github.com/TrieuNguyenPhu/shorten-link/pull/79), [PR #70 — scaffold/static export](https://github.com/TrieuNguyenPhu/shorten-link/pull/70) |
-| **Phase 5** | **Task 5.2** | Dashboard & My Links Doodle & Sketch, API thật & Native WebSocket Hook (`useRealtimeClicks`) | `feat/phase-05-task-02-dashboard-api-and-websocket` | ⏳ Pending | — |
+| **Phase 5** | **Task 5.2** | Dashboard & My Links Doodle & Sketch, API thật & Native WebSocket Hook (`useRealtimeClicks`) | `feat/phase-05-task-02-dashboard-api-and-websocket` | complete (implementation/deployed) | [PR #82](https://github.com/TrieuNguyenPhu/shorten-link/pull/82) và Task 5.5 |
 | **Phase 5** | **Task 5.3** | Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + URL Rewrite) | `feat/phase-05-task-03-terraform-s3-cloudfront-oac-v2` | complete (implementation/local) | [PR #81](https://github.com/TrieuNguyenPhu/shorten-link/pull/81) |
+| **Phase 5** | **Task 5.5** | UI tối giản, font Lobster, lifecycle dashboard và project review/release | `fix/phase-05-ui-review-production` | complete (implementation/deployed) | Đang xuất bản PR |
 | **Phase 6** | **Task 6.1** | Terraform Modules `observability` (Alarms, SNS, Dashboard, X-Ray) & `codedeploy_canary` (`live` alias) | `feat/phase-06-task-01-observability-and-canary` | ⏳ Pending | — |
 | **Phase 6** | **Task 6.2** | GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), k6 Load Test & Runbook E2E | `feat/phase-06-task-02-cicd-k6-and-runbook` | ⏳ Pending | — |
 
@@ -225,3 +229,9 @@
 - Loại bỏ form tạo link trùng lặp trong Dashboard/My Links, nút mũi tên và các helper caption nhỏ; giữ API thật và hook WebSocket realtime hiện có.
 - Kiểm tra local trên branch PR: `pnpm lint`, `pnpm typecheck`, `pnpm build` và `pnpm test` (16 pass). Không chạy `terraform apply` hoặc load test.
 - PR: [#82](https://github.com/TrieuNguyenPhu/shorten-link/pull/82), base `main`; đang đồng bộ lại với `origin/main` để xử lý merge conflict.
+
+
+## 2026-11-05 — UI refinement, project review và production rollout
+
+- **Status: complete (implementation/deployed)**. Yêu cầu: đăng nhập về trang chủ; sửa dashboard nhấp nháy; layout chung; menu active/hover; login tối giản; font Lobster; review toàn project, sửa lỗi và triển khai production.
+- Nhánh `fix/phase-05-ui-review-production` tạo từ `origin/main` (`2253a3c`), kế thừa hai commit sửa PKCE #87 để giữ luồng đăng nhập an toàn. Giữ nguyên các diff có sẵn để rà soát, không tự hoàn nguyên.
