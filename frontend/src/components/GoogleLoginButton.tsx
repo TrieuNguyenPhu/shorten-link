@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { getPublicConfig } from "@/lib/config";
+import { getAuthConfig } from "@/lib/config";
 import { startGoogleLogin } from "@/lib/auth";
 
 export function GoogleLoginButton() {
@@ -12,7 +12,7 @@ export function GoogleLoginButton() {
     setPending(true);
     setError(null);
     try {
-      await startGoogleLogin(getPublicConfig());
+      await startGoogleLogin(getAuthConfig());
     } catch {
       setPending(false);
       setError("Chưa thể mở đăng nhập Google. Kiểm tra cấu hình môi trường rồi thử lại.");
