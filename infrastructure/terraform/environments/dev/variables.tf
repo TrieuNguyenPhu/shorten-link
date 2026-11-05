@@ -116,3 +116,17 @@ variable "moderation_boundary_arn" {
     error_message = "Provide the dedicated moderation boundary ARN from bootstrap."
   }
 }
+
+variable "canary_boundary_arn" {
+  type        = string
+  default     = null
+  description = "Optional explicit bootstrap ARN; deterministic default supports existing operator inputs."
+  validation {
+    condition     = var.canary_boundary_arn == null || var.canary_boundary_arn == "arn:aws:iam::${var.aws_account_id}:policy/url-shortener/bootstrap/${var.name_prefix}-canary-boundary"
+    error_message = "Provide the dedicated canary boundary ARN from bootstrap."
+  }
+}
+variable "alarm_email_addresses" {
+  type    = set(string)
+  default = []
+}

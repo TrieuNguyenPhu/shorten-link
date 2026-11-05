@@ -275,3 +275,9 @@
 - Merge main `2b6ed24`; đối chiếu main với head #87 xác nhận cùng tree. Giải quyết bảy file conflict bằng bản #88 đã chứa PKCE và UI mới; staged tree trước ghi chú không có khác biệt với head #88. Không gọi AWS, apply hoặc publish lại.
 
 - Lint/typecheck/build static, 27 frontend tests, `bash -n scripts/publish-frontend.sh` và diff-check PASS. Source `frontend/`, scripts và tests không thay đổi so với #88 trước merge. Push merge commit lên đúng PR #88; không tạo PR mới.
+
+## Phase 6 — 2026-11-05
+
+Đọc bốn file trạng thái và master plan từ Git (bản workspace chính đang bị xóa chưa commit). Dùng worktree riêng, giữ nguyên diff người dùng. Skills planning-with-files/TDD/ponytail không có trên host; thực hiện quy trình AGENTS/test-first trực tiếp. Không apply/load test AWS.
+
+Task 6.1 implementation/local complete: RED module missing → GREEN; Terraform 1.17.1/provider 6.71.0 fmt/init-backend=false-lockfile-readonly/validate, 20 bootstrap + 21 dev mock-plan tests PASS. Go race/vet và build8ZIP PASS. SNS topic policy chỉ CloudWatch từ đúng alarm/account; không subscription mặc định. IAM service boundary chỉ alias resolve:live; deployment grants exact app/group/alarms, quota PASS. Sửa test fixture S3 ARN unknown; không apply để né test. Kiểm diff thủ công không secret/state; không chạy AWS/canary thật.
