@@ -200,3 +200,9 @@
 - Chỉ đưa 14 file Terraform/frontend hosting, test và CI vào commit `20caa84`; không merge docs cũ.
 - Terraform dev `fmt -check`, `validate`, `test`: 19 pass, 0 fail.
 - Đã mở [PR #81](https://github.com/TrieuNguyenPhu/shorten-link/pull/81); base `main` tại `702b97a`, head `84e23bb`, trạng thái mergeable.
+
+## Phiên 2026-11-05 — Giải quyết conflict PR #82
+
+- Fetch `origin/main` tại `37f0978` và remote head PR #82 tại `fceb63f`; merge thử trong worktree tạm để không chạm các thay đổi chưa commit của workspace chính.
+- Conflict chỉ xuất hiện ở bốn file trạng thái/tài liệu. Giữ lịch sử `main`, bổ sung ghi nhận frontend Shrnk và PR #82; các thay đổi Terraform hosting từ PR #81 được giữ nguyên.
+- Sau khi merge, kiểm tra `git diff --check`; chưa chạy `terraform apply`, load test hoặc thao tác AWS.

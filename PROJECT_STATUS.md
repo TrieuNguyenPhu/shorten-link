@@ -213,3 +213,10 @@
 - Terraform dev: `fmt -check`, `validate` và `terraform test` PASS, tổng cộng 19 test pass; CloudFront viewer rewrite Node test được đưa vào CI.
 - Chưa chạy `terraform apply` trong bước tạo PR; tài nguyên AWS hiện hữu không bị thay đổi.
 - Đã mở [PR #81](https://github.com/TrieuNguyenPhu/shorten-link/pull/81) từ `main` (`702b97a`); GitHub xác nhận branch mergeable, không còn conflict.
+
+## 20. Phase 5 / Task 5.4 — 2026-11-05
+
+- PR #82 cập nhật trải nghiệm frontend Shrnk trên nền static export: logo/icon link dùng chung, Navbar nhận biết phiên đăng nhập, liên kết Source Code, route `/architecture/`, landing tạo link khi đã đăng nhập và dashboard chỉ hiển thị analytics links.
+- Loại bỏ form tạo link trùng lặp trong Dashboard/My Links, nút mũi tên và các helper caption nhỏ; giữ API thật và hook WebSocket realtime hiện có.
+- Kiểm tra local trên branch PR: `pnpm lint`, `pnpm typecheck`, `pnpm build` và `pnpm test` (16 pass). Không chạy `terraform apply` hoặc load test.
+- PR: [#82](https://github.com/TrieuNguyenPhu/shorten-link/pull/82), base `main`; đang đồng bộ lại với `origin/main` để xử lý merge conflict.

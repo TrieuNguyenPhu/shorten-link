@@ -160,3 +160,9 @@
 - Cách tránh conflict: dựng branch mới từ `origin/main`, áp dụng implementation hosting theo file, không mang merge commit `86a40ad` hoặc các thay đổi trạng thái đã xung đột của PR #80.
 - Module giữ S3 private + CloudFront OAC SigV4, bucket policy giới hạn distribution ARN, cache policy tách HTML/API assets và CloudFront Function rewrite cho static routes.
 - Bộ kiểm Terraform mock xác nhận frontend hosting wiring cùng core/event/realtime contracts vẫn pass 19/19; chưa apply AWS trong bước tạo PR.
+
+## Phase 5 / Task 5.4 — Shrnk frontend refresh — 2026-11-05
+
+- Frontend dùng một `LinkIcon` chung cho branding và Navbar; trạng thái đăng nhập điều khiển các liên kết Dashboard, đăng xuất và landing create form.
+- Dashboard giữ workspace analytics links, bỏ trải nghiệm My Links/create form trùng lặp; route `/architecture/` được export tĩnh.
+- PR #82 giữ static export và API/WebSocket thật; không thêm password/signup flow hoặc runtime server-side.
