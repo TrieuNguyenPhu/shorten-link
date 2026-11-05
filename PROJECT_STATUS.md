@@ -7,6 +7,9 @@
 
 ## 1. Tổng Quan Trạng Thái Hiện Tại
 
+- **Google login và metadata — `complete (implementation/local)` — [PR #85](https://github.com/TrieuNguyenPhu/shorten-link/pull/85):** local đã có public env từ Terraform outputs, nút Google mở được `accounts.google.com` qua Cognito; giữ stage WebSocket `/prod`, bỏ chú thích đăng nhập, favicon dùng logo link vàng và title riêng cho từng trang. Nhánh `fix/phase-05-google-login-and-page-metadata` từ `origin/main`.
+- Kiểm tra phiên sửa: `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm test` (18/18), `git diff --check` PASS. Google client/secret trong JSON khớp IdP AWS; `.env.local` chỉ chứa public config và bị Git bỏ qua. Chưa xác minh sau bước nhập tài khoản Google; chưa publish CloudFront trong phiên này.
+
 | Hạng mục | Trạng thái | Chi tiết |
 | --- | --- | --- |
 | **Giai đoạn hiện tại (Current Phase)** | **Phase 5 — `in_progress`** | Frontend tĩnh và hosting S3/CloudFront |
