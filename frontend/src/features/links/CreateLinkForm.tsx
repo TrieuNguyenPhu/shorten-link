@@ -13,9 +13,9 @@ function messageFor(error: unknown): string {
   return "Chưa tạo được link. Hãy thử lại.";
 }
 
-type Props = { config: PublicConfig; token: string };
+type Props = { config: PublicConfig; token: string; onCreated?: (created: CreatedLink) => void };
 
-export function CreateLinkForm({ config, token }: Props) {
+export function CreateLinkForm({ config, token, onCreated }: Props) {
   const [created, setCreated] = useState<CreatedLink | null>(null);
   const [copied, setCopied] = useState(false);
   const [target, setTarget] = useState("");
@@ -36,6 +36,7 @@ export function CreateLinkForm({ config, token }: Props) {
     try {
       const created = await createLink(config, token, target.trim());
       setCreated(created);
+      onCreated?.(created);
       setCopied(false);
       setTarget("");
     } catch (reason) {

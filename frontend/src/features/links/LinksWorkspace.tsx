@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getAccessToken } from "@/lib/auth";
-import { ApiError, deleteLink, listAllLinks, type Link } from "@/lib/api";
+import { ApiError, deleteLink, listAllLinks, type CreatedLink, type Link } from "@/lib/api";
 import { getPublicConfig, type PublicConfig } from "@/lib/config";
+import { CreateLinkForm } from "./CreateLinkForm";
 import { LinksTable } from "./LinksTable";
 
 function errorMessage(error: unknown): string {
@@ -76,9 +77,28 @@ export function LinksWorkspace() {
     }
   }
 
+  function handleCreated(created: CreatedLink) {
+    deletedCodes.current.delete(created.code);
+    setLinks((current) => [
+      {
+        code: created.code,
+        target: created.target,
+        shortUrl: created.shortUrl,
+        clicks: 0,
+        createdAt: new Date().toISOString(),
+      },
+      ...current.filter((link) => link.code !== created.code),
+    ]);
+  }
+
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-5 pb-16 pt-10 sm:px-8 sm:pt-14" id="main-content">
       <h1 className="mb-8 font-display text-4xl sm:text-5xl">Dashboard</h1>
+      {config && token ? (
+        <div className="mb-8">
+          <CreateLinkForm config={config} onCreated={handleCreated} token={token} />
+        </div>
+      ) : null}
       {error ? <div aria-live="polite" className="mb-5 rounded-xl border-2 border-red-300 bg-red-50 p-4 text-red-800">{error}</div> : null}
       {loading ? <section aria-live="polite" className="sketch-card text-center">Đang tải…</section> : config ? (
         <LinksTable apiBaseUrl={config.apiBaseUrl} links={links} onDelete={handleDelete} onReconnect={() => { if (token) void reload(config, token); }} websocketUrl={config.websocketUrl} />

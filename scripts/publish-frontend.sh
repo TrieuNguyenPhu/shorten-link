@@ -40,7 +40,7 @@ if [[ ! -f "$out/.publish-config" || $(cat "$out/.publish-config") != "$config_d
   printf 'Artifact was not built with the current public deployment config.\n' >&2
   exit 1
 fi
-for route in index.html login/index.html auth/callback/index.html dashboard/index.html architecture/index.html; do
+for route in index.html login/index.html auth/callback/index.html dashboard/index.html privacy/index.html; do
   if [[ ! -s "$out/$route" ]]; then
     printf 'Missing exported page %s\n' "$out/$route" >&2
     exit 1

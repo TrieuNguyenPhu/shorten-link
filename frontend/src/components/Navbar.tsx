@@ -7,8 +7,9 @@ import { getAccessToken } from "@/lib/auth";
 import { LinkIcon } from "./LinkIcon";
 import { LogoutButton } from "./LogoutButton";
 
-export function Navbar() {
-  const pathname = usePathname();
+export function Navbar({ currentPath }: { currentPath?: string } = {}) {
+  const activePathname = usePathname();
+  const pathname = currentPath ?? activePathname;
   const [signedIn, setSignedIn] = useState(false);
   useEffect(() => {
     const updateSession = () => setSignedIn(Boolean(getAccessToken(window.sessionStorage)));
@@ -20,7 +21,6 @@ export function Navbar() {
   const items = [
     { href: "/", label: "Trang chủ" },
     ...(signedIn ? [{ href: "/dashboard/", label: "Dashboard" }] : []),
-    { href: "/architecture/", label: "Kiến trúc dự án" },
   ];
 
   return (

@@ -34,7 +34,7 @@ if cmd=='terraform':
 elif cmd=='corepack':
  if 'build' in args:
   out=root/'frontend/out'
-  for page in ['index.html','login/index.html','auth/callback/index.html','dashboard/index.html','architecture/index.html','_next/static/test.js']:
+  for page in ['index.html','login/index.html','auth/callback/index.html','dashboard/index.html','privacy/index.html','_next/static/test.js']:
    p=out/page;p.parent.mkdir(parents=True,exist_ok=True);p.write_text('static')
   if case=='build-failed':sys.exit(5)
 elif cmd=='node':pass

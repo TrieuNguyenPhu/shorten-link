@@ -11,7 +11,7 @@ export default function Home() {
           <p className="mt-7 text-xl text-ink-muted">Rút gọn link, theo dõi lượt click realtime cùng Shrnk.</p>
           <div className="mt-9 flex flex-wrap gap-3">
             <a className="sketch-button" href="https://github.com/TrieuNguyenPhu/shorten-link" rel="noreferrer" target="_blank">Source Code</a>
-            <Link className="sketch-button sketch-button-secondary" href="/architecture/">Kiến trúc dự án</Link>
+            <Link className="sketch-button sketch-button-secondary" href="/dashboard/">Dashboard</Link>
           </div>
         </div>
         <div aria-label="Biểu tượng link Shrnk" className="relative mx-auto w-full max-w-sm rotate-[2deg]">

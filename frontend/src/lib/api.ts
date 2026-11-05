@@ -5,6 +5,7 @@ export type Link = {
   target: string;
   clicks: number;
   createdAt: string;
+  shortUrl?: string;
 };
 
 export type LinkPage = { links: Link[]; nextCursor?: string };
