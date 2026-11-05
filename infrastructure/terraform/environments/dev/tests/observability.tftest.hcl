@@ -44,4 +44,9 @@ run "canary_contract" {
     condition     = jsondecode(aws_iam_role_policy.service.policy).Statement[0].Resource == ["${var.function_arn}:live"] && aws_iam_role.service.permissions_boundary == var.boundary_arn && jsondecode(aws_iam_role.service.assume_role_policy).Statement[0].Principal.Service == "codedeploy.amazonaws.com"
     error_message = "CodeDeploy may manage only the live resolve alias, using a bounded service role."
   }
+  assert {
+    condition     = try(jsondecode(aws_iam_role.service.assume_role_policy).Statement[0].Condition.StringEquals["aws:SourceAccount"], "") == "111111111111" && try(jsondecode(aws_iam_role.service.assume_role_policy).Statement[0].Condition.ArnEquals["aws:SourceArn"], "") == "arn:aws:codedeploy:ap-southeast-1:111111111111:deploymentgroup:url-shortener-dev-resolve/url-shortener-dev-resolve-live"
+    error_message = "Only the exact deployment group in this account may assume the CodeDeploy role."
+  }
+
 }

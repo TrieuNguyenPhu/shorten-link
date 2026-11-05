@@ -252,3 +252,5 @@ Task 6.1 — **complete (implementation/local)**: observability và CodeDeploy c
 Task 6.1: [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89), code tree `a1706d5` đã đối chiếu local/remote; chưa merge/apply. Git HTTPS thiếu credential, xuất bản qua GitHub connector.
 
 Task 6.1: CI [#218](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41979476998) PASS toàn bộ bốn jobs trên commit36faa086. AWS apply/canary thật vẫn pending; Task6.2 có [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90) riêng từ main.
+
+Review Phase6.1: AWS tài liệu hóa SourceAccount/SourceArn cho CodeDeploy Lambda; sửa nhận định comment cũ, thêm exact account/group trust và regression RED→GREEN. Không đổi alias/deploy AWS. Chạy lại Terraform dev tests/validate/fmt sau sửa; CI cũ #218 là bằng chứng trước hardening, CI mới sẽ kiểm commit này.

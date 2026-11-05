@@ -1,3 +1,7 @@
+locals {
+  function_arn_parts   = split(":", var.function_arn)
+  deployment_group_arn = "arn:${local.function_arn_parts[1]}:codedeploy:${local.function_arn_parts[3]}:${local.function_arn_parts[4]}:deploymentgroup:${var.name_prefix}-resolve/${var.name_prefix}-resolve-live"
+}
 resource "aws_codedeploy_app" "resolve" {
   name             = "${var.name_prefix}-resolve"
   compute_platform = "Lambda"
@@ -6,9 +10,13 @@ resource "aws_iam_role" "service" {
   name                 = "${var.name_prefix}-codedeploy"
   path                 = "/url-shortener/dev/"
   permissions_boundary = var.boundary_arn
-  # CodeDeploy does not document SourceArn/SourceAccount support for this trust.
+  # Derive the exact group ARN without a role/group dependency cycle.
   assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{
-    Effect = "Allow", Action = "sts:AssumeRole", Principal = { Service = "codedeploy.amazonaws.com" }
+    Effect = "Allow", Action = "sts:AssumeRole", Principal = { Service = "codedeploy.amazonaws.com" },
+    Condition = {
+      StringEquals = { "aws:SourceAccount" = local.function_arn_parts[4] }
+      ArnEquals    = { "aws:SourceArn" = local.deployment_group_arn }
+    }
   }] })
 }
 resource "aws_iam_role_policy" "service" {
