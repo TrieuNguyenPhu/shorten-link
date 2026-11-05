@@ -293,3 +293,5 @@
 Task 6.2: [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90), code tree `94d64f2` khớp local/remote. CI đang chạy; chưa merge/dispatch/apply. Merge #89 trước #90; giữ nguyên checkout/diff của người dùng.
 
 Phase6.2: CI [#222](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982111683) PASS cả5jobs trên commit2985818 sau cấu hình environment tường minh. Task6.1 đã harden trust exact SourceAccount/deployment-group ARN, regression RED→GREEN/21 dev tests và kiểm bản ghép focused PASS; không đổi codeTask6.2. AWS apply/canary thật vẫn pending.
+
+Phase6 chốt: PR#89 CI [#223](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982495610) PASS4jobs sau trust hardening; PR#90 CI [#222](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982111683) PASS5jobs. Implementation/local complete; review/merge theo thứ tự89→90, protected-environment setup và AWS validation pending. Worktree sạch, diff người dùng ở checkout gốc giữ nguyên.
