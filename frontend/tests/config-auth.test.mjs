@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const { getPublicConfig } = await import("../src/lib/config.ts");
+const { getAuthConfig, getPublicConfig } = await import("../src/lib/config.ts");
 const {
   AUTH_STORAGE_KEYS,
   buildGoogleAuthorizationUrl,
@@ -34,6 +34,18 @@ const validEnvironment = {
   NEXT_PUBLIC_AUTH_REDIRECT_URI: "https://shortn.dev/auth/callback",
   NEXT_PUBLIC_AUTH_LOGOUT_URI: "https://shortn.dev",
 };
+
+test("builds auth configuration without unrelated API and WebSocket endpoints", () => {
+  const authEnvironment = { ...validEnvironment };
+  delete authEnvironment.NEXT_PUBLIC_API_BASE_URL;
+  delete authEnvironment.NEXT_PUBLIC_WS_URL;
+  const config = getAuthConfig(authEnvironment);
+
+  assert.equal(config.cognitoDomain, "https://auth-shortn.auth.ap-southeast-1.amazoncognito.com");
+  assert.equal(config.cognitoClientId, "client-123");
+  assert.equal(config.redirectUri, "https://shortn.dev/auth/callback/");
+  assert.equal(config.logoutUri, "https://shortn.dev/");
+});
 
 function idTokenWithNonce(nonce) {
   const payload = Buffer.from(JSON.stringify({ nonce })).toString("base64url");

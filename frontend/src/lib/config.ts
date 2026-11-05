@@ -1,10 +1,13 @@
-export type PublicConfig = {
-  apiBaseUrl: string;
-  websocketUrl: string;
+export type AuthConfig = {
   cognitoDomain: string;
   cognitoClientId: string;
   redirectUri: string;
   logoutUri: string;
+};
+
+export type PublicConfig = AuthConfig & {
+  apiBaseUrl: string;
+  websocketUrl: string;
 };
 
 export type ConfigEnvironment = Partial<Record<
@@ -17,13 +20,16 @@ export type ConfigEnvironment = Partial<Record<
   string | undefined
 >>;
 
-const requiredKeys = [
-  "NEXT_PUBLIC_API_BASE_URL",
-  "NEXT_PUBLIC_WS_URL",
+const authKeys = [
   "NEXT_PUBLIC_COGNITO_DOMAIN",
   "NEXT_PUBLIC_COGNITO_CLIENT_ID",
   "NEXT_PUBLIC_AUTH_REDIRECT_URI",
   "NEXT_PUBLIC_AUTH_LOGOUT_URI",
+] as const;
+
+const apiKeys = [
+  "NEXT_PUBLIC_API_BASE_URL",
+  "NEXT_PUBLIC_WS_URL",
 ] as const;
 
 function buildRuntimeEnvironment(): ConfigEnvironment {
@@ -82,8 +88,8 @@ function parseUrl(
   return origin + (path === "logout" ? "/" : "");
 }
 
-export function getPublicConfig(environment: ConfigEnvironment = buildRuntimeEnvironment()): PublicConfig {
-  for (const key of requiredKeys) {
+export function getAuthConfig(environment: ConfigEnvironment = buildRuntimeEnvironment()): AuthConfig {
+  for (const key of authKeys) {
     if (!environment[key]?.trim()) throw new Error(`${key} is required`);
   }
 
@@ -93,11 +99,21 @@ export function getPublicConfig(environment: ConfigEnvironment = buildRuntimeEnv
   }
 
   return {
-    apiBaseUrl: parseUrl(environment.NEXT_PUBLIC_API_BASE_URL, requiredKeys[0], ["https:", "http:"], "origin"),
-    websocketUrl: parseUrl(environment.NEXT_PUBLIC_WS_URL, requiredKeys[1], ["wss:", "ws:"], "origin"),
-    cognitoDomain: parseUrl(environment.NEXT_PUBLIC_COGNITO_DOMAIN, requiredKeys[2], ["https:", "http:"], "origin"),
+    cognitoDomain: parseUrl(environment.NEXT_PUBLIC_COGNITO_DOMAIN, authKeys[0], ["https:", "http:"], "origin"),
     cognitoClientId: clientId,
-    redirectUri: parseUrl(environment.NEXT_PUBLIC_AUTH_REDIRECT_URI, requiredKeys[4], ["https:", "http:"], "callback"),
-    logoutUri: parseUrl(environment.NEXT_PUBLIC_AUTH_LOGOUT_URI, requiredKeys[5], ["https:", "http:"], "logout"),
+    redirectUri: parseUrl(environment.NEXT_PUBLIC_AUTH_REDIRECT_URI, authKeys[2], ["https:", "http:"], "callback"),
+    logoutUri: parseUrl(environment.NEXT_PUBLIC_AUTH_LOGOUT_URI, authKeys[3], ["https:", "http:"], "logout"),
+  };
+}
+
+export function getPublicConfig(environment: ConfigEnvironment = buildRuntimeEnvironment()): PublicConfig {
+  const auth = getAuthConfig(environment);
+  for (const key of apiKeys) {
+    if (!environment[key]?.trim()) throw new Error(`${key} is required`);
+  }
+  return {
+    ...auth,
+    apiBaseUrl: parseUrl(environment.NEXT_PUBLIC_API_BASE_URL, apiKeys[0], ["https:", "http:"], "origin"),
+    websocketUrl: parseUrl(environment.NEXT_PUBLIC_WS_URL, apiKeys[1], ["wss:", "ws:"], "origin"),
   };
 }

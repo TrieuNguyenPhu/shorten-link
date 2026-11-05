@@ -1,4 +1,4 @@
-import type { PublicConfig } from "./config";
+import type { AuthConfig } from "./config";
 
 export const AUTH_STORAGE_KEYS = {
   accessToken: "shorten-link.access-token",
@@ -81,7 +81,7 @@ export function clearAuthSession(storage: StorageLike): void {
   storage.removeItem(AUTH_STORAGE_KEYS.pkce);
 }
 
-export async function buildGoogleAuthorizationUrl(config: PublicConfig, storage: StorageLike): Promise<string> {
+export async function buildGoogleAuthorizationUrl(config: AuthConfig, storage: StorageLike): Promise<string> {
   const transaction = await createPkceTransaction(storage, config.redirectUri);
   const url = new URL(`${config.cognitoDomain}/oauth2/authorize`);
   url.search = new URLSearchParams({
@@ -98,7 +98,7 @@ export async function buildGoogleAuthorizationUrl(config: PublicConfig, storage:
   return url.toString();
 }
 
-export async function startGoogleLogin(config: PublicConfig): Promise<void> {
+export async function startGoogleLogin(config: AuthConfig): Promise<void> {
   const target = await buildGoogleAuthorizationUrl(config, storageAvailable() ?? window.sessionStorage);
   window.location.assign(target);
 }
@@ -116,7 +116,7 @@ function decodeIdTokenNonce(idToken: string): string | null {
 }
 
 export async function exchangeCodeForToken(
-  config: PublicConfig,
+  config: AuthConfig,
   code: string,
   storage: StorageLike,
   fetchImpl: typeof fetch = fetch,
@@ -175,7 +175,7 @@ export function getAccessToken(storage: StorageLike = storageAvailable()!, now =
   return token;
 }
 
-export function logout(config: PublicConfig, storage: StorageLike = storageAvailable()!): void {
+export function logout(config: AuthConfig, storage: StorageLike = storageAvailable()!): void {
   clearAuthSession(storage);
   const url = new URL(`${config.cognitoDomain}/logout`);
   url.search = new URLSearchParams({ client_id: config.cognitoClientId, logout_uri: config.logoutUri }).toString();

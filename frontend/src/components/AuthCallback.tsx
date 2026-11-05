@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { clearAuthSession, exchangeCodeForToken, validateCallback } from "@/lib/auth";
-import { getPublicConfig } from "@/lib/config";
+import { getAuthConfig } from "@/lib/config";
 
 export function AuthCallback() {
   const [message, setMessage] = useState("Đang kiểm tra phiên đăng nhập…");
@@ -20,7 +20,7 @@ export function AuthCallback() {
         if (params.get("error")) throw new Error("Google không hoàn tất đăng nhập");
         const { code } = validateCallback(storage, params);
         if (active) setMessage("Đang đổi mã đăng nhập an toàn…");
-        await exchangeCodeForToken(getPublicConfig(), code, storage);
+        await exchangeCodeForToken(getAuthConfig(), code, storage);
         if (active) {
           setMessage("Đăng nhập thành công. Đang mở không gian của bạn…");
           window.location.replace("/dashboard/");
