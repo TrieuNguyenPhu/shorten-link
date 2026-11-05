@@ -225,3 +225,5 @@
 - Website: https://d2aamyg2mt28wl.cloudfront.net; bucket `url-shortener-dev-654822777701-frontend`; distribution `EP4W63KC4Y7HZ`; invalidation `I7A20EUFG6A2VDMZ6BOQAM2I67` Completed.
 - `pnpm test` 18/18, `bash -n`, production bundle config/secret scan và `tests/e2e/frontend-hosting.mjs` PASS. Đối chiếu byte HTML của năm route và SVG/ICO với build đều khớp; title riêng và favicon đúng. Browser production hiển thị form đã bỏ chú thích, nút Google mở accounts.google.com qua Cognito.
 - Chưa kiểm chứng federation sau bước nhập tài khoản Google. Không apply Terraform, thay backend, chạy load test hoặc tạo tài nguyên mới.
+
+- PR vận hành [#86](https://github.com/TrieuNguyenPhu/shorten-link/pull/86) ghi nhận rollout và đồng bộ preflight/smoke routes; chưa merge.

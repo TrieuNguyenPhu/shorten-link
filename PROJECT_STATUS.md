@@ -7,7 +7,7 @@
 
 ## 1. Tổng Quan Trạng Thái Hiện Tại
 
-- **Publish frontend — `complete`:** đã xuất bản PR #85 (`2253a3c`) lên [website đang chạy](https://d2aamyg2mt28wl.cloudfront.net). CloudFront `EP4W63KC4Y7HZ`, invalidation `I7A20EUFG6A2VDMZ6BOQAM2I67` đã `Completed`. Build production/18 tests, hosting smoke, title/favicon năm route và đối chiếu HTML/icon với artifact đều PASS. Browser production mở được Google qua Cognito; chưa kiểm chứng sau bước nhập tài khoản Google.
+- **Publish frontend — `complete` — [PR #86](https://github.com/TrieuNguyenPhu/shorten-link/pull/86):** đã xuất bản PR #85 (`2253a3c`) lên [website đang chạy](https://d2aamyg2mt28wl.cloudfront.net). CloudFront `EP4W63KC4Y7HZ`, invalidation `I7A20EUFG6A2VDMZ6BOQAM2I67` đã `Completed`. Build production/18 tests, hosting smoke, title/favicon năm route và đối chiếu HTML/icon với artifact đều PASS. Browser production mở được Google qua Cognito; chưa kiểm chứng sau bước nhập tài khoản Google.
 
 - **Google login và metadata — `complete (implementation/local)` — [PR #85](https://github.com/TrieuNguyenPhu/shorten-link/pull/85):** local đã có public env từ Terraform outputs, nút Google mở được `accounts.google.com` qua Cognito; giữ stage WebSocket `/prod`, bỏ chú thích đăng nhập, favicon dùng logo link vàng và title riêng cho từng trang. Nhánh `fix/phase-05-google-login-and-page-metadata` từ `origin/main`.
 - Kiểm tra phiên sửa: `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm test` (18/18), `git diff --check` PASS. Google client/secret trong JSON khớp IdP AWS; `.env.local` chỉ chứa public config và bị Git bỏ qua. Chưa xác minh sau bước nhập tài khoản Google; chưa publish CloudFront trong phiên này.
