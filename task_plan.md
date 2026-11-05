@@ -108,3 +108,5 @@ Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e37
 
 ## 2026-11-05 — PR #88 sau squash PR #87
 - [x] **Status: complete (local)**. Merge main `2b6ed24` vào PR #88 hiện có; bảo toàn implementation UI/PKCE đã kiểm thử.
+
+Task 6.2: [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90), code tree `94d64f2` khớp local/remote. CI đang chạy; chưa merge/dispatch/apply. Merge #89 trước #90; giữ nguyên checkout/diff của người dùng.

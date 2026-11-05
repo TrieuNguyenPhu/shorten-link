@@ -289,3 +289,5 @@
 - Go DynamoDB Local3.3 repository/HTTP-WebSocket integration -race PASS; k6 2.3.0 pinned digest với HTTP harness thật + DDB Local và PutEvents recorder: 20/20 301,~1.99 successful RPS, zero failure/throttle. Không chứng minh AWS event delivery/benchmark. Container DDB của phiên đã dừng.
 - actionlint1.7.11, Bash syntax,8 CloudFront rewrite tests và PS7.5 networknone offline preflight/lifecycle (thêm Canary authorization guard) PASS. Script dùng chung TS config validator chạy được trên Node26.
 - IAM hosting pin CloudFront IDs, không wildcard unknown resources; saved plan SSE trong state bucket/private prefix, hash/commit/package binding, write-once và lifecycle current/noncurrent2d. Không GitHub plan artifact chứa secret. Review diff/secrets/state thủ công và diff-check PASS. AWS deployment/OIDC/canary/rollback/Google account E2E vẫn pending; không gửi email hoặc chạy AWS load test.
+
+Task 6.2: [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90), code tree `94d64f2` khớp local/remote. CI đang chạy; chưa merge/dispatch/apply. Merge #89 trước #90; giữ nguyên checkout/diff của người dùng.
