@@ -214,3 +214,13 @@
 
 ## 2026-11-05 — Squash #87 và ancestry của PR #88
 - Main `2b6ed24` có tree giống hệt head #87 `bfb8fdf`, nhưng squash đổi ancestry nên Git báo lại các thay đổi đã tồn tại trong #88. Kiểm tra tree trước khi resolve; giữ head #88 ở bảy file conflict. Sau resolution, toàn bộ staged tree giống head #88 trước merge, không bỏ thay đổi nào từ main.
+
+## Phase 6 — 2026-11-05
+
+Main đã merge PR #88 (`f5112f1`). Alias resolve live đã ignore function_version/routing_config; X-Ray Active và Logs retention 14d có sẵn. EMF namespace UrlShortener, dimension service=resolve-link/click-aggregator. uvx/pip thiếu (exit 127), dùng AWS Service Authorization Reference cho IAM mới.
+
+Task 6.1 implementation/local complete: RED module missing → GREEN; Terraform 1.17.1/provider 6.71.0 fmt/init-backend=false-lockfile-readonly/validate, 20 bootstrap + 21 dev mock-plan tests PASS. Go race/vet và build8ZIP PASS. SNS topic policy chỉ CloudWatch từ đúng alarm/account; không subscription mặc định. IAM service boundary chỉ alias resolve:live; deployment grants exact app/group/alarms, quota PASS. Sửa test fixture S3 ARN unknown; không apply để né test. Kiểm diff thủ công không secret/state; không chạy AWS/canary thật.
+
+Review Phase6.1: AWS tài liệu hóa SourceAccount/SourceArn cho CodeDeploy Lambda; sửa nhận định comment cũ, thêm exact account/group trust và regression RED→GREEN. Không đổi alias/deploy AWS. Chạy lại Terraform dev tests/validate/fmt sau sửa; CI cũ #218 là bằng chứng trước hardening, CI mới sẽ kiểm commit này.
+
+Chốt Task6.1: CI [#223](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982495610) PASS cả4jobs trên91794cf sau trust hardening. Task6.2 PR#90 có CI#222 PASS5jobs. Commit chốt chỉ tài liệu; cả hai PR chờ review/merge, không apply/dispatch hoặc load test AWS.

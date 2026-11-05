@@ -1,5 +1,10 @@
 # Task Plan: Serverless URL Shortener with Realtime Analytics (Go + Terraform + Next.js)
 
+## Phase 6 — 2026-11-05
+
+- [x] Task 6.1 — **Status: complete (implementation/local)**; Task 6.2 pending. Nhánh `feat/phase-06-task-01-observability-and-canary-v2` từ main `f5112f1`.
+
+
 ## Goal
 Tái hiện hoàn chỉnh hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS theo chuỗi 21 bài và repository `nghiadaulau/serverless-url-shortener-aws`, chuyển đổi sang **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js Static Export (`S3 + CloudFront OAC`)**, với mỗi Task hoàn thành được tạo một **Pull Request riêng** và luôn cập nhật trạng thái hiện tại của dự án.
 
@@ -53,7 +58,7 @@ Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e37
 - **Status:** complete (implementation/deployed; Google account E2E chưa thực hiện)
 
 ### Phase 6: Production Operations, Observability, Canary CI/CD & Load Testing
-- [ ] **Task 6.1:** Xây dựng Terraform Modules `observability` (CloudWatch Alarms, SNS, Dashboard, X-Ray) & `codedeploy_canary` (`LambdaCanary10Percent5Minutes` trên alias `live`).
+- [x] **Task 6.1:** Xây dựng Terraform Modules `observability` (CloudWatch Alarms, SNS, Dashboard, X-Ray) & `codedeploy_canary` (`LambdaCanary10Percent5Minutes` trên alias `live`).
 - [ ] **Task 6.2:** Thiết lập GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), kịch bản `tests/load/redirect.k6.js` & tài liệu vận hành E2E.
 - **Status:** pending
 
@@ -102,3 +107,9 @@ Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e37
 
 ## 2026-11-05 — PR #88 sau squash PR #87
 - [x] **Status: complete (local)**. Merge main `2b6ed24` vào PR #88 hiện có; bảo toàn implementation UI/PKCE đã kiểm thử.
+
+Task 6.1: [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89), code tree `a1706d5` đã đối chiếu local/remote; chưa merge/apply. Git HTTPS thiếu credential, xuất bản qua GitHub connector.
+
+Task 6.1: CI [#218](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41979476998) PASS toàn bộ bốn jobs trên commit36faa086. AWS apply/canary thật vẫn pending; Task6.2 có [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90) riêng từ main.
+
+Chốt Task6.1: CI [#223](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982495610) PASS cả4jobs trên91794cf sau trust hardening. Task6.2 PR#90 có CI#222 PASS5jobs. Commit chốt chỉ tài liệu; cả hai PR chờ review/merge, không apply/dispatch hoặc load test AWS.
