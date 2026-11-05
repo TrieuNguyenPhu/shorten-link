@@ -107,3 +107,5 @@ Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e37
 
 ## 2026-11-05 — PR #88 sau squash PR #87
 - [x] **Status: complete (local)**. Merge main `2b6ed24` vào PR #88 hiện có; bảo toàn implementation UI/PKCE đã kiểm thử.
+
+Task 6.1: [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89), code tree `a1706d5` đã đối chiếu local/remote; chưa merge/apply. Git HTTPS thiếu credential, xuất bản qua GitHub connector.
