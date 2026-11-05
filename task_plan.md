@@ -5,7 +5,7 @@ Tái hiện hoàn chỉnh hệ thống **Serverless URL Shortener with Realtime 
 
 ## Current Phase
 
-- [x] **Task 5.5 — Status: complete (implementation/deployed):** UI tối giản, shared layout/menu active/hover, Lobster; đăng nhập về Trang chủ; sửa refresh/reconnect/deletion race và hiển thị link mới. Review toàn project và low-volume AWS smoke PASS; rollout cuối `I4OJCY74UTRUNCSQ430QB61MWL` Completed.
+- [x] **[Task 5.5 / PR #88](https://github.com/TrieuNguyenPhu/shorten-link/pull/88) — Status: complete (implementation/deployed):** UI tối giản, shared layout/menu active/hover, Lobster; đăng nhập về Trang chủ; sửa refresh/reconnect/deletion race và hiển thị link mới. Review toàn project và low-volume AWS smoke PASS; rollout cuối `I4OJCY74UTRUNCSQ430QB61MWL` Completed.
 
 - [x] **Sửa callback state mismatch — `Status: complete (implementation/deployed)`:** giữ PKCE khi token chưa có/hết hạn, callback chỉ exchange một lần dù effect replay. 24 tests/checks PASS; đã publish và xác minh production không còn xóa state trước token exchange trong phiên chẩn đoán.
 

@@ -244,3 +244,7 @@
 - Rollout đầu: invalidation `I1G0E6D3QN3D83W0NNAJMRV9MO` Completed; hosting smoke và byte comparison 5 HTML + 14 JS/CSS/font assets PASS. Sau review bổ sung fix deletion race, đã chạy lại checks và rollout cuối `I4OJCY74UTRUNCSQ430QB61MWL` Completed. Browser production mở được Google qua Cognito; chưa nhập tài khoản Google thật.
 
 - Rollout cuối: CloudFront invalidation `I4OJCY74UTRUNCSQ430QB61MWL` Completed; hosting smoke PASS. Không đổi AWS IAM/Cognito hay chạy Terraform apply/load test. Git HTTPS local thiếu credential helper; xuất bản PR qua GitHub connector và đối chiếu tree.
+
+- [PR #88](https://github.com/TrieuNguyenPhu/shorten-link/pull/88) đã mở, GitHub xác nhận mergeable. Code tree local/remote `67be4f3934df20c0a25650d9ecc13a05ceb3e9ad` khớp; CI [#209](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41974976600) PASS cả 4 jobs: frontend, backend, terraform và packaging-windows. Hosting smoke rollout cuối PASS; 5 HTML + 14 JS/CSS/font assets khớp từng byte với artifact.
+
+- Commit chốt chỉ cập nhật URL PR và bằng chứng CI; code production không thay đổi. Không tự merge PR.
