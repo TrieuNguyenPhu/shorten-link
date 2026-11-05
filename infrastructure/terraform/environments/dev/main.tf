@@ -16,9 +16,11 @@ module "event_bus" {
   name   = var.event_bus_name
 }
 module "frontend_hosting" {
-  source      = "../../modules/frontend_hosting"
-  name_prefix = var.name_prefix
-  bucket_name = "${var.name_prefix}-${var.aws_account_id}-frontend"
+  source          = "../../modules/frontend_hosting"
+  name_prefix     = var.name_prefix
+  bucket_name     = "${var.name_prefix}-${var.aws_account_id}-frontend"
+  domain_name     = var.frontend_domain_name
+  certificate_arn = var.frontend_certificate_arn
 }
 
 locals {

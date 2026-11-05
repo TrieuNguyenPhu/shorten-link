@@ -93,6 +93,30 @@ variable "cors_origins" {
   default = []
 }
 
+variable "frontend_domain_name" {
+  type        = string
+  default     = ""
+  description = "Optional frontend custom domain, for example npt-shortenlink.dev."
+  validation {
+    condition     = var.frontend_domain_name == "" || can(regex("^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$", var.frontend_domain_name))
+    error_message = "Use a lowercase domain name without a scheme or path."
+  }
+}
+
+variable "frontend_certificate_arn" {
+  type        = string
+  default     = ""
+  description = "ACM certificate ARN in us-east-1 covering frontend_domain_name."
+  validation {
+    condition     = var.frontend_certificate_arn == "" || can(regex("^arn:aws:acm:us-east-1:[0-9]{12}:certificate/[0-9a-f-]{36}$", var.frontend_certificate_arn))
+    error_message = "Use an ACM certificate ARN from us-east-1."
+  }
+  validation {
+    condition     = (var.frontend_domain_name == "") == (var.frontend_certificate_arn == "")
+    error_message = "Set both frontend_domain_name and frontend_certificate_arn, or leave both empty."
+  }
+}
+
 variable "lambda_package_directory" {
   type    = string
   default = "../../../../backend/dist"

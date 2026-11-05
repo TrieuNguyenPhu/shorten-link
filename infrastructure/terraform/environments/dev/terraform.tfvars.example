@@ -4,6 +4,10 @@ runtime_boundary_arn  = "REPLACE_WITH_BOOTSTRAP_RUNTIME_BOUNDARY_ARN"
 cognito_domain_prefix = "replace-with-unique-cognito-prefix"
 google_client_id      = "replace-with-web-client-id.apps.googleusercontent.com"
 # CloudFront URLs are derived automatically. To allow a local frontend, also set:
+# For a custom domain, set frontend_domain_name and frontend_certificate_arn together.
+# The ACM certificate must cover the domain and be issued in us-east-1.
+# frontend_domain_name    = "npt-shortenlink.dev"
+# frontend_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/00000000-0000-0000-0000-000000000000"
 # callback_urls = ["http://localhost:3000/auth/callback/"]
 # logout_urls   = ["http://localhost:3000/"]
 # cors_origins  = ["http://localhost:3000"]

@@ -19,7 +19,7 @@ NEXT_PUBLIC_COGNITO_CLIENT_ID=$(output cognito_client_id)
 export NEXT_PUBLIC_API_BASE_URL NEXT_PUBLIC_WS_URL NEXT_PUBLIC_COGNITO_DOMAIN NEXT_PUBLIC_COGNITO_CLIENT_ID
 export NEXT_PUBLIC_AUTH_REDIRECT_URI="$site/auth/callback/" NEXT_PUBLIC_AUTH_LOGOUT_URI="$site/"
 
-if [[ $NEXT_PUBLIC_WS_URL != wss://*/prod || $site != https://*.cloudfront.net ]]; then
+if [[ $NEXT_PUBLIC_WS_URL != wss://*/prod || ( $site != https://*.cloudfront.net && $site != https://npt-shortenlink.dev ) ]]; then
   printf 'Expected the deployed CloudFront origin and prod WebSocket endpoint.\n' >&2
   exit 1
 fi
