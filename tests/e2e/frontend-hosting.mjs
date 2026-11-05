@@ -10,7 +10,7 @@ async function get(path) {
 }
 
 let home;
-for (const path of ['/', '/login', '/dashboard', '/architecture/', '/auth/callback/?code=test&state=test']) {
+for (const path of ['/', '/login', '/dashboard', '/privacy/', '/auth/callback/?code=test&state=test']) {
   const response = await get(path);
   assert.equal(response.status, 200, path);
   assert.match(response.headers.get('content-type') ?? '', /text\/html/i, path);

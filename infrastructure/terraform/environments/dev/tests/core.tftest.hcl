@@ -77,8 +77,8 @@ run "google_only_auth" {
     error_message = "Only Google + authorization code for a public client; no password or self-signup flow."
   }
   assert {
-    condition     = aws_cognito_user_pool_client.web.allowed_oauth_scopes == toset(["openid", "email", "profile"]) && aws_cognito_identity_provider.google.attribute_mapping["email"] == "email"
-    error_message = "OAuth scopes and Google attribute mapping must support browser federation."
+    condition     = aws_cognito_user_pool_client.web.allowed_oauth_scopes == toset(["openid", "email"]) && aws_cognito_identity_provider.google.attribute_mapping["email"] == "email" && !contains(keys(aws_cognito_identity_provider.google.attribute_mapping), "name")
+    error_message = "OAuth scopes and Google attribute mapping must support browser federation with minimal personal data collection."
   }
 }
 run "lambda_contract" {

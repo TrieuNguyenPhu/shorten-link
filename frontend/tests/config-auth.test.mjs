@@ -4,10 +4,13 @@ import test from "node:test";
 const { getAuthConfig, getPublicConfig } = await import("../src/lib/config.ts");
 const {
   AUTH_STORAGE_KEYS,
+  PRIVACY_POLICY_VERSION,
   buildGoogleAuthorizationUrl,
   createPkceTransaction,
   exchangeCodeForToken,
   getAccessToken,
+  readPrivacyConsent,
+  recordPrivacyConsent,
 } = await import("../src/lib/auth.ts");
 
 class MemoryStorage {
@@ -98,15 +101,19 @@ test("validates production public URLs and rejects placeholder endpoints", () =>
   );
 });
 
-test("builds Google Cognito PKCE authorization URL and stores the transaction", async () => {
+test("builds Google Cognito PKCE authorization URL with minimal scopes and stores consent evidence", async () => {
   const storage = new MemoryStorage();
   const config = getPublicConfig(validEnvironment);
+  const consent = recordPrivacyConsent(storage, 1_762_300_000_000);
   const url = new URL(await buildGoogleAuthorizationUrl(config, storage));
 
+  assert.equal(consent.policyVersion, PRIVACY_POLICY_VERSION);
+  assert.deepEqual(consent.purposes, ["authentication"]);
+  assert.equal(readPrivacyConsent(storage)?.consentedAt, new Date(1_762_300_000_000).toISOString());
   assert.equal(url.pathname, "/oauth2/authorize");
   assert.equal(url.searchParams.get("identity_provider"), "Google");
   assert.equal(url.searchParams.get("response_type"), "code");
-  assert.equal(url.searchParams.get("scope"), "openid email profile");
+  assert.equal(url.searchParams.get("scope"), "openid email");
   assert.equal(url.searchParams.get("code_challenge_method"), "S256");
   assert.ok(url.searchParams.get("state"));
   assert.ok(url.searchParams.get("nonce"));

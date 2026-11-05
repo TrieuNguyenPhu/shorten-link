@@ -13,8 +13,10 @@ func TestModerationCheckPreservesInputAndRejectsKeywords(t *testing.T) {
 		target string
 		safe   bool
 	}{
-		{"https://example.org/docs", true}, {"https://example.org/MALWARE", false},
-		{"https://phishing.example.org", false}, {"https://example.org/?q=evil", false},
+		{"https://example.org/docs", true}, {"https://devil.com/medieval", true},
+		{"https://example.org/MALWARE", false}, {"https://phishing.example.org", false},
+		{"https://example.org/?q=evil", false}, {"http://127.0.0.1/admin", false},
+		{"http://169.254.169.254/latest/meta-data/", false},
 	} {
 		t.Run(tc.target, func(t *testing.T) {
 			out, err := CheckSafety(context.Background(), domain.ModerationInput{Code: "Abc1234", Target: tc.target})

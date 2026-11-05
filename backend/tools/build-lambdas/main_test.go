@@ -6,9 +6,7 @@ import (
 	"debug/elf"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 	"testing"
 )
 
@@ -95,53 +93,5 @@ func TestBuildAllRejectsMissingHandlers(t *testing.T) {
 	}
 	if err := buildAll(root, filepath.Join(root, "dist")); err == nil {
 		t.Fatal("empty cmd accepted")
-	}
-}
-
-func TestPlatformBuildScript(t *testing.T) {
-	root := fixture(t)
-	scripts := filepath.Join(filepath.Dir(root), "scripts")
-	if err := os.MkdirAll(scripts, 0755); err != nil {
-		t.Fatal(err)
-	}
-	name, shell := "build-lambdas.sh", "bash"
-	if runtime.GOOS == "windows" {
-		name, shell = "build-lambdas.ps1", "powershell.exe"
-	}
-	data, err := os.ReadFile(filepath.Join("..", "..", "..", "scripts", name))
-	if err != nil {
-		t.Fatal(err)
-	}
-	script := filepath.Join(scripts, name)
-	if err := os.WriteFile(script, data, 0755); err != nil {
-		t.Fatal(err)
-	}
-	toolDir := filepath.Join(root, "tools", "build-lambdas")
-	if err := os.MkdirAll(toolDir, 0755); err != nil {
-		t.Fatal(err)
-	}
-	data, err = os.ReadFile("main.go")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(toolDir, "main.go"), data, 0644); err != nil {
-		t.Fatal(err)
-	}
-	args := []string{script}
-	if runtime.GOOS == "windows" {
-		args = []string{"-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script}
-	}
-	cmd := exec.Command(shell, args...)
-	cmd.Dir = t.TempDir()
-	if output, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("script: %v\n%s", err, output)
-	}
-	verifyArchive(t, filepath.Join(root, "dist", "sample.zip"))
-	if err := os.WriteFile(filepath.Join(root, "cmd", "sample", "main.go"), []byte("broken Go"), 0644); err != nil {
-		t.Fatal(err)
-	}
-	cmd = exec.Command(shell, args...)
-	if output, err := cmd.CombinedOutput(); err == nil {
-		t.Fatalf("script hid build failure: %s", output)
 	}
 }

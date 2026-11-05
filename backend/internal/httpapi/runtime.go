@@ -3,7 +3,6 @@ package httpapi
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"time"
 
@@ -13,9 +12,6 @@ import (
 	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/repository"
 	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/service"
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/aws/retry"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
 )
@@ -31,13 +27,10 @@ func NewRuntime(ctx context.Context, name string) (*Handler, error) {
 	if name == "resolve-link" && cfg.EventBusName == "" {
 		return nil, errors.New("EVENT_BUS is required for resolve-link")
 	}
-	sdk, err := config.LoadDefaultConfig(ctx, config.WithRetryer(func() aws.Retryer {
-		return retry.NewStandard(func(o *retry.StandardOptions) { o.MaxAttempts = 2; o.MaxBackoff = 100 * time.Millisecond })
-	}))
+	sdk, err := middleware.LoadAWSConfig(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("load AWS config: %w", err)
+		return nil, err
 	}
-	middleware.InstrumentAWSConfig(&sdk)
 	repo := repository.New(dynamodb.NewFromConfig(sdk), cfg.TableName)
 	var publisher service.ClickPublisher
 	if name == "resolve-link" {

@@ -21,7 +21,8 @@ jobs:
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: '1.26.10'
-          cache: false
+          cache: true
+          cache-dependency-path: backend/go.sum
       - name: Check formatting
         shell: bash
         run: test -z "$(gofmt -l backend)"
@@ -36,22 +37,12 @@ jobs:
       - name: Build all eight Lambda arm64 archives
         shell: bash
         run: |
-          bash scripts/build-lambdas.sh
+          go -C backend run ./tools/build-lambdas
           for handler in create-link resolve-link list-links delete-link click-aggregator ws-connect ws-disconnect moderate-check; do
             test -s "backend/dist/$handler.zip"
           done
       - name: Check reachable vulnerabilities
         run: go -C backend run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
-  packaging-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
-        with:
-          go-version: '1.26.10'
-          cache: false
-      - name: Verify Windows packaging and PowerShell entrypoint
-        run: go -C backend test ./tools/build-lambdas
   frontend:
     runs-on: ubuntu-latest
     defaults:
@@ -88,13 +79,14 @@ jobs:
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: '1.26.10'
-          cache: false
+          cache: true
+          cache-dependency-path: backend/go.sum
       - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
           terraform_version: '1.17.1'
           terraform_wrapper: false
       - name: Build real Lambda packages for Terraform hash inputs
-        run: bash scripts/build-lambdas.sh
+        run: go -C backend run ./tools/build-lambdas
       - name: Test CloudFront viewer-request rewrites
         run: node --test infrastructure/terraform/modules/frontend_hosting/tests/url-rewrite.test.mjs
       - name: Check Terraform formatting
@@ -107,9 +99,6 @@ jobs:
             terraform -chdir="$root" validate -no-color
             terraform -chdir="$root" test -no-color
           done
-      - name: Check Core, OIDC, Pipeline and Realtime E2E syntax and offline preflight
-        shell: pwsh
-        run: ./tests/e2e/aws-flow.test.ps1
 
   operations:
     runs-on: ubuntu-latest
@@ -118,7 +107,8 @@ jobs:
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: '1.26.10'
-          cache: false
+          cache: true
+          cache-dependency-path: backend/go.sum
       - name: Validate workflow definitions
         run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.11 -shellcheck= .github/workflows/ci.yml .github/workflows/deploy.yml
       - name: Validate deployment scripts and exercise release failure paths

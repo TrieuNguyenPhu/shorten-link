@@ -1,10 +1,19 @@
 import type { AuthConfig } from "./config";
 
+export const PRIVACY_POLICY_VERSION = "1.0";
+
 export const AUTH_STORAGE_KEYS = {
   accessToken: "shorten-link.access-token",
   accessTokenExpiresAt: "shorten-link.access-token-expires-at",
   pkce: "shorten-link.pkce",
+  privacyConsent: "shorten-link.privacy-consent",
 } as const;
+
+export type PrivacyConsentRecord = {
+  policyVersion: string;
+  consentedAt: string;
+  purposes: ["authentication"];
+};
 
 export type StorageLike = {
   getItem(key: string): string | null;
@@ -75,10 +84,43 @@ export function validateCallback(storage: StorageLike, params: URLSearchParams):
   return { code, state };
 }
 
+export function recordPrivacyConsent(
+  storage: StorageLike = storageAvailable()!,
+  now = Date.now(),
+): PrivacyConsentRecord {
+  const record: PrivacyConsentRecord = {
+    policyVersion: PRIVACY_POLICY_VERSION,
+    consentedAt: new Date(now).toISOString(),
+    purposes: ["authentication"],
+  };
+  storage.setItem(AUTH_STORAGE_KEYS.privacyConsent, JSON.stringify(record));
+  return record;
+}
+
+export function readPrivacyConsent(storage: StorageLike = storageAvailable()!): PrivacyConsentRecord | null {
+  const raw = storage?.getItem(AUTH_STORAGE_KEYS.privacyConsent) ?? null;
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<PrivacyConsentRecord>;
+    if (
+      typeof parsed.policyVersion !== "string" ||
+      typeof parsed.consentedAt !== "string" ||
+      !Array.isArray(parsed.purposes) ||
+      parsed.purposes[0] !== "authentication"
+    ) {
+      return null;
+    }
+    return parsed as PrivacyConsentRecord;
+  } catch {
+    return null;
+  }
+}
+
 export function clearAuthSession(storage: StorageLike): void {
   storage.removeItem(AUTH_STORAGE_KEYS.accessToken);
   storage.removeItem(AUTH_STORAGE_KEYS.accessTokenExpiresAt);
   storage.removeItem(AUTH_STORAGE_KEYS.pkce);
+  storage.removeItem(AUTH_STORAGE_KEYS.privacyConsent);
 }
 
 export async function buildGoogleAuthorizationUrl(config: AuthConfig, storage: StorageLike): Promise<string> {
@@ -89,7 +131,7 @@ export async function buildGoogleAuthorizationUrl(config: AuthConfig, storage: S
     response_type: "code",
     client_id: config.cognitoClientId,
     redirect_uri: config.redirectUri,
-    scope: "openid email profile",
+    scope: "openid email",
     state: transaction.state,
     nonce: transaction.nonce,
     code_challenge_method: "S256",
@@ -99,7 +141,9 @@ export async function buildGoogleAuthorizationUrl(config: AuthConfig, storage: S
 }
 
 export async function startGoogleLogin(config: AuthConfig): Promise<void> {
-  const target = await buildGoogleAuthorizationUrl(config, storageAvailable() ?? window.sessionStorage);
+  const storage = storageAvailable() ?? window.sessionStorage;
+  recordPrivacyConsent(storage);
+  const target = await buildGoogleAuthorizationUrl(config, storage);
   window.location.assign(target);
 }
 

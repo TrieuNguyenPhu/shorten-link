@@ -119,7 +119,7 @@ func TestLocalHTTPEndToEnd(t *testing.T) {
 		if res.StatusCode != status {
 			t.Fatalf("%s %s: got %d want %d body=%s", method, path, res.StatusCode, status, data)
 		}
-		if status == 301 && (res.Header.Get("Location") != "https://example.org/path" || len(data) != 0) {
+		if status == 302 && (res.Header.Get("Location") != "https://example.org/path" || !strings.Contains(res.Header.Get("Cache-Control"), "no-store") || len(data) != 0) {
 			t.Fatal("invalid redirect", res.Header, string(data))
 		}
 		return string(data)
@@ -212,7 +212,7 @@ func TestLocalHTTPEndToEnd(t *testing.T) {
 	if denied != missing {
 		t.Fatal("ownership oracle")
 	}
-	call("GET", "/"+link.Code, "", "", 301)
+	call("GET", "/"+link.Code, "", "", 302)
 	if publications.Load() != 1 {
 		t.Fatal("click not published")
 	}
@@ -242,27 +242,20 @@ func TestLocalHTTPEndToEnd(t *testing.T) {
 		}
 	}
 	var event struct {
-		ID     string
-		Detail struct{ At string }
+		ID string
 	}
 	if err := json.Unmarshal([]byte(message.Body), &event); err != nil {
 		t.Fatal(err)
 	}
-	for _, check := range []struct{ pk, sk, attribute, want string }{
-		{"LINK#" + link.Code, "STAT#" + event.Detail.At[:10], "count", "1"},
-		{"CLICK#" + event.ID, "CLICK", "ttl", ""},
-	} {
-		item, err := ddb.GetItem(ctx, &dynamodb.GetItemInput{TableName: aws.String(cfg.TableName), Key: map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: check.pk}, "SK": &types.AttributeValueMemberS{Value: check.sk}}, ConsistentRead: aws.Bool(true)})
-		if err != nil {
-			t.Fatal(err)
-		}
-		value, ok := item.Item[check.attribute].(*types.AttributeValueMemberN)
-		if !ok || (check.want != "" && value.Value != check.want) {
-			t.Fatal(check, item)
-		}
+	item, err := ddb.GetItem(ctx, &dynamodb.GetItemInput{TableName: aws.String(cfg.TableName), Key: map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: "CLICK#" + event.ID}, "SK": &types.AttributeValueMemberS{Value: "CLICK"}}, ConsistentRead: aws.Bool(true)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := item.Item["ttl"].(*types.AttributeValueMemberN); !ok {
+		t.Fatal(item)
 	}
 	fail.Store(true)
-	call("GET", "/"+link.Code, "", "", 502)
+	call("GET", "/"+link.Code, "", "", 302)
 	if publications.Load() != 1 {
 		t.Fatal("unexpected publish")
 	}

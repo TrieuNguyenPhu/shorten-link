@@ -63,5 +63,5 @@ jq -e --arg expected "$expected" '.FunctionVersion == $expected and ((.RoutingCo
 printf 'Canary %s verified: alias live=%s with no weighted routing\n' "$scenario" "$expected"
 
 status=$(curl --silent --show-error --max-time 15 --max-redirs 0 -o /dev/null -D "$work/headers" -w '%{http_code}' "$base/$E2E_REDIRECT_CODE")
-[[ $status == 301 ]] && grep -Eiq '^location: https?://' "$work/headers"
+[[ $status == 302 ]] && grep -Eiq '^location: https?://' "$work/headers"
 printf 'Real API redirect after %s PASS\n' "$scenario"

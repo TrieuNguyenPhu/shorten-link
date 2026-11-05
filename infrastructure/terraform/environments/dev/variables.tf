@@ -22,13 +22,13 @@ variable "name_prefix" {
 }
 
 variable "runtime_boundary_arn" {
-  nullable = false
+  type        = string
+  default     = null
+  description = "Optional explicit runtime boundary ARN; deterministic default matches bootstrap output."
   validation {
-    condition     = var.runtime_boundary_arn == "arn:aws:iam::${var.aws_account_id}:policy/url-shortener/bootstrap/${var.name_prefix}-runtime-boundary"
+    condition     = var.runtime_boundary_arn == null || var.runtime_boundary_arn == "arn:aws:iam::${var.aws_account_id}:policy/url-shortener/bootstrap/${var.name_prefix}-runtime-boundary"
     error_message = "Provide the runtime boundary ARN from bootstrap."
   }
-  type        = string
-  description = "Permissions boundary ARN output by the separate bootstrap root."
 }
 
 variable "table_name" {
@@ -105,14 +105,15 @@ variable "deletion_protection_enabled" {
 
 variable "log_retention_days" {
   type    = number
-  default = 14
+  default = 365
 }
 
 variable "moderation_boundary_arn" {
-  type     = string
-  nullable = false
+  type        = string
+  default     = null
+  description = "Optional explicit moderation boundary ARN; deterministic default matches bootstrap output."
   validation {
-    condition     = var.moderation_boundary_arn == "arn:aws:iam::${var.aws_account_id}:policy/url-shortener/bootstrap/${var.name_prefix}-moderation-boundary"
+    condition     = var.moderation_boundary_arn == null || var.moderation_boundary_arn == "arn:aws:iam::${var.aws_account_id}:policy/url-shortener/bootstrap/${var.name_prefix}-moderation-boundary"
     error_message = "Provide the dedicated moderation boundary ARN from bootstrap."
   }
 }

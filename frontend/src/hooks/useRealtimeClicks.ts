@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 
 export type RealtimeStatus = "idle" | "connecting" | "open" | "reconnecting" | "closed";
 
+export const MAX_RECONNECT_ATTEMPTS = 5;
+
 export function mergeClickCount(current: number, incoming: number): number {
   return Math.max(current, incoming);
 }
@@ -56,6 +58,10 @@ export function useRealtimeClicks({ code, websocketUrl, enabled = true, onReconn
       socket.onclose = () => {
         if (cancelled) return;
         attempt += 1;
+        if (attempt > MAX_RECONNECT_ATTEMPTS) {
+          setStatus("closed");
+          return;
+        }
         const delay = Math.min(8000, 250 * 2 ** Math.min(attempt - 1, 5));
         setStatus("reconnecting");
         timer = setTimeout(connect, delay);

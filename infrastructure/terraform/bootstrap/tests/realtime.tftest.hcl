@@ -7,6 +7,8 @@ mock_provider "aws" {
 variables {
   aws_account_id    = "111111111111"
   state_bucket_name = "url-shortener-test-state"
+  http_api_ids      = []
+  websocket_api_ids = []
 }
 run "realtime_boundaries_and_passrole" {
   command = plan

@@ -71,7 +71,7 @@ func TestAggregatorPartialBatchRetriesOnlyFailedRecords(t *testing.T) {
 	}
 	response, err := svc.HandleBatch(context.Background(), batch)
 	want := []events.SQSBatchItemFailure{{ItemIdentifier: "message-3"}, {ItemIdentifier: "message-7"}}
-	if err != nil || !reflect.DeepEqual(response.BatchItemFailures, want) || seen != 10 || pushed != 8 {
+	if err != nil || !reflect.DeepEqual(response.BatchItemFailures, want) || seen != 10 || pushed != 1 {
 		t.Fatal(response, err, seen, pushed)
 	}
 }

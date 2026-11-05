@@ -29,6 +29,7 @@ output "moderation_role_arn" { value = module.moderation_sfn.role_arn }
 output "frontend_bucket_name" { value = module.frontend_hosting.bucket_name }
 output "cloudfront_distribution_id" { value = module.frontend_hosting.distribution_id }
 output "frontend_url" { value = module.frontend_hosting.url }
+output "frontend_resource_ids" { value = module.frontend_hosting.resource_ids }
 
 output "alarm_topic_arn" { value = module.observability.alarm_topic_arn }
 output "canary_alarm_names" { value = module.observability.canary_alarm_names }

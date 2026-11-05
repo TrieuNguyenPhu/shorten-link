@@ -22,9 +22,23 @@ module "frontend_hosting" {
 }
 
 locals {
-  frontend_callbacks = setunion(var.callback_urls, ["${module.frontend_hosting.url}/auth/callback/"])
-  frontend_logouts   = setunion(var.logout_urls, ["${module.frontend_hosting.url}/"])
-  frontend_origins   = setunion(var.cors_origins, [module.frontend_hosting.url])
+  runtime_boundary_arn    = coalesce(var.runtime_boundary_arn, "arn:aws:iam::${var.aws_account_id}:policy/url-shortener/bootstrap/${var.name_prefix}-runtime-boundary")
+  moderation_boundary_arn = coalesce(var.moderation_boundary_arn, "arn:aws:iam::${var.aws_account_id}:policy/url-shortener/bootstrap/${var.name_prefix}-moderation-boundary")
+  canary_boundary_arn     = coalesce(var.canary_boundary_arn, "arn:aws:iam::${var.aws_account_id}:policy/url-shortener/bootstrap/${var.name_prefix}-canary-boundary")
+  frontend_callbacks      = setunion(var.callback_urls, ["${module.frontend_hosting.url}/auth/callback/"])
+  frontend_logouts        = setunion(var.logout_urls, ["${module.frontend_hosting.url}/"])
+  frontend_origins        = setunion(var.cors_origins, [module.frontend_hosting.url])
+  permissions = {
+    create-link  = [{ actions = ["dynamodb:PutItem"], resources = [module.table.arn] }]
+    resolve-link = [{ actions = ["dynamodb:GetItem"], resources = [module.table.arn] }, { actions = ["events:PutEvents"], resources = [module.event_bus.arn] }]
+    list-links   = [{ actions = ["dynamodb:Query"], resources = [module.table.index_arn] }]
+    delete-link  = [{ actions = ["dynamodb:DeleteItem"], resources = [module.table.arn] }]
+  }
+  realtime_permissions = {
+    ws-connect     = [{ actions = ["dynamodb:PutItem"], resources = [module.table.arn] }]
+    ws-disconnect  = [{ actions = ["dynamodb:DeleteItem"], resources = [module.table.arn] }]
+    moderate-check = []
+  }
 }
 
 module "auth" {
@@ -37,21 +51,13 @@ module "auth" {
   logout_urls                 = local.frontend_logouts
   deletion_protection_enabled = var.deletion_protection_enabled
 }
-locals {
-  permissions = {
-    create-link  = [{ actions = ["dynamodb:PutItem"], resources = [module.table.arn] }]
-    resolve-link = [{ actions = ["dynamodb:GetItem"], resources = [module.table.arn] }, { actions = ["events:PutEvents"], resources = [module.event_bus.arn] }]
-    list-links   = [{ actions = ["dynamodb:Query"], resources = [module.table.index_arn] }]
-    delete-link  = [{ actions = ["dynamodb:DeleteItem"], resources = [module.table.arn] }]
-  }
-}
 module "functions" {
   for_each             = local.permissions
   source               = "../../modules/lambda"
   function_name        = "${var.name_prefix}-${each.key}"
   filename             = abspath("${path.root}/${var.lambda_package_directory}/${each.key}.zip")
   role_path            = "/url-shortener/dev/"
-  runtime_boundary_arn = var.runtime_boundary_arn
+  runtime_boundary_arn = local.runtime_boundary_arn
   permissions          = each.value
   canary_managed       = each.key == "resolve-link"
   log_retention_days   = var.log_retention_days
@@ -78,27 +84,20 @@ module "event_pipeline" {
   event_bus_arn        = module.event_bus.arn
   table_name           = module.table.name
   table_arn            = module.table.arn
-  runtime_boundary_arn = var.runtime_boundary_arn
+  runtime_boundary_arn = local.runtime_boundary_arn
   aggregator_filename  = abspath("${path.root}/${var.lambda_package_directory}/click-aggregator.zip")
   log_retention_days   = var.log_retention_days
   ws_endpoint          = module.websocket_api.management_endpoint
   ws_connections_arn   = module.websocket_api.connections_arn
 }
 
-locals {
-  realtime_permissions = {
-    ws-connect     = [{ actions = ["dynamodb:PutItem"], resources = [module.table.arn] }]
-    ws-disconnect  = [{ actions = ["dynamodb:DeleteItem"], resources = [module.table.arn] }]
-    moderate-check = []
-  }
-}
 module "realtime_functions" {
   for_each              = local.realtime_permissions
   source                = "../../modules/lambda"
   function_name         = "${var.name_prefix}-${each.key}"
   filename              = abspath("${path.root}/${var.lambda_package_directory}/${each.key}.zip")
   role_path             = "/url-shortener/dev/"
-  runtime_boundary_arn  = var.runtime_boundary_arn
+  runtime_boundary_arn  = local.runtime_boundary_arn
   permissions           = each.value
   environment_variables = each.key == "moderate-check" ? {} : { TABLE_NAME = module.table.name }
   log_retention_days    = var.log_retention_days
@@ -117,7 +116,7 @@ module "moderation_sfn" {
   table_name              = module.table.name
   table_arn               = module.table.arn
   moderate_check_arn      = module.realtime_functions["moderate-check"].alias_arn
-  moderation_boundary_arn = var.moderation_boundary_arn
+  moderation_boundary_arn = local.moderation_boundary_arn
 }
 
 module "observability" {
@@ -133,6 +132,6 @@ module "codedeploy_canary" {
   source       = "../../modules/codedeploy_canary"
   name_prefix  = var.name_prefix
   function_arn = module.functions["resolve-link"].arn
-  boundary_arn = coalesce(var.canary_boundary_arn, "arn:aws:iam::${var.aws_account_id}:policy/url-shortener/bootstrap/${var.name_prefix}-canary-boundary")
+  boundary_arn = local.canary_boundary_arn
   alarm_names  = module.observability.canary_alarm_names
 }

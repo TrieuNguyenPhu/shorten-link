@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/domain"
 	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/middleware"
 	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/repository"
 	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/service"
@@ -25,6 +26,14 @@ type Handler struct {
 
 func New(service *service.LinkService, baseURL string, logger *slog.Logger, metrics io.Writer) *Handler {
 	return &Handler{service: service, baseURL: strings.TrimRight(baseURL, "/"), logger: logger, metrics: metrics}
+}
+
+func (h *Handler) shortURL(req events.APIGatewayV2HTTPRequest, code string) string {
+	base := h.baseURL
+	if base == "" {
+		base = "https://" + req.RequestContext.DomainName
+	}
+	return base + "/" + code
 }
 
 func identity(req events.APIGatewayV2HTTPRequest) string {
@@ -77,18 +86,14 @@ func (h *Handler) Create(ctx context.Context, req events.APIGatewayV2HTTPRequest
 	link, err := h.service.Create(ctx, owner, input.URL)
 	switch {
 	case errors.Is(err, service.ErrInvalidURL):
-		return failure(400, "thieu hoac sai dinh dang 'url' (chi nhan http/https)")
+		return failure(400, "thieu hoac sai dinh dang 'url' (chi nhan http/https cong khai, an toan)")
 	case errors.Is(err, service.ErrCodeExhausted):
 		return failure(500, "khong sinh duoc ma duy nhat, thu lai")
 	case err != nil:
 		h.log(ctx, req).Error("create link failed", "error", err)
 		return failure(500, "loi he thong")
 	}
-	base := h.baseURL
-	if base == "" {
-		base = "https://" + req.RequestContext.DomainName
-	}
-	return jsonResponse(201, map[string]string{"code": link.Code, "shortUrl": base + "/" + link.Code, "target": link.Target})
+	return jsonResponse(201, map[string]string{"code": link.Code, "shortUrl": h.shortURL(req, link.Code), "target": link.Target})
 }
 
 func (h *Handler) List(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
@@ -115,13 +120,14 @@ func (h *Handler) List(ctx context.Context, req events.APIGatewayV2HTTPRequest) 
 	}
 	type item struct {
 		Code      string `json:"code"`
+		ShortURL  string `json:"shortUrl"`
 		Target    string `json:"target"`
 		Clicks    int64  `json:"clicks"`
 		CreatedAt string `json:"createdAt"`
 	}
 	items := make([]item, 0, len(links))
 	for _, link := range links {
-		items = append(items, item{link.Code, link.Target, link.Clicks, link.CreatedAt})
+		items = append(items, item{link.Code, h.shortURL(req, link.Code), link.Target, link.Clicks, link.CreatedAt})
 	}
 	return jsonResponse(200, struct {
 		Links      []item `json:"links"`
@@ -135,7 +141,7 @@ func (h *Handler) Delete(ctx context.Context, req events.APIGatewayV2HTTPRequest
 		return failure(401, "thieu danh tinh nguoi dung")
 	}
 	code := req.PathParameters["code"]
-	if code == "" {
+	if !domain.IsValidShortCode(code) {
 		return failure(404, "link khong ton tai hoac khong thuoc ve ban")
 	}
 	err := h.service.Delete(ctx, code, owner)
@@ -151,6 +157,9 @@ func (h *Handler) Delete(ctx context.Context, req events.APIGatewayV2HTTPRequest
 
 func (h *Handler) Resolve(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 	code := req.PathParameters["code"]
+	if !domain.IsValidShortCode(code) {
+		return events.APIGatewayV2HTTPResponse{StatusCode: 404, Headers: map[string]string{"Content-Type": "text/plain"}, Body: "khong tim thay link"}, nil
+	}
 	target, err := h.service.Resolve(ctx, code)
 	if errors.Is(err, repository.ErrNotFound) {
 		h.log(ctx, req).Warn("link not found", "code", code)
@@ -159,14 +168,15 @@ func (h *Handler) Resolve(ctx context.Context, req events.APIGatewayV2HTTPReques
 	}
 	if err != nil {
 		h.log(ctx, req).Error("resolve link failed", "code", code, "error", err)
-		if errors.Is(err, service.ErrPublish) {
+		if errors.Is(err, service.ErrPublish) && target != "" {
 			h.metric(ctx, req, "ClickPublishFailed")
+			return events.APIGatewayV2HTTPResponse{StatusCode: 302, Headers: map[string]string{"Location": target, "Cache-Control": "private, no-store, no-cache, must-revalidate"}, Body: ""}, nil
 		}
-		return events.APIGatewayV2HTTPResponse{}, err
+		return events.APIGatewayV2HTTPResponse{StatusCode: 500, Headers: map[string]string{"Content-Type": "text/plain"}, Body: "loi he thong"}, nil
 	}
 	h.log(ctx, req).Info("link resolved", "code", code)
 	h.metric(ctx, req, "LinkResolved")
-	return events.APIGatewayV2HTTPResponse{StatusCode: 301, Headers: map[string]string{"Location": target}, Body: ""}, nil
+	return events.APIGatewayV2HTTPResponse{StatusCode: 302, Headers: map[string]string{"Location": target, "Cache-Control": "private, no-store, no-cache, must-revalidate"}, Body: ""}, nil
 }
 
 func (h *Handler) log(ctx context.Context, req events.APIGatewayV2HTTPRequest) *slog.Logger {

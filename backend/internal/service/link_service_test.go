@@ -67,8 +67,10 @@ func TestCreateRetriesOnlyCollisionsFiveTotalWrites(t *testing.T) {
 
 func TestCreateRejectsInvalidURLAndGeneratorError(t *testing.T) {
 	s := New(repoStub{}, nil)
-	if _, err := s.Create(context.Background(), "alice", "javascript:alert(1)"); !errors.Is(err, ErrInvalidURL) {
-		t.Fatal(err)
+	for _, raw := range []string{"javascript:alert(1)", "http://127.0.0.1/admin", "http://localhost:8080/internal", "http://169.254.169.254/latest/meta-data/", "https://phishing.example.org/login"} {
+		if _, err := s.Create(context.Background(), "alice", raw); !errors.Is(err, ErrInvalidURL) {
+			t.Fatalf("raw=%q err=%v", raw, err)
+		}
 	}
 	s.generate = func() (string, error) { return "", errors.New("entropy unavailable") }
 	if _, err := s.Create(context.Background(), "alice", "https://example.org"); err == nil {
@@ -76,11 +78,11 @@ func TestCreateRejectsInvalidURLAndGeneratorError(t *testing.T) {
 	}
 }
 
-func TestResolveRequiresPublishAcknowledgement(t *testing.T) {
+func TestResolveBlocksRejectedOrInvalidCodesAndReturnsTargetOnPublishError(t *testing.T) {
 	for _, fail := range []bool{false, true} {
 		published := false
 		s := New(repoStub{get: func(c string) (domain.Link, error) {
-			return domain.Link{Code: c, Target: "https://example.org", Status: "REJECTED"}, nil
+			return domain.Link{Code: c, Target: "https://example.org", Status: "active"}, nil
 		}}, publisherStub(func(_ context.Context, e domain.ClickEvent) error {
 			published = true
 			if e.Code != "Abc1234" || e.At == "" {
@@ -92,12 +94,18 @@ func TestResolveRequiresPublishAcknowledgement(t *testing.T) {
 			return nil
 		}))
 		target, err := s.Resolve(context.Background(), "Abc1234")
-		if !published || (err != nil) != fail || (!fail && target != "https://example.org") {
+		if !published || (err != nil) != fail || target != "https://example.org" {
 			t.Fatal(target, err)
 		}
 	}
-	s := New(repoStub{get: func(string) (domain.Link, error) { return domain.Link{}, repository.ErrNotFound }}, nil)
-	if _, err := s.Resolve(context.Background(), "missing"); !errors.Is(err, repository.ErrNotFound) {
+	rejected := New(repoStub{get: func(c string) (domain.Link, error) {
+		return domain.Link{Code: c, Target: "https://example.org", Status: "rejected"}, nil
+	}}, nil)
+	if _, err := rejected.Resolve(context.Background(), "Abc1234"); !errors.Is(err, repository.ErrNotFound) {
+		t.Fatal("rejected link resolved:", err)
+	}
+	s := New(repoStub{get: func(string) (domain.Link, error) { t.Fatal("invalid code queried storage"); return domain.Link{}, nil }}, nil)
+	if _, err := s.Resolve(context.Background(), "robots.txt"); !errors.Is(err, repository.ErrNotFound) {
 		t.Fatal(err)
 	}
 }

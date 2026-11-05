@@ -6,7 +6,7 @@ import test from "node:test";
 const output = new URL("../out/", import.meta.url);
 
 test("export includes standalone product routes and error HTML pages", async () => {
-  for (const name of ["index.html", "login/index.html", "auth/callback/index.html", "dashboard/index.html", "architecture/index.html", "404.html"]) {
+  for (const name of ["index.html", "login/index.html", "auth/callback/index.html", "dashboard/index.html", "privacy/index.html", "404.html"]) {
     const html = await readFile(new URL(name, output), "utf8");
     assert.match(html, /<html[\s>]/);
     assert.match(html, /<body[\s>]/);

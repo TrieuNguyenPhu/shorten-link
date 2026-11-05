@@ -26,16 +26,16 @@ export function LinksTable({ links, apiBaseUrl, websocketUrl, onDelete, onReconn
   const [copyState, setCopyState] = useState<string | null>(null);
   if (links.length === 0) return <section className="sketch-card text-center"><h2 className="font-display text-2xl">Chưa có link nào</h2><NextLink className="sketch-button mt-6" href="/#create-link">Tạo link mới</NextLink></section>;
 
-  async function copy(code: string) {
-    const url = `${apiBaseUrl}/${code}`;
+  async function copy(link: Link) {
+    const url = link.shortUrl || `${apiBaseUrl}/${link.code}`;
     try {
       await navigator.clipboard.writeText(url);
-      setCopyState(code);
-      window.setTimeout(() => setCopyState((current) => current === code ? null : current), 1600);
+      setCopyState(link.code);
+      window.setTimeout(() => setCopyState((current) => current === link.code ? null : current), 1600);
     } catch {
       setCopyState(null);
     }
   }
 
-  return <section className="sketch-card overflow-hidden p-0"><div className="overflow-x-auto"><table aria-label="Các link của bạn" className="w-full min-w-[680px] text-left text-sm"><thead className="bg-paper-deep/50 text-base text-ink-muted"><tr><th className="px-5 py-4 font-black sm:px-6">Link</th><th className="px-5 py-4 font-black">Clicks</th><th className="px-5 py-4 font-black">Đích đến</th><th className="px-5 py-4 font-black">Thao tác</th></tr></thead><tbody>{links.map((link) => <tr className="border-t border-ink/10" key={link.code}><td className="px-5 py-4 sm:px-6"><a className="font-display font-bold text-coral underline decoration-coral/30 underline-offset-4" href={`${apiBaseUrl}/${link.code}`} rel="noreferrer" target="_blank">/{link.code}</a></td><td className="px-5 py-4"><ClickCell link={link} onReconnect={onReconnect} websocketUrl={websocketUrl} /></td><td className="max-w-xs truncate px-5 py-4 text-ink-muted" title={link.target}>{link.target}</td><td className="px-5 py-4"><div className="flex flex-wrap gap-2"><button className="rounded-lg border-2 border-ink px-2.5 py-1.5 text-sm font-bold transition hover:bg-sun focus-visible:outline-3 focus-visible:outline-coral" onClick={() => void copy(link.code)} type="button">{copyState === link.code ? "Đã copy" : "Copy"}</button><button className="rounded-lg border-2 border-red-300 px-2.5 py-1.5 text-sm font-bold text-red-700 transition hover:bg-red-50 focus-visible:outline-3 focus-visible:outline-coral" onClick={() => void onDelete(link.code)} type="button">Xóa</button></div></td></tr>)}</tbody></table></div></section>;
+  return <section className="sketch-card overflow-hidden p-0"><div className="overflow-x-auto"><table aria-label="Các link của bạn" className="w-full min-w-[680px] text-left text-sm"><thead className="bg-paper-deep/50 text-base text-ink-muted"><tr><th className="px-5 py-4 font-black sm:px-6">Link</th><th className="px-5 py-4 font-black">Clicks</th><th className="px-5 py-4 font-black">Đích đến</th><th className="px-5 py-4 font-black">Thao tác</th></tr></thead><tbody>{links.map((link) => <tr className="border-t border-ink/10" key={link.code}><td className="px-5 py-4 sm:px-6"><a className="font-display font-bold text-coral underline decoration-coral/30 underline-offset-4" href={link.shortUrl || `${apiBaseUrl}/${link.code}`} rel="noreferrer" target="_blank">/{link.code}</a></td><td className="px-5 py-4"><ClickCell link={link} onReconnect={onReconnect} websocketUrl={websocketUrl} /></td><td className="max-w-xs truncate px-5 py-4 text-ink-muted" title={link.target}>{link.target}</td><td className="px-5 py-4"><div className="flex flex-wrap gap-2"><button className="rounded-lg border-2 border-ink px-2.5 py-1.5 text-sm font-bold transition hover:bg-sun focus-visible:outline-3 focus-visible:outline-coral" onClick={() => void copy(link)} type="button">{copyState === link.code ? "Đã copy" : "Copy"}</button><button className="rounded-lg border-2 border-red-300 px-2.5 py-1.5 text-sm font-bold text-red-700 transition hover:bg-red-50 focus-visible:outline-3 focus-visible:outline-coral" onClick={() => void onDelete(link.code)} type="button">Xóa</button></div></td></tr>)}</tbody></table></div></section>;
 }

@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 :root { --paper: #fffaf0; --paper-deep: #f2e6cf; --ink: #24221e; --ink-muted: #635e53; --sun: #ffd45c; --coral: #e85f4f; }
-@theme inline { --color-paper: var(--paper); --color-paper-deep: var(--paper-deep); --color-ink: var(--ink); --color-ink-muted: var(--ink-muted); --color-sun: var(--sun); --color-coral: var(--coral); --font-display: var(--font-lobster), cursive; --font-sans: var(--font-lobster), cursive; }
+@theme inline { --color-paper: var(--paper); --color-paper-deep: var(--paper-deep); --color-ink: var(--ink); --color-ink-muted: var(--ink-muted); --color-sun: var(--sun); --color-coral: var(--coral); --font-display: var(--font-lobster), cursive; --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-lobster), cursive; font-size: 18px; font-synthesis: none; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-sans); font-size: 16px; font-synthesis: none; }
 a { color: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 .paper-shell { min-height: 100vh; min-height: 100dvh; background-color: var(--paper); background-image: radial-gradient(rgba(36, 34, 30, 0.07) 0.7px, transparent 0.7px); background-size: 14px 14px; display: flex; flex-direction: column; }
-.font-display { font-family: var(--font-lobster), cursive; }
+.font-display, .brand-link { font-family: var(--font-lobster), cursive; }
 button, input, select, textarea { font-family: inherit; }
 .sketch-card { border: 2px solid var(--ink); border-radius: 20px 16px 22px 14px; background: rgba(255, 255, 255, 0.64); padding: 1.5rem; box-shadow: 4px 4px 0 var(--ink); }
 .sketch-card.bg-sun { background: var(--sun); }
@@ -18,7 +18,6 @@ button, input, select, textarea { font-family: inherit; }
 .sketch-button:disabled { cursor: wait; opacity: 0.65; transform: none; }
 .sketch-button-secondary { background: transparent; color: var(--ink); box-shadow: 3px 3px 0 var(--ink); }
 .sketch-button-small { min-height: 2.5rem; padding: 0.5rem 0.8rem; box-shadow: 2px 2px 0 var(--coral); }
-.ink-note { color: var(--coral); font-size: 0.75rem; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase; }
 .scribble-underline { position: absolute; right: -0.1em; bottom: -0.15em; left: 0; height: 0.15em; border-bottom: 3px solid var(--coral); border-radius: 50%; transform: rotate(-2deg); }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .sketch-button { transition: none; } }
 

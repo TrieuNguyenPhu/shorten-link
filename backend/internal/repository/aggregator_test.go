@@ -25,23 +25,20 @@ func TestRecordClickWritesAtomicCountersAndMarker(t *testing.T) {
 	now := time.Date(2026, 11, 4, 1, 0, 0, 0, time.UTC)
 	at := time.Date(2026, 11, 4, 1, 0, 0, 0, time.FixedZone("UTC+7", 7*3600))
 	r := New(transactionStub{transact: func(in *dynamodb.TransactWriteItemsInput) (*dynamodb.TransactWriteItemsOutput, error) {
-		if len(in.TransactItems) != 3 {
+		if len(in.TransactItems) != 2 {
 			t.Fatal(in)
 		}
-		meta, stat, marker := in.TransactItems[0].Update, in.TransactItems[1].Update, in.TransactItems[2].Put
-		if meta == nil || stat == nil || marker == nil {
+		meta, marker := in.TransactItems[0].Update, in.TransactItems[1].Put
+		if meta == nil || marker == nil {
 			t.Fatal("transaction order")
 		}
-		for _, table := range []*string{meta.TableName, stat.TableName, marker.TableName} {
+		for _, table := range []*string{meta.TableName, marker.TableName} {
 			if aws.ToString(table) != "url-shortener" {
 				t.Fatal("wrong table")
 			}
 		}
 		if str(meta.Key["PK"]) != "LINK#Abc1234" || str(meta.Key["SK"]) != "META" || aws.ToString(meta.ConditionExpression) != "attribute_exists(PK)" || aws.ToString(meta.UpdateExpression) != "ADD clicks :one" || meta.ExpressionAttributeValues[":one"].(*types.AttributeValueMemberN).Value != "1" {
 			t.Fatal(meta)
-		}
-		if str(stat.Key["PK"]) != "LINK#Abc1234" || str(stat.Key["SK"]) != "STAT#2026-11-03" || aws.ToString(stat.UpdateExpression) != "ADD #c :one" || stat.ExpressionAttributeNames["#c"] != "count" || stat.ExpressionAttributeValues[":one"].(*types.AttributeValueMemberN).Value != "1" {
-			t.Fatal(stat)
 		}
 		if str(marker.Item["PK"]) != "CLICK#event-1" || str(marker.Item["SK"]) != "CLICK" || marker.Item["ttl"].(*types.AttributeValueMemberN).Value != "1793840400" || len(marker.Item) != 3 || aws.ToString(marker.ConditionExpression) != "attribute_not_exists(PK)" {
 			t.Fatal(marker)
@@ -74,24 +71,21 @@ func TestRecordClickClassifiesEveryCancellationReason(t *testing.T) {
 		retry   bool
 		reads   int
 	}{
-		{"duplicate", []string{"None", "None", "ConditionalCheckFailed"}, false, false, ClickDuplicate, false, 0},
-		{"deleted", []string{"ConditionalCheckFailed", "None", "None"}, true, false, ClickDeleted, false, 1},
-		{"deleted duplicate", []string{"ConditionalCheckFailed", "None", "ConditionalCheckFailed"}, true, false, ClickDeleted, false, 1},
-		{"meta exists", []string{"ConditionalCheckFailed", "None", "None"}, false, false, 0, true, 1},
-		{"get error", []string{"ConditionalCheckFailed", "None", "None"}, true, true, 0, true, 1},
-		{"mixed marker", []string{"TransactionConflict", "None", "ConditionalCheckFailed"}, false, false, 0, true, 0},
-		{"stat conflict", []string{"None", "TransactionConflict", "ConditionalCheckFailed"}, false, false, 0, true, 0},
-		{"deleted mixed", []string{"ConditionalCheckFailed", "TransactionConflict", "None"}, true, false, 0, true, 0},
-		{"deleted throttle", []string{"ConditionalCheckFailed", "None", "ThrottlingError"}, true, false, 0, true, 0},
-		{"all none", []string{"None", "None", "None"}, false, false, 0, true, 0},
+		{"duplicate", []string{"None", "ConditionalCheckFailed"}, false, false, ClickDuplicate, false, 0},
+		{"deleted", []string{"ConditionalCheckFailed", "None"}, true, false, ClickDeleted, false, 1},
+		{"deleted duplicate", []string{"ConditionalCheckFailed", "ConditionalCheckFailed"}, true, false, ClickDeleted, false, 1},
+		{"meta exists", []string{"ConditionalCheckFailed", "None"}, false, false, 0, true, 1},
+		{"get error", []string{"ConditionalCheckFailed", "None"}, true, true, 0, true, 1},
+		{"mixed marker", []string{"TransactionConflict", "ConditionalCheckFailed"}, false, false, 0, true, 0},
+		{"deleted throttle", []string{"ConditionalCheckFailed", "ThrottlingError"}, true, false, 0, true, 0},
+		{"all none", []string{"None", "None"}, false, false, 0, true, 0},
 		{"empty", nil, false, false, 0, true, 0},
-		{"short", []string{"None", "None"}, false, false, 0, true, 0},
-		{"long", []string{"None", "None", "ConditionalCheckFailed", "None"}, false, false, 0, true, 0},
-		{"nil code", []string{"<nil>", "None", "ConditionalCheckFailed"}, false, false, 0, true, 0},
-		{"empty code", []string{"None", "", "ConditionalCheckFailed"}, false, false, 0, true, 0},
-		{"unknown", []string{"FutureReason", "None", "ConditionalCheckFailed"}, false, false, 0, true, 0},
-		{"throttle", []string{"ProvisionedThroughputExceeded", "None", "None"}, false, false, 0, true, 0},
-		{"stat condition", []string{"None", "ConditionalCheckFailed", "ConditionalCheckFailed"}, false, false, 0, true, 0},
+		{"short", []string{"None"}, false, false, 0, true, 0},
+		{"long", []string{"None", "ConditionalCheckFailed", "None"}, false, false, 0, true, 0},
+		{"nil code", []string{"<nil>", "ConditionalCheckFailed"}, false, false, 0, true, 0},
+		{"empty code", []string{"", "ConditionalCheckFailed"}, false, false, 0, true, 0},
+		{"unknown", []string{"FutureReason", "ConditionalCheckFailed"}, false, false, 0, true, 0},
+		{"throttle", []string{"ProvisionedThroughputExceeded", "None"}, false, false, 0, true, 0},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -131,7 +125,7 @@ func TestRecordClickPropagatesUncertainFailures(t *testing.T) {
 	for _, cancelled := range []bool{false, true} {
 		r := New(transactionStub{sdkStub: sdkStub{get: func(*dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) { return nil, nil }}, transact: func(*dynamodb.TransactWriteItemsInput) (*dynamodb.TransactWriteItemsOutput, error) {
 			if cancelled {
-				return nil, cancellation("ConditionalCheckFailed", "None", "None")
+				return nil, cancellation("ConditionalCheckFailed", "None")
 			}
 			return nil, nil
 		}}, "table")

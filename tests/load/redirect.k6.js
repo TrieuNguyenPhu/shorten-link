@@ -8,7 +8,7 @@ if (mode === 'stress' && __ENV.ALLOW_STRESS !== '1') throw new Error('Stress req
 const base = (__ENV.BASE_URL || '').replace(/\/$/, '');
 const code = __ENV.CODE || '';
 if (!/^(https:\/\/[A-Za-z0-9.-]+(?::[0-9]+)?|http:\/\/(localhost|127\.0\.0\.1):[0-9]+)$/.test(base)) throw new Error('BASE_URL must be an HTTPS origin or explicit local HTTP origin');
-if (!/^[A-Za-z0-9]{1,32}$/.test(code)) throw new Error('CODE must be an existing short code');
+if (!/^[A-Za-z0-9]{7}$/.test(code)) throw new Error('CODE must be a 7-character Base62 short code');
 
 export const options = {
   maxRedirects: 0,
@@ -29,14 +29,14 @@ const serverErrors = new Counter('redirect_server_errors');
 export default function () {
   const response = http.get(`${base}/${code}`, {
     redirects: 0, timeout: '5s', tags: { name: 'GET /{code}' },
-    responseCallback: http.expectedStatuses(301),
+    responseCallback: http.expectedStatuses(302),
   });
-  const ok = response.status === 301 && /^https?:\/\//.test(response.headers.Location || '');
+  const ok = response.status === 302 && /^https?:\/\//.test(response.headers.Location || '');
   successful.add(ok ? 1 : 0);
   failed.add(!ok);
   failures.add(ok ? 0 : 1);
   throttled.add(response.status === 429 ? 1 : 0);
   serverErrors.add(response.status >= 500 ? 1 : 0);
-  check(response, { '301 with an HTTP(S) Location': () => ok });
+  check(response, { '302 with an HTTP(S) Location': () => ok });
   sleep(1); // Smoke: at most approximately 2 requests/second, including latency.
 }

@@ -45,7 +45,7 @@ jobs:
       TF_VAR_logout_urls: ${{ vars.LOGOUT_URLS || '[]' }}
       TF_VAR_cors_origins: ${{ vars.CORS_ORIGINS || '[]' }}
       TF_VAR_alarm_email_addresses: ${{ vars.ALARM_EMAIL_ADDRESSES || '[]' }}
-      TF_VAR_log_retention_days: ${{ vars.LOG_RETENTION_DAYS || '14' }}
+      TF_VAR_log_retention_days: ${{ vars.LOG_RETENTION_DAYS || '365' }}
       NEXT_TELEMETRY_DISABLED: '1'
       TF_IN_AUTOMATION: 'true'
       RELEASE_ACTION: ${{ inputs.action }}
@@ -68,7 +68,8 @@ jobs:
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: '1.26.10'
-          cache: false
+          cache: true
+          cache-dependency-path: backend/go.sum
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '26.13.0'
