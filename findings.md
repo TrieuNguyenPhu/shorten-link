@@ -166,3 +166,12 @@
 - Frontend dùng một `LinkIcon` chung cho branding và Navbar; trạng thái đăng nhập điều khiển các liên kết Dashboard, đăng xuất và landing create form.
 - Dashboard giữ workspace analytics links, bỏ trải nghiệm My Links/create form trùng lặp; route `/architecture/` được export tĩnh.
 - PR #82 giữ static export và API/WebSocket thật; không thêm password/signup flow hoặc runtime server-side.
+
+
+## 2026-11-05 — Google login local và page metadata
+
+- Checkout chạy dev vẫn ở `4e7c590`, trong khi bản tách auth config đã merge qua PR #84 (`004b935`). Tạo branch fix mới từ `origin/main`, giữ các diff backend/Terraform có sẵn ngoài commit frontend.
+- Dev server chưa có `NEXT_PUBLIC_*`; bổ sung sáu giá trị public vào `.env.local` từ Terraform outputs và callback/logout localhost đã được Cognito allowlist. File local không được commit; thêm `.env.example` và hướng dẫn cấu hình để tái lập.
+- WebSocket URL thật có `/prod`, parser cũ chỉ nhận origin. Test hồi quy RED với lỗi `NEXT_PUBLIC_WS_URL must be an origin URL without a path`, GREEN sau khi giữ pathname cho WebSocket; vẫn từ chối credentials/query/fragment và WS không TLS ngoài loopback.
+- Đọc Google JSON và Cognito IdP trong bộ nhớ: client ID và secret đều khớp, không cần thay đổi tài nguyên AWS. Không in secret, không đưa JSON vào repository/assets.
+- Logo và favicon SVG dùng chung `/icon.svg`; ICO dự phòng được rasterize từ cùng SVG. Metadata static có title template `%s | Shrnk`, trang chủ giữ tagline riêng.

@@ -206,3 +206,11 @@
 - Fetch `origin/main` tại `37f0978` và remote head PR #82 tại `fceb63f`; merge thử trong worktree tạm để không chạm các thay đổi chưa commit của workspace chính.
 - Conflict chỉ xuất hiện ở bốn file trạng thái/tài liệu. Giữ lịch sử `main`, bổ sung ghi nhận frontend Shrnk và PR #82; các thay đổi Terraform hosting từ PR #81 được giữ nguyên.
 - Sau khi merge, kiểm tra `git diff --check`; chưa chạy `terraform apply`, load test hoặc thao tác AWS.
+
+
+## 2026-11-05 — Sửa Google login local, favicon và page titles
+
+- Nhánh `fix/phase-05-google-login-and-page-metadata` từ `origin/main` (`004b935`). Đã tái hiện lỗi trong ảnh tại localhost trước sửa và xác minh nút đăng nhập mở `accounts.google.com` qua Cognito sau khi bổ sung env public.
+- Bỏ đoạn mô tả nhỏ dưới tiêu đề đăng nhập; đồng bộ logo/favicon link vàng, title trang chủ/đăng nhập/dashboard/callback/kiến trúc qua Metadata API tĩnh.
+- Test hồi quy WebSocket stage đã chạy RED → GREEN. `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm test` (18/18) và `git diff --check` PASS. Kiểm tra HTML export xác nhận title/icon của cả năm route.
+- Google JSON khớp IdP đang chạy. Không chạy Terraform apply, không publish CloudFront, không load test; Google federation sau bước nhập tài khoản vẫn chưa kiểm chứng. Không sửa các diff backend/Terraform có sẵn.

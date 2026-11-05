@@ -58,7 +58,7 @@ function parseUrl(
   value: string | undefined,
   name: string,
   protocols: readonly string[],
-  path: "origin" | "callback" | "logout",
+  path: "origin" | "websocket" | "callback" | "logout",
 ): string {
   if (!value?.trim()) throw new Error(`${name} is required`);
   let parsed: URL;
@@ -84,6 +84,7 @@ function parseUrl(
   if (path === "logout" && parsed.pathname !== "/") throw new Error(`${name} must point to the site root`);
 
   const origin = parsed.origin;
+  if (path === "websocket") return origin + (parsed.pathname === "/" ? "" : parsed.pathname);
   if (path === "callback") return `${origin}/auth/callback/`;
   return origin + (path === "logout" ? "/" : "");
 }
@@ -114,6 +115,6 @@ export function getPublicConfig(environment: ConfigEnvironment = buildRuntimeEnv
   return {
     ...auth,
     apiBaseUrl: parseUrl(environment.NEXT_PUBLIC_API_BASE_URL, apiKeys[0], ["https:", "http:"], "origin"),
-    websocketUrl: parseUrl(environment.NEXT_PUBLIC_WS_URL, apiKeys[1], ["wss:", "ws:"], "origin"),
+    websocketUrl: parseUrl(environment.NEXT_PUBLIC_WS_URL, apiKeys[1], ["wss:", "ws:"], "websocket"),
   };
 }

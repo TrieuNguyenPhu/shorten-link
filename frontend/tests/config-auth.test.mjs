@@ -47,6 +47,22 @@ test("builds auth configuration without unrelated API and WebSocket endpoints", 
   assert.equal(config.logoutUri, "https://shortn.dev/");
 });
 
+test("preserves the API Gateway WebSocket stage when loading deployed configuration", () => {
+  const config = getPublicConfig({
+    ...validEnvironment,
+    NEXT_PUBLIC_WS_URL: "wss://a1b2c3.execute-api.ap-southeast-1.amazonaws.com/prod",
+  });
+
+  assert.equal(config.websocketUrl, "wss://a1b2c3.execute-api.ap-southeast-1.amazonaws.com/prod");
+  assert.equal(
+    getPublicConfig({ ...validEnvironment, NEXT_PUBLIC_WS_URL: "ws://localhost:8080/realtime" }).websocketUrl,
+    "ws://localhost:8080/realtime",
+  );
+  for (const url of ["wss://ws.shortn.dev/prod?token=secret", "wss://ws.shortn.dev/prod#fragment", "wss://user:secret@ws.shortn.dev/prod", "ws://ws.shortn.dev/prod"]) {
+    assert.throws(() => getPublicConfig({ ...validEnvironment, NEXT_PUBLIC_WS_URL: url }));
+  }
+});
+
 function idTokenWithNonce(nonce) {
   const payload = Buffer.from(JSON.stringify({ nonce })).toString("base64url");
   return `header.${payload}.signature`;
