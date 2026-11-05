@@ -250,3 +250,5 @@ Task 6.1 — **complete (implementation/local)**: observability và CodeDeploy c
 - Nhánh `fix/phase-05-ui-review-production` tạo từ `origin/main` (`2253a3c`), kế thừa hai commit sửa PKCE #87 để giữ luồng đăng nhập an toàn. Giữ nguyên các diff có sẵn để rà soát, không tự hoàn nguyên.
 
 Task 6.1: [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89), code tree `a1706d5` đã đối chiếu local/remote; chưa merge/apply. Git HTTPS thiếu credential, xuất bản qua GitHub connector.
+
+Task 6.1: CI [#218](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41979476998) PASS toàn bộ bốn jobs trên commit36faa086. AWS apply/canary thật vẫn pending; Task6.2 có [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90) riêng từ main.

@@ -283,3 +283,5 @@
 Task 6.1 implementation/local complete: RED module missing → GREEN; Terraform 1.17.1/provider 6.71.0 fmt/init-backend=false-lockfile-readonly/validate, 20 bootstrap + 21 dev mock-plan tests PASS. Go race/vet và build8ZIP PASS. SNS topic policy chỉ CloudWatch từ đúng alarm/account; không subscription mặc định. IAM service boundary chỉ alias resolve:live; deployment grants exact app/group/alarms, quota PASS. Sửa test fixture S3 ARN unknown; không apply để né test. Kiểm diff thủ công không secret/state; không chạy AWS/canary thật.
 
 Task 6.1: [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89), code tree `a1706d5` đã đối chiếu local/remote; chưa merge/apply. Git HTTPS thiếu credential, xuất bản qua GitHub connector.
+
+Task 6.1: CI [#218](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41979476998) PASS toàn bộ bốn jobs trên commit36faa086. AWS apply/canary thật vẫn pending; Task6.2 có [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90) riêng từ main.
