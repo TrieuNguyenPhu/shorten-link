@@ -7,6 +7,8 @@
 
 ## 1. Tổng Quan Trạng Thái Hiện Tại
 
+- **Đồng bộ PR #88 sau squash #87 — complete (local):** main `2b6ed24` có cùng tree với head #87 đã kế thừa. Giữ nguyên tree #88 khi giải quyết conflict, bao gồm callback về `/`, PKCE và dashboard lifecycle.
+
 - **Đồng bộ PR #88 — complete (local):** kế thừa bản sửa conflict #87 và main sau #86; giữ UI đã deploy, callback về `/` và publisher chạy test trước upload.
 
 - **Task 5.5 — UI refinement và project review — complete (implementation/deployed)** — [PR #88](https://github.com/TrieuNguyenPhu/shorten-link/pull/88): đăng nhập về `/`; Navbar/Footer ở root layout; menu Trang chủ/Dashboard khi đăng nhập/Kiến trúc dự án có active/hover; login có logo và tiêu đề căn giữa; Lobster self-hosted; giảm copy. Sửa refresh gây nhấp nháy, giữ click mới trước snapshot cũ, chặn snapshot khôi phục link đã xóa, hiển thị/copy kết quả tạo link. Frontend 27 tests và lint/typecheck/build/audit PASS; [CI #209](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41974976600) PASS cả 4 jobs.

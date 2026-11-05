@@ -269,3 +269,9 @@
 - Hợp nhất lịch sử publish #86, PKCE #87 và UI #88; không deploy lại website hoặc chạy AWS. Giữ nguyên toàn bộ `frontend/`, script chạy test và architecture route của #88.
 
 - Frontend lint/typecheck/build, 27 tests, `bash -n` và diff-check PASS. Diff `frontend/` và `scripts/publish-frontend.sh` so với head #88 trước merge đều rỗng. PR #87 đã push merge main; bản #88 sẽ giữ merge parent tương ứng để không bỏ mất lịch sử chung.
+
+
+## 2026-11-05 — Sửa lại conflict PR #88 sau squash #87
+- Merge main `2b6ed24`; đối chiếu main với head #87 xác nhận cùng tree. Giải quyết bảy file conflict bằng bản #88 đã chứa PKCE và UI mới; staged tree trước ghi chú không có khác biệt với head #88. Không gọi AWS, apply hoặc publish lại.
+
+- Lint/typecheck/build static, 27 frontend tests, `bash -n scripts/publish-frontend.sh` và diff-check PASS. Source `frontend/`, scripts và tests không thay đổi so với #88 trước merge. Push merge commit lên đúng PR #88; không tạo PR mới.

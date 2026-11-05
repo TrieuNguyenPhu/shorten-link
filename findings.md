@@ -210,3 +210,7 @@
 
 ## 2026-11-05 — Conflict PR #88
 - Đồng bộ qua merge head #87 đã chứa main #86 để giữ cùng lịch sử tổ tiên. Conflict ở bốn file trạng thái và vùng preflight publisher; giữ kiểm thử trước upload cùng route architecture. Mã `frontend/` không đổi so với PR #88 đã deploy.
+
+
+## 2026-11-05 — Squash #87 và ancestry của PR #88
+- Main `2b6ed24` có tree giống hệt head #87 `bfb8fdf`, nhưng squash đổi ancestry nên Git báo lại các thay đổi đã tồn tại trong #88. Kiểm tra tree trước khi resolve; giữ head #88 ở bảy file conflict. Sau resolution, toàn bộ staged tree giống head #88 trước merge, không bỏ thay đổi nào từ main.
