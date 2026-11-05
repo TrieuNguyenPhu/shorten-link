@@ -3,8 +3,9 @@ aws_account_id        = "REPLACE_WITH_12_DIGIT_ACCOUNT_ID"
 runtime_boundary_arn  = "REPLACE_WITH_BOOTSTRAP_RUNTIME_BOUNDARY_ARN"
 cognito_domain_prefix = "replace-with-unique-cognito-prefix"
 google_client_id      = "replace-with-web-client-id.apps.googleusercontent.com"
-callback_urls         = ["http://localhost:3000/auth/callback/"]
-logout_urls           = ["http://localhost:3000/"]
-cors_origins          = ["http://localhost:3000"]
+# CloudFront URLs are derived automatically. To allow a local frontend, also set:
+# callback_urls = ["http://localhost:3000/auth/callback/"]
+# logout_urls   = ["http://localhost:3000/"]
+# cors_origins  = ["http://localhost:3000"]
 # Supply google_client_secret through a protected TF_VAR_google_client_secret input.
 # Do not put a real secret in a committed file or command argument.

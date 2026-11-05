@@ -192,3 +192,10 @@
 2026-11-05: Bắt đầu Phase 5 trên nhánh `feat/phase-05-task-01-nextjs-auth-and-pages`; chốt phạm vi Task 5.1 cho static landing/login/callback, Google-only Cognito PKCE và Doodle UI. Đã ghi thiết kế tại `docs/superpowers/specs/2026-11-05-phase-5-task-5-1-frontend-design.md`; chưa chạy AWS hoặc Terraform apply.
 
 - Đã mở [PR #79](https://github.com/TrieuNguyenPhu/shorten-link/pull/79) cho Task 5.1 từ main `f80c0dc`.
+
+
+## Phiên 2026-11-05 — Tạo lại PR Phase 5 / Task 5.3
+
+- PR #80 đã đóng do branch cũ chứa lịch sử tài liệu xung đột với PR #79. Đã tạo branch `feat/phase-05-task-03-terraform-s3-cloudfront-oac-v2` trực tiếp từ `origin/main` tại `702b97a`.
+- Chỉ đưa 14 file Terraform/frontend hosting, test và CI vào commit `20caa84`; không merge docs cũ.
+- Terraform dev `fmt -check`, `validate`, `test`: 19 pass, 0 fail.

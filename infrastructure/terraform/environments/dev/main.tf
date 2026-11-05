@@ -15,14 +15,26 @@ module "event_bus" {
   source = "../../modules/event_bus"
   name   = var.event_bus_name
 }
+module "frontend_hosting" {
+  source      = "../../modules/frontend_hosting"
+  name_prefix = var.name_prefix
+  bucket_name = "${var.name_prefix}-${var.aws_account_id}-frontend"
+}
+
+locals {
+  frontend_callbacks = setunion(var.callback_urls, ["${module.frontend_hosting.url}/auth/callback/"])
+  frontend_logouts   = setunion(var.logout_urls, ["${module.frontend_hosting.url}/"])
+  frontend_origins   = setunion(var.cors_origins, [module.frontend_hosting.url])
+}
+
 module "auth" {
   source                      = "../../modules/cognito"
   name                        = var.name_prefix
   cognito_domain_prefix       = var.cognito_domain_prefix
   google_client_id            = var.google_client_id
   google_client_secret        = var.google_client_secret
-  callback_urls               = var.callback_urls
-  logout_urls                 = var.logout_urls
+  callback_urls               = local.frontend_callbacks
+  logout_urls                 = local.frontend_logouts
   deletion_protection_enabled = var.deletion_protection_enabled
 }
 locals {
@@ -52,7 +64,7 @@ module "http_api" {
   name               = var.name_prefix
   jwt_issuer         = module.auth.issuer
   jwt_audience       = module.auth.client_id
-  cors_origins       = var.cors_origins
+  cors_origins       = local.frontend_origins
   log_retention_days = var.log_retention_days
   lambda_targets = { for key, fn in module.functions : key => {
     function_name = fn.function_name, alias_invoke_arn = fn.alias_invoke_arn

@@ -25,3 +25,7 @@ output "websocket_management_endpoint" { value = module.websocket_api.management
 output "websocket_connections_arn" { value = module.websocket_api.connections_arn }
 output "moderation_state_machine_arn" { value = module.moderation_sfn.arn }
 output "moderation_role_arn" { value = module.moderation_sfn.role_arn }
+
+output "frontend_bucket_name" { value = module.frontend_hosting.bucket_name }
+output "cloudfront_distribution_id" { value = module.frontend_hosting.distribution_id }
+output "frontend_url" { value = module.frontend_hosting.url }

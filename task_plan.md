@@ -6,7 +6,7 @@ Tái hiện hoàn chỉnh hệ thống **Serverless URL Shortener with Realtime 
 ## Current Phase
 Review fix Task4.2 — complete (implementation/local): execution name/ARN được theo dõi trước StartExecution; cleanup chỉ xóa khi xác nhận terminal. Tám lifecycle regression tests và PS offline PASS; PR #77 đã merge main501c049; [PR fix #78](https://github.com/TrieuNguyenPhu/shorten-link/pull/78) từ main, CI #186 PASS, chờ review.
 
-Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e3769; Task4.2 có Terraform WebSocket/Step Functions, bounded IAM và E2E scenario, 37plan tests/Go checks/PS offline PASS; [PR #77](https://github.com/TrieuNguyenPhu/shorten-link/pull/77) CI #183 PASS, đã merge main501c049. AWS Phase3/4 chưa apply; Phase 5 đang triển khai, Task 5.1 đã hoàn tất kiểm tra local.
+Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e3769; Task4.2 có Terraform WebSocket/Step Functions, bounded IAM và E2E scenario, 37plan tests/Go checks/PS offline PASS; [PR #77](https://github.com/TrieuNguyenPhu/shorten-link/pull/77) CI #183 PASS, đã merge main501c049. AWS Phase3/4 chưa apply; Phase 5 đang triển khai, Task 5.1 và Task 5.3 đã hoàn tất kiểm tra local.
 
 ## Phases & Tasks
 
@@ -41,8 +41,8 @@ Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e37
 ### Phase 5: Frontend Next.js Dashboard & S3 + CloudFront OAC Hosting
 - [x] **Task 5.1 — complete (implementation/local):** Hoàn thiện Next.js App Router (`output: "export"`), nút Google qua Cognito PKCE & các trang Landing (`/`), Login (`/login`), Callback (`/auth/callback`) theo Hand-Drawn / Doodle & Sketch UI.
 - [ ] **Task 5.2:** Xây dựng Dashboard (`/dashboard`), My Links (`/links`) cùng phong cách Doodle & Sketch, tích hợp HTTP API thật & Native WebSocket Hook (`useRealtimeClicks`).
-- [ ] **Task 5.3:** Xây dựng Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + CloudFront Function URL rewrite).
-- **Status:** in_progress
+- [x] **Task 5.3 — complete (implementation/local):** Xây dựng Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + CloudFront Function URL rewrite) trên nhánh PR mới từ `origin/main`.
+- **Status:** in_progress (Task 5.2 vẫn pending; Task 5.3 complete implementation/local)
 
 ### Phase 6: Production Operations, Observability, Canary CI/CD & Load Testing
 - [ ] **Task 6.1:** Xây dựng Terraform Modules `observability` (CloudWatch Alarms, SNS, Dashboard, X-Ray) & `codedeploy_canary` (`LambdaCanary10Percent5Minutes` trên alias `live`).
@@ -65,3 +65,10 @@ Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e37
 |-------|---------|------------|
 | `aws_dynamodb_table` / `aws_cognito_user_pool` `deletion_protection` chặn `terraform destroy` trên stack cũ | 1 | Tắt `deletion_protection` và bật `force_destroy = true` kèm `AWS_ACCOUNT_ID_ENDPOINT_MODE=disabled`, sau đó chạy `terraform destroy` xóa sạch 64 resources ở `dev` và 5 resources ở `bootstrap`. |
 | Thư mục `services/lambda` và `.codegraph` bị khóa bởi tiến trình `go` / `codegraph` nền khi xóa local | 1 | Dừng tiến trình nền đang giữ khóa và xóa sạch toàn bộ file/thư mục cũ trong workspace. |
+
+
+## Session 2026-11-05 — Recreate Phase 5 / Task 5.3 PR
+
+- Không cherry-pick merge commit của PR #80. Branch mới được dựng trực tiếp từ `origin/main` (`702b97a`) rồi chép riêng 14 file implementation/test của hosting.
+- Commit `20caa84` giữ phạm vi Terraform/S3/CloudFront OAC, không đưa thay đổi backend hoặc tài liệu conflict cũ vào branch.
+- `terraform fmt -check -recursive`, `terraform validate` và `terraform test` PASS (19/19).

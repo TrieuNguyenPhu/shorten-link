@@ -95,6 +95,8 @@ jobs:
           terraform_wrapper: false
       - name: Build real Lambda packages for Terraform hash inputs
         run: bash scripts/build-lambdas.sh
+      - name: Test CloudFront viewer-request rewrites
+        run: node --test infrastructure/terraform/modules/frontend_hosting/tests/url-rewrite.test.mjs
       - name: Check Terraform formatting
         run: terraform fmt -check -recursive infrastructure/terraform
       - name: Validate and test bootstrap and dev without AWS

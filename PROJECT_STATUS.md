@@ -1,6 +1,6 @@
 # PROJECT_STATUS.md — Trạng Thái Hiện Tại Của Dự Án
 
-> **Cập nhật lần cuối:** 2026-11-05 (Phase 5 đang triển khai, Task 5.1 hoàn tất kiểm tra local).
+> **Cập nhật lần cuối:** 2026-11-05 (Task 5.3 đã hoàn tất implementation/local trên nhánh PR mới).
 > **Quy tắc bắt buộc:** File này luôn được cập nhật ngay sau khi hoàn thành mỗi Task trước khi mở Pull Request tương ứng.
 
 ---
@@ -10,7 +10,7 @@
 | Hạng mục | Trạng thái | Chi tiết |
 | --- | --- | --- |
 | **Giai đoạn hiện tại (Current Phase)** | **Phase 5 — `in_progress`** | Frontend tĩnh và hosting S3/CloudFront |
-| **Task hiện tại** | **Task 5.1 — complete (implementation/local)** | Google-only Cognito PKCE và giao diện Doodle |
+| **Task hiện tại** | **Task 5.3 — complete (implementation/local)** | Private S3, CloudFront OAC và URL rewrite |
 | **Task tiếp theo (Next Up)** | **Task 5.2** | Dashboard, My Links và realtime WebSocket |
 | **Trạng thái AWS Cloud** | **Core đã triển khai ngày 2026-11-04** | Account654822777701, ap-southeast-1; bootstrap10 + core42 tài nguyên mới; pin deployment policy sau apply, không destroy |
 | **13 Bộ Skills & `AGENTS.md`** | **Đã kiểm tra file/config** | Đủ 13 file skill đại diện; 314 thư mục cấp đầu có `SKILL.md`. Có cấu hình trỏ `~/.agents/skills`; không suy ra mọi host đều tự nạp |
@@ -32,7 +32,7 @@
 | **Phase 4** | **Task 4.2** | Terraform Modules `websocket_api` (`$connect`, `$disconnect`, stage `prod`) & `moderation_sfn` | `feat/phase-04-task-02-terraform-websocket-and-sfn` | complete (đã merge main501c049; review fix riêng) | [PR #77](https://github.com/TrieuNguyenPhu/shorten-link/pull/77); [fix #78](https://github.com/TrieuNguyenPhu/shorten-link/pull/78) |
 | **Phase 5** | **Task 5.1** | Next.js static, Google-only qua Cognito PKCE, Landing/Login/Callback theo Doodle & Sketch UI | `feat/phase-05-task-01-nextjs-auth-and-pages` | complete (implementation/local) | [PR #79](https://github.com/TrieuNguyenPhu/shorten-link/pull/79), [PR #70 — scaffold/static export](https://github.com/TrieuNguyenPhu/shorten-link/pull/70) |
 | **Phase 5** | **Task 5.2** | Dashboard & My Links Doodle & Sketch, API thật & Native WebSocket Hook (`useRealtimeClicks`) | `feat/phase-05-task-02-dashboard-api-and-websocket` | ⏳ Pending | — |
-| **Phase 5** | **Task 5.3** | Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + URL Rewrite) | `feat/phase-05-task-03-terraform-s3-cloudfront-oac` | ⏳ Pending | — |
+| **Phase 5** | **Task 5.3** | Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + URL Rewrite) | `feat/phase-05-task-03-terraform-s3-cloudfront-oac-v2` | complete (implementation/local) | PR mới chờ publish |
 | **Phase 6** | **Task 6.1** | Terraform Modules `observability` (Alarms, SNS, Dashboard, X-Ray) & `codedeploy_canary` (`live` alias) | `feat/phase-06-task-01-observability-and-canary` | ⏳ Pending | — |
 | **Phase 6** | **Task 6.2** | GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), k6 Load Test & Runbook E2E | `feat/phase-06-task-02-cicd-k6-and-runbook` | ⏳ Pending | — |
 
@@ -204,3 +204,12 @@
 - Auth kiểm `state`, PKCE S256, `id_token.nonce`, expiry, URL allowlist và dọn query callback; không có password/signup flow.
 - Chưa chạy Terraform apply, CloudFront hosting hoặc Google browser federation E2E trong task local này.
 - Trong working tree ban đầu, full Go suite/vet bị chặn bởi thay đổi backend ngoài task: `backend/internal/config/config.go:27` giữ biến `dest` nhưng dòng gán cấu hình đã bị xóa; chưa sửa trong commit frontend.
+
+
+## 19. Phase 5 / Task 5.3 — 2026-11-05
+
+- Tạo nhánh mới từ `origin/main` tại commit `702b97a` để tránh mang theo lịch sử tài liệu gây conflict của PR #80.
+- Commit code hosting: `20caa84` (`feat: add private S3 and CloudFront frontend hosting`).
+- Terraform dev: `fmt -check`, `validate` và `terraform test` PASS, tổng cộng 19 test pass; CloudFront viewer rewrite Node test được đưa vào CI.
+- Chưa chạy `terraform apply` trong bước tạo PR; tài nguyên AWS hiện hữu không bị thay đổi.
+- PR mới sẽ được tạo sau khi branch được push lên GitHub.
