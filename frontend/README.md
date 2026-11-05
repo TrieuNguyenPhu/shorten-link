@@ -21,4 +21,6 @@ Phát triển local bằng `corepack pnpm@10.33.2 dev`. Font Google được t�
 
 ## Phạm vi hiện tại
 
-Đây là scaffold đã kiểm tra static export. Google qua Cognito PKCE, landing/login/callback theo Doodle UI, dashboard, API và WebSocket thật vẫn thuộc Task5.1/5.2. Chưa triển khai hosting AWS hoặc E2E đăng nhập.
+Task 5.1 đã có landing, login Google-only qua Cognito authorization code + PKCE S256, callback có state/nonce/expiry validation và route dashboard handoff. UI dùng phong cách Doodle & Sketch, không có password/signup flow. Dashboard/My Links gọi API thật và WebSocket realtime thuộc Task 5.2; S3 private + CloudFront OAC thuộc Task 5.3. Chưa chạy browser federation E2E hoặc hosting AWS trong local task này.
+
+Public build cần sáu biến `NEXT_PUBLIC_*` từ Terraform outputs hoặc môi trường local. API/CloudFront/Cognito URL production phải dùng HTTPS/WSS và không được là placeholder; callback phải kết thúc bằng `/auth/callback/`.

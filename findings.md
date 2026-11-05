@@ -147,3 +147,9 @@
 - StartExecution không truyền name dùng UUID do AWS tạo nên response bị mất thì không biết execution ARN. Tạo tên e2e-code-GUID trước request cho phép suy ra ARN, đăng ký trước khi gửi và giữ CLI retries idempotent theo name/input của STANDARD.
 - Không xem lỗi transport là bằng chứng request bị từ chối. Cleanup Describe trước; chỉ stop RUNNING, rồi Describe để xác nhận terminal. Stop bị mất response vẫn có thể đối soát ABORTED. Execution chưa tồn tại/không đọc được/still RUNNING/PENDING_REDRIVE đều giữ META và in ARN, không suy diễn an toàn để xóa.
 - Regression tests chạy hàm Start-RealtimeModeration và finally lấy trực tiếp từ AST nguồn để không khởi động luồng AWS/HTTP thật; mock tại dependency boundary. Tám trường hợp bao gồm start mất response, workflow đã xong, không rõ trạng thái, stop bị từ chối/mất response, poll lỗi, trạng thái chưa kết thúc và success.
+
+## Phase 5 / Task 5.1 — 2026-11-05
+
+- Task 5.1 dùng native Next.js App Router + Tailwind/CSS hiện có, không thêm component library. Static export tiếp tục dùng `output: "export"`, `trailingSlash: true`, `images.unoptimized: true`.
+- Browser auth chỉ dùng Cognito authorization code + PKCE S256 với Google IdP; không có password/signup flow và không đưa secret vào public config.
+- Builder review đã chốt thêm: đối chiếu `id_token.nonce`, lưu expiry và dọn query callback bằng `history.replaceState`; service URL production chỉ HTTPS/WSS, origin-only và reject placeholder/query/fragment.

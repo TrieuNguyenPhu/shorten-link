@@ -1,6 +1,6 @@
 # PROJECT_STATUS.md — Trạng Thái Hiện Tại Của Dự Án
 
-> **Cập nhật lần cuối:** 2026-11-04 (**Phase 4 implementation/local complete; PR #77 đã merge; cleanup review fix PR #78 CI #186 PASS, chờ review**)
+> **Cập nhật lần cuối:** 2026-11-05 (Phase 5 đang triển khai, Task 5.1 hoàn tất kiểm tra local).
 > **Quy tắc bắt buộc:** File này luôn được cập nhật ngay sau khi hoàn thành mỗi Task trước khi mở Pull Request tương ứng.
 
 ---
@@ -9,9 +9,9 @@
 
 | Hạng mục | Trạng thái | Chi tiết |
 | --- | --- | --- |
-| **Giai đoạn hiện tại (Current Phase)** | **Phase 4 — `complete` (implementation/local)** | Task4.1 đã merge; Task4.2 Terraform/local complete, AWS Phase3/4 chưa deploy |
-| **Task hiện tại** | **Task 4.2 — `complete` (implementation/local, review fix)** | Lost-response cleanup đã sửa; tám lifecycle regressions và PS offline PASS; PR #78 từ main501c049 sau PR #77 merge; CI #186 PASS, chờ review |
-| **Task tiếp theo (Next Up)** | **Task 5.1 (Phase 5)** | Next.js Google auth và Doodle UI sau Phase4 |
+| **Giai đoạn hiện tại (Current Phase)** | **Phase 5 — `in_progress`** | Frontend tĩnh và hosting S3/CloudFront |
+| **Task hiện tại** | **Task 5.1 — complete (implementation/local)** | Google-only Cognito PKCE và giao diện Doodle |
+| **Task tiếp theo (Next Up)** | **Task 5.2** | Dashboard, My Links và realtime WebSocket |
 | **Trạng thái AWS Cloud** | **Core đã triển khai ngày 2026-11-04** | Account654822777701, ap-southeast-1; bootstrap10 + core42 tài nguyên mới; pin deployment policy sau apply, không destroy |
 | **13 Bộ Skills & `AGENTS.md`** | **Đã kiểm tra file/config** | Đủ 13 file skill đại diện; 314 thư mục cấp đầu có `SKILL.md`. Có cấu hình trỏ `~/.agents/skills`; không suy ra mọi host đều tự nạp |
 
@@ -30,7 +30,7 @@
 | **Phase 3** | **Task 3.2** | Terraform Module `event_pipeline` (nhận bus từ Task 2.2, tạo rule, SQS `ClickQueue` + `ClickDLQ`, ESM) | `feat/phase-03-task-02-terraform-event-pipeline` | complete (đã merge main6dee1ca) | [PR #75](https://github.com/TrieuNguyenPhu/shorten-link/pull/75) | |
 | **Phase 4** | **Task 4.1** | Go Lambdas `ws-connect`, `ws-disconnect`, `PostToConnection` Pusher (`410 Gone`) & `moderate-check` + ASL | `feat/phase-04-task-01-websocket-and-moderation-lambdas` | complete (đã merge mainf6e3769) | [PR #76](https://github.com/TrieuNguyenPhu/shorten-link/pull/76) |
 | **Phase 4** | **Task 4.2** | Terraform Modules `websocket_api` (`$connect`, `$disconnect`, stage `prod`) & `moderation_sfn` | `feat/phase-04-task-02-terraform-websocket-and-sfn` | complete (đã merge main501c049; review fix riêng) | [PR #77](https://github.com/TrieuNguyenPhu/shorten-link/pull/77); [fix #78](https://github.com/TrieuNguyenPhu/shorten-link/pull/78) |
-| **Phase 5** | **Task 5.1** | Next.js static, Google-only qua Cognito PKCE, Landing/Login/Callback theo Doodle & Sketch UI | `feat/phase-05-task-01-nextjs-auth-and-pages` | ⏳ Pending (auth/UI); scaffold đã kiểm | [PR #70 — scaffold/static export](https://github.com/TrieuNguyenPhu/shorten-link/pull/70) |
+| **Phase 5** | **Task 5.1** | Next.js static, Google-only qua Cognito PKCE, Landing/Login/Callback theo Doodle & Sketch UI | `feat/phase-05-task-01-nextjs-auth-and-pages` | complete (implementation/local) | [PR #79](https://github.com/TrieuNguyenPhu/shorten-link/pull/79), [PR #70 — scaffold/static export](https://github.com/TrieuNguyenPhu/shorten-link/pull/70) |
 | **Phase 5** | **Task 5.2** | Dashboard & My Links Doodle & Sketch, API thật & Native WebSocket Hook (`useRealtimeClicks`) | `feat/phase-05-task-02-dashboard-api-and-websocket` | ⏳ Pending | — |
 | **Phase 5** | **Task 5.3** | Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + URL Rewrite) | `feat/phase-05-task-03-terraform-s3-cloudfront-oac` | ⏳ Pending | — |
 | **Phase 6** | **Task 6.1** | Terraform Modules `observability` (Alarms, SNS, Dashboard, X-Ray) & `codedeploy_canary` (`live` alias) | `feat/phase-06-task-01-observability-and-canary` | ⏳ Pending | — |
@@ -196,3 +196,11 @@
 - PR fix [#78](https://github.com/TrieuNguyenPhu/shorten-link/pull/78), base main501c049 → ff45f5a, tree74817f2 đã khớp local/remote; CI #186 PASS, chờ review.
 
 - CI [run #186](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41798012440) trên ff45f5a PASS backend, terraform (37plan tests + PS preflight/tám lifecycle cases), packaging-windows và frontend. Commit chốt chỉ tài liệu: URL PR/CI và khôi phục nguyên lịch sử progress.md; không sửa code/apply/merge.
+
+## 18. Phase 5 / Task 5.1 — 2026-11-05
+
+- `pnpm lint`, `pnpm typecheck`, `pnpm test` (12 tests), `pnpm build` và artifact tests đều PASS trong `frontend/`.
+- Build tạo `out/index.html`, `out/login/index.html`, `out/auth/callback/index.html`, `out/dashboard/index.html`, `out/404.html` và static assets.
+- Auth kiểm `state`, PKCE S256, `id_token.nonce`, expiry, URL allowlist và dọn query callback; không có password/signup flow.
+- Chưa chạy Terraform apply, CloudFront hosting hoặc Google browser federation E2E trong task local này.
+- Trong working tree ban đầu, full Go suite/vet bị chặn bởi thay đổi backend ngoài task: `backend/internal/config/config.go:27` giữ biến `dest` nhưng dòng gán cấu hình đã bị xóa; chưa sửa trong commit frontend.
