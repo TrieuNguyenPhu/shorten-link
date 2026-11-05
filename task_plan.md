@@ -1,67 +1,10 @@
-# Task Plan: Serverless URL Shortener with Realtime Analytics (Go + Terraform + Next.js)
+# Kế hoạch hiện tại
 
-## Goal
-Tái hiện hoàn chỉnh hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS theo chuỗi 21 bài và repository `nghiadaulau/serverless-url-shortener-aws`, chuyển đổi sang **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js Static Export (`S3 + CloudFront OAC`)**, với mỗi Task hoàn thành được tạo một **Pull Request riêng** và luôn cập nhật trạng thái hiện tại của dự án.
-
-## Current Phase
-Review fix Task4.2 — complete (implementation/local): execution name/ARN được theo dõi trước StartExecution; cleanup chỉ xóa khi xác nhận terminal. Tám lifecycle regression tests và PS offline PASS; PR #77 đã merge main501c049; [PR fix #78](https://github.com/TrieuNguyenPhu/shorten-link/pull/78) từ main, CI #186 PASS, chờ review.
-
-Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e3769; Task4.2 có Terraform WebSocket/Step Functions, bounded IAM và E2E scenario, 37plan tests/Go checks/PS offline PASS; [PR #77](https://github.com/TrieuNguyenPhu/shorten-link/pull/77) CI #183 PASS, đã merge main501c049. AWS Phase3/4 chưa apply; Phase 5 đang triển khai, Task 5.1 đã hoàn tất kiểm tra local.
-
-## Phases & Tasks
-
-### Phase 0: Reference Audit, Clean Reset & Architecture Specification
-- [x] **Task 0.1:** Hoàn thiện audit nguồn, xác minh setup skills/`AGENTS.md`, đặc tả kiến trúc và kế hoạch chi tiết sau review PR #65. AWS cũ đã được người dùng xác nhận dọn sạch; không lặp lại thao tác xóa.
-- **Status:** complete (PR #65 đã merge main; chưa triển khai ứng dụng)
-
-### Phase 1: Monorepo & Local Foundation
-- **Task hiện tại:** Task 1.1/1.2 — complete và đã vào main; final review đã sửa/kiểm thử
-- [x] **Task 1.1:** Khởi tạo cấu trúc Monorepo, `Makefile`, Go module (`backend/`), Domain Models, Base62 Generator (`crypto/rand`) & URL Validator kèm unit tests và CI nền.
-- [x] **Task 1.2:** Xây dựng Observability Middleware (`slog` JSON, CloudWatch EMF metrics, X-Ray wrapper) & script đóng gói Lambda `bootstrap` ZIP (`arm64`) kèm tests.
-- **Status:** complete (Task 1.1/1.2 đã vào main; final review đã sửa/kiểm thử)
-
-### Phase 2: Core URL Shortener (DynamoDB, Cognito JWT & 4 HTTP Handlers)
-- **Task hiện tại:** Task 2.2 và final review/deployment — complete (PR #73 chờ review/merge)
-- [x] **Task 2.1:** Triển khai DynamoDB Repository, Link Service, EventBridge publisher, local HTTP harness & 4 Go HTTP Lambda Handlers kèm unit/integration tests (multi-tenant, anti-IDOR, collision retry, 301, lỗi publish).
-- [x] **Task 2.2:** Xây dựng Terraform Bootstrap (S3 remote state + lockfile, OIDC provider/deployment role) & Core Infrastructure (`dynamodb`, Cognito Google-only social IdP, `lambda`, `http_api`, custom event bus) + `environments/dev`.
-- **Status:** complete (implementation + AWS core apply/smoke; Google authenticated E2E pending)
-
-### Phase 3: Event-Driven Analytics (EventBridge, SQS + DLQ, ClickAggregator)
-- **Task hiện tại:** Task 3.2 — complete (PR #75 đã merge main6dee1ca; AWS pipeline chưa deploy)
-- [x] **Task 3.1:** Triển khai Go Lambda `click-aggregator` (`TransactWriteItems` 3 thao tác, phân biệt chính xác `CancellationReasons`, `ReportBatchItemFailures`) kèm unit/integration tests.
-- [x] **Task 3.2:** Xây dựng Terraform Module `event_pipeline` nhận custom bus từ Task 2.2, thêm rule `link.clicked`, SQS `ClickQueue` + `ClickDLQ` 14d, Event Source Mapping.
-- **Status:** complete (implementation/local; AWS pipeline chưa deploy)
-
-### Phase 4: Realtime WebSocket & Step Functions Moderation
-- **Task hiện tại:** Task 4.2 — complete (implementation/local)
-- [x] **Task 4.1:** Triển khai Go Lambdas `ws-connect`, `ws-disconnect`, `PostToConnection` Pusher (xử lý `410 GoneException`) & `moderate-check` + `statemachine/moderation.asl.json` kèm tests.
-- [x] **Task 4.2:** Xây dựng Terraform Modules `websocket_api` (`$connect`, `$disconnect`, stage `prod`) & `moderation_sfn` (Step Functions Standard + IAM).
-- **Status:** complete (implementation/local; AWS deployment/E2E pending)
-
-### Phase 5: Frontend Next.js Dashboard & S3 + CloudFront OAC Hosting
-- [x] **Task 5.1 — complete (implementation/local):** Hoàn thiện Next.js App Router (`output: "export"`), nút Google qua Cognito PKCE & các trang Landing (`/`), Login (`/login`), Callback (`/auth/callback`) theo Hand-Drawn / Doodle & Sketch UI.
-- [ ] **Task 5.2:** Xây dựng Dashboard (`/dashboard`), My Links (`/links`) cùng phong cách Doodle & Sketch, tích hợp HTTP API thật & Native WebSocket Hook (`useRealtimeClicks`).
-- [ ] **Task 5.3:** Xây dựng Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + CloudFront Function URL rewrite).
-- **Status:** in_progress
-
-### Phase 6: Production Operations, Observability, Canary CI/CD & Load Testing
-- [ ] **Task 6.1:** Xây dựng Terraform Modules `observability` (CloudWatch Alarms, SNS, Dashboard, X-Ray) & `codedeploy_canary` (`LambdaCanary10Percent5Minutes` trên alias `live`).
-- [ ] **Task 6.2:** Thiết lập GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), kịch bản `tests/load/redirect.k6.js` & tài liệu vận hành E2E.
-- **Status:** pending
-
-## Key Decisions
-| Decision | Rationale |
-|----------|-----------|
-| Tách domain CloudFront (Frontend) và API Gateway (`GET /{code}`) | Giữ nguyên route `GET /{code}` ở gốc API Gateway như bản gốc mà không xung đột với các route tĩnh của Next.js trên CloudFront. |
-| Phân loại đầy đủ `CancellationReasons` theo META/STAT/marker | Không coi mọi cancellation là duplicate; phân biệt event của link đã xóa, conflict và lỗi hỗn hợp theo hợp đồng kiến trúc. |
-| Cấu hình `lifecycle { ignore_changes = [function_version, routing_config] }` trên `aws_lambda_alias.live` | Cho phép CodeDeploy quản lý việc dịch chuyển phiên bản Canary mà không bị `terraform apply` ghi đè. |
-| Giữ TTL marker 24 giờ và công bố giới hạn replay | Chống trùng phụ thuộc marker còn tồn tại; không khẳng định exactly-once vô thời hạn. |
-| Bootstrap OIDC tách ứng dụng, build static frontend sau khi có outputs | Tài khoản sạch cần trust/role trước khi CI authenticate; static export cần endpoint thật ở thời điểm build. |
-| Chỉ Google qua Cognito User Pool | Google redirect về Cognito `/oauth2/idpresponse`, Cognito Code+PKCE về CloudFront; API dùng Cognito access token + `sub`. Không có password/signup flow. Google client secret chỉ ở input deploy bảo mật và remote state. |
-| Hand-Drawn / Doodle & Sketch UI | Dùng ngôn ngữ nét vẽ tay nhất quán cho frontend, nhưng giữ chữ, dữ liệu và các trạng thái tương tác rõ, accessible. |
-
-## Errors Encountered (Nhật ký lịch sử trước phiên hoàn thiện 2026-10-27; không kiểm chứng AWS lại trong phiên này)
-| Error | Attempt | Resolution |
-|-------|---------|------------|
-| `aws_dynamodb_table` / `aws_cognito_user_pool` `deletion_protection` chặn `terraform destroy` trên stack cũ | 1 | Tắt `deletion_protection` và bật `force_destroy = true` kèm `AWS_ACCOUNT_ID_ENDPOINT_MODE=disabled`, sau đó chạy `terraform destroy` xóa sạch 64 resources ở `dev` và 5 resources ở `bootstrap`. |
-| Thư mục `services/lambda` và `.codegraph` bị khóa bởi tiến trình `go` / `codegraph` nền khi xóa local | 1 | Dừng tiến trình nền đang giữ khóa và xóa sạch toàn bộ file/thư mục cũ trong workspace. |
+- [x] Rà soát trạng thái repository và rút gọn tài liệu lịch sử.
+- [x] Xóa comment dòng khỏi mã nguồn được quản lý.
+- [ ] **Phase 5 — in_progress:** hoàn thiện frontend và hosting.
+  - [x] **Task 5.1 — complete (implementation/local):** Next.js static, Google-only Cognito PKCE, landing/login/callback theo Doodle & Sketch UI.
+  - [x] Task 5.2: Dashboard, My Links, HTTP API thật và native WebSocket realtime hook. Commit `babf5af`.
+  - [x] Task 5.3: S3 private, CloudFront OAC, cache policy và static rewrite. Commits `ea53ccd`, `0c624b0`.
+- [x] Frontend refresh Shrnk: branding, auth-aware navigation, architecture route và landing create form.
+- [ ] Phase 6: observability, canary, CI/CD và AWS E2E.
