@@ -2,7 +2,8 @@
 
 ## Phase 6 — 2026-11-05
 
-- [x] Task 6.1 — **Status: complete (implementation/local)**; Task 6.2 pending. Nhánh `feat/phase-06-task-01-observability-and-canary-v2` từ main `f5112f1`.
+- [x] **Task 6.1:** **Status: complete (đã merge main qua PR #89)**: Terraform Modules `observability` & `codedeploy_canary`.
+- [x] **Task 6.2:** **Status: complete (implementation/local)**: GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), k6 Load Test & Runbook E2E — [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90). Branch đã đồng bộ với `origin/main` sau khi PR #89 đã merge.
 
 
 ## Goal
@@ -59,8 +60,8 @@ Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e37
 
 ### Phase 6: Production Operations, Observability, Canary CI/CD & Load Testing
 - [x] **Task 6.1:** Xây dựng Terraform Modules `observability` (CloudWatch Alarms, SNS, Dashboard, X-Ray) & `codedeploy_canary` (`LambdaCanary10Percent5Minutes` trên alias `live`).
-- [ ] **Task 6.2:** Thiết lập GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), kịch bản `tests/load/redirect.k6.js` & tài liệu vận hành E2E.
-- **Status:** pending
+- [x] **Task 6.2:** Thiết lập GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), kịch bản `tests/load/redirect.k6.js` & tài liệu vận hành E2E.
+- **Status:** complete (implementation/local); AWS/CD/canary thật pending
 
 ## Key Decisions
 | Decision | Rationale |
@@ -108,8 +109,6 @@ Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e37
 ## 2026-11-05 — PR #88 sau squash PR #87
 - [x] **Status: complete (local)**. Merge main `2b6ed24` vào PR #88 hiện có; bảo toàn implementation UI/PKCE đã kiểm thử.
 
-Task 6.1: [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89), code tree `a1706d5` đã đối chiếu local/remote; chưa merge/apply. Git HTTPS thiếu credential, xuất bản qua GitHub connector.
+Task 6.1: [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89) đã merge vào `origin/main` (`10b6d7e`). CI [#223](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982495610) PASS cả 4 jobs sau trust hardening.
 
-Task 6.1: CI [#218](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41979476998) PASS toàn bộ bốn jobs trên commit36faa086. AWS apply/canary thật vẫn pending; Task6.2 có [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90) riêng từ main.
-
-Chốt Task6.1: CI [#223](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982495610) PASS cả4jobs trên91794cf sau trust hardening. Task6.2 PR#90 có CI#222 PASS5jobs. Commit chốt chỉ tài liệu; cả hai PR chờ review/merge, không apply/dispatch hoặc load test AWS.
+Task 6.2: [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90), CI [#222](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982111683) PASS cả 5 jobs trên commit 2985818 sau cấu hình environment tường minh. Branch đã giải quyết merge conflict và đồng bộ với `origin/main`. AWS apply/canary thật vẫn pending.

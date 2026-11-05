@@ -276,16 +276,20 @@
 
 - Lint/typecheck/build static, 27 frontend tests, `bash -n scripts/publish-frontend.sh` và diff-check PASS. Source `frontend/`, scripts và tests không thay đổi so với #88 trước merge. Push merge commit lên đúng PR #88; không tạo PR mới.
 
-## Phase 6 — 2026-11-05
-
-Đọc bốn file trạng thái và master plan từ Git (bản workspace chính đang bị xóa chưa commit). Dùng worktree riêng, giữ nguyên diff người dùng. Skills planning-with-files/TDD/ponytail không có trên host; thực hiện quy trình AGENTS/test-first trực tiếp. Không apply/load test AWS.
+## Phase 6 / Task 6.1 — 2026-11-05
 
 Task 6.1 implementation/local complete: RED module missing → GREEN; Terraform 1.17.1/provider 6.71.0 fmt/init-backend=false-lockfile-readonly/validate, 20 bootstrap + 21 dev mock-plan tests PASS. Go race/vet và build8ZIP PASS. SNS topic policy chỉ CloudWatch từ đúng alarm/account; không subscription mặc định. IAM service boundary chỉ alias resolve:live; deployment grants exact app/group/alarms, quota PASS. Sửa test fixture S3 ARN unknown; không apply để né test. Kiểm diff thủ công không secret/state; không chạy AWS/canary thật.
 
-Task 6.1: [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89), code tree `a1706d5` đã đối chiếu local/remote; chưa merge/apply. Git HTTPS thiếu credential, xuất bản qua GitHub connector.
+Task 6.1: [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89), CI [#223](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982495610) PASS cả 4 jobs sau trust hardening. Đã merge vào main (`10b6d7e`).
 
-Task 6.1: CI [#218](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41979476998) PASS toàn bộ bốn jobs trên commit36faa086. AWS apply/canary thật vẫn pending; Task6.2 có [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90) riêng từ main.
+## Phase 6 / Task 6.2 — 2026-11-05
 
-Review Phase6.1: AWS tài liệu hóa SourceAccount/SourceArn cho CodeDeploy Lambda; sửa nhận định comment cũ, thêm exact account/group trust và regression RED→GREEN. Không đổi alias/deploy AWS. Chạy lại Terraform dev tests/validate/fmt sau sửa; CI cũ #218 là bằng chứng trước hardening, CI mới sẽ kiểm commit này.
-
-Chốt Task6.1: CI [#223](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982495610) PASS cả4jobs trên91794cf sau trust hardening. Task6.2 PR#90 có CI#222 PASS5jobs. Commit chốt chỉ tài liệu; cả hai PR chờ review/merge, không apply/dispatch hoặc load test AWS.
+- Status: complete (implementation/local). Branch `feat/phase-06-task-02-cicd-k6-and-runbook` [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90).
+- RED script missing → GREEN 11 Python release/writer tests (subcases: same-version, active/weighted guard, response lost/unknown/timeout, rollback success/failure, manifest/digest mismatch, build/apply failure, config drift và không upload khi lỗi); 3 k6 tests PASS. Mocks ở process/CLI boundaries, không gọi AWS.
+- make check PASS: Go race/vet/build8ZIP, Terraform 22 bootstrap +19 dev plan tests, frontend lint/typecheck/build/27 tests, operations tests. Make 4.4.1 lấy từ Ubuntu package vào /tmp (host chưa có make); sửa Makefile pin corepack pnpm10.33.2 sau lần đầu host pnpm12 mismatch. Không bypass version check.
+- Bản ghép infrastructure hai task từ archive riêng: Terraform init-backend=false-lockfile-readonly/validate/23 bootstrap+21 dev=44 mock-plan tests PASS. Task 6.2 chỉ chứa diff riêng, không chép module Task6.1.
+- Go DynamoDB Local3.3 repository/HTTP-WebSocket integration -race PASS; k6 2.3.0 pinned digest với HTTP harness thật + DDB Local và PutEvents recorder: 20/20 301,~1.99 successful RPS, zero failure/throttle. Không chứng minh AWS event delivery/benchmark. Container DDB của phiên đã dừng.
+- actionlint1.7.11, Bash syntax,8 CloudFront rewrite tests và PS7.5 networknone offline preflight/lifecycle (thêm Canary authorization guard) PASS. Script dùng chung TS config validator chạy được trên Node26.
+- IAM hosting pin CloudFront IDs, không wildcard unknown resources; saved plan SSE trong state bucket/private prefix, hash/commit/package binding, write-once và lifecycle current/noncurrent2d. Không GitHub plan artifact chứa secret. Review diff/secrets/state thủ công và diff-check PASS. AWS deployment/OIDC/canary/rollback/Google account E2E vẫn pending; không gửi email hoặc chạy AWS load test.
+- CI [#222](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982111683) PASS cả 5 jobs trên commit 2985818 sau cấu hình environment tường minh.
+- Giải quyết merge conflict và đồng bộ branch với `origin/main` sau khi PR #89 đã merge.

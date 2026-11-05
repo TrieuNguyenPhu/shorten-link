@@ -2,7 +2,8 @@
 
 ## Phase 6 — 2026-11-05
 
-Task 6.1 — **complete (implementation/local)**: observability và CodeDeploy canary; Task 6.2 tiếp theo. Worktree riêng từ main `f5112f1`; không apply AWS.
+- **Task 6.1:** **complete (đã merge main qua PR #89)**: Terraform Modules `observability` & `codedeploy_canary`.
+- **Task 6.2:** **complete (implementation/local)**: GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), k6 Load Test & Runbook E2E — [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90). Branch đã đồng bộ với `origin/main` sau khi merge PR #89.
 
 
 > **Cập nhật lần cuối:** 2026-11-05 (UI tối giản, review toàn project và production rollout).
@@ -30,9 +31,9 @@ Task 6.1 — **complete (implementation/local)**: observability và CodeDeploy c
 
 | Hạng mục | Trạng thái | Chi tiết |
 | --- | --- | --- |
-| **Giai đoạn hiện tại (Current Phase)** | **Phase 5 — complete (implementation/deployed)** | Frontend tĩnh và hosting S3/CloudFront; Google account E2E chưa thực hiện |
-| **Task hiện tại** | **Task 5.5 — complete (implementation/deployed)** | UI refinement, dashboard lifecycle và project review |
-| **Task tiếp theo (Next Up)** | **Task 6.1** | Observability nâng cao và CodeDeploy canary |
+| **Giai đoạn hiện tại (Current Phase)** | **Phase 6 — complete (implementation/local)** | CI/CD, observability/canary và k6/runbook; AWS validation pending |
+| **Task hiện tại** | **Task 6.2 — complete (implementation/local)** | Manual OIDC CD, reviewed saved plan, canary gating, k6 và E2E runbook |
+| **Task tiếp theo (Next Up)** | **Review/merge Task 6.1 → Task 6.2; AWS validation** | Provision bootstrap/app và chạy canary sandbox khi được phép |
 | **Trạng thái AWS Cloud** | **Core/pipeline/realtime/hosting đang phục vụ** | Account 654822777701, ap-southeast-1; phiên này publish frontend, không apply Terraform |
 | **13 Bộ Skills & `AGENTS.md`** | **Đã kiểm tra file/config** | Đủ 13 file skill đại diện; 314 thư mục cấp đầu có `SKILL.md`. Có cấu hình trỏ `~/.agents/skills`; không suy ra mọi host đều tự nạp |
 
@@ -55,8 +56,8 @@ Task 6.1 — **complete (implementation/local)**: observability và CodeDeploy c
 | **Phase 5** | **Task 5.2** | Dashboard & My Links Doodle & Sketch, API thật & Native WebSocket Hook (`useRealtimeClicks`) | `feat/phase-05-task-02-dashboard-api-and-websocket` | complete (implementation/deployed) | [PR #82](https://github.com/TrieuNguyenPhu/shorten-link/pull/82) và Task 5.5 |
 | **Phase 5** | **Task 5.3** | Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + URL Rewrite) | `feat/phase-05-task-03-terraform-s3-cloudfront-oac-v2` | complete (implementation/local) | [PR #81](https://github.com/TrieuNguyenPhu/shorten-link/pull/81) |
 | **Phase 5** | **Task 5.5** | UI tối giản, font Lobster, lifecycle dashboard và project review/release | `fix/phase-05-ui-review-production` | complete (implementation/deployed) | [PR #88](https://github.com/TrieuNguyenPhu/shorten-link/pull/88) |
-| **Phase 6** | **Task 6.1** | Terraform Modules `observability` (Alarms, SNS, Dashboard, X-Ray) & `codedeploy_canary` (`live` alias) | `feat/phase-06-task-01-observability-and-canary-v2` | complete (implementation/local) | [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89) |
-| **Phase 6** | **Task 6.2** | GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), k6 Load Test & Runbook E2E | `feat/phase-06-task-02-cicd-k6-and-runbook` | ⏳ Pending | — |
+| **Phase 6** | **Task 6.1** | Terraform Modules `observability` (Alarms, SNS, Dashboard, X-Ray) & `codedeploy_canary` (`live` alias) | `feat/phase-06-task-01-observability-and-canary-v2` | complete (đã merge main qua PR #89) | [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89) |
+| **Phase 6** | **Task 6.2** | GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), k6 Load Test & Runbook E2E | `feat/phase-06-task-02-cicd-k6-and-runbook` | complete (implementation/local) | [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90) |
 
 ---
 
@@ -249,10 +250,6 @@ Task 6.1 — **complete (implementation/local)**: observability và CodeDeploy c
 - **Status: complete (implementation/deployed)**. Yêu cầu: đăng nhập về trang chủ; sửa dashboard nhấp nháy; layout chung; menu active/hover; login tối giản; font Lobster; review toàn project, sửa lỗi và triển khai production.
 - Nhánh `fix/phase-05-ui-review-production` tạo từ `origin/main` (`2253a3c`), kế thừa hai commit sửa PKCE #87 để giữ luồng đăng nhập an toàn. Giữ nguyên các diff có sẵn để rà soát, không tự hoàn nguyên.
 
-Task 6.1: [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89), code tree `a1706d5` đã đối chiếu local/remote; chưa merge/apply. Git HTTPS thiếu credential, xuất bản qua GitHub connector.
+Task 6.1: [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89) đã merge vào `origin/main` (`10b6d7e`). CI [#223](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982495610) PASS cả 4 jobs sau trust hardening.
 
-Task 6.1: CI [#218](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41979476998) PASS toàn bộ bốn jobs trên commit36faa086. AWS apply/canary thật vẫn pending; Task6.2 có [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90) riêng từ main.
-
-Review Phase6.1: AWS tài liệu hóa SourceAccount/SourceArn cho CodeDeploy Lambda; sửa nhận định comment cũ, thêm exact account/group trust và regression RED→GREEN. Không đổi alias/deploy AWS. Chạy lại Terraform dev tests/validate/fmt sau sửa; CI cũ #218 là bằng chứng trước hardening, CI mới sẽ kiểm commit này.
-
-Chốt Task6.1: CI [#223](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982495610) PASS cả4jobs trên91794cf sau trust hardening. Task6.2 PR#90 có CI#222 PASS5jobs. Commit chốt chỉ tài liệu; cả hai PR chờ review/merge, không apply/dispatch hoặc load test AWS.
+Task 6.2: [PR #90](https://github.com/TrieuNguyenPhu/shorten-link/pull/90), CI [#222](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982111683) PASS cả 5 jobs trên commit 2985818 sau cấu hình environment tường minh. Branch đã giải quyết merge conflict và đồng bộ với `origin/main`. AWS apply/canary thật vẫn pending.

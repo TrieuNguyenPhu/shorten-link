@@ -365,11 +365,13 @@
   - Create: `docs/e2e-verification-and-operations.md`
   - Modify: `README.md`, `Makefile`, `PROJECT_STATUS.md`, `task_plan.md`, `progress.md`, `findings.md`
 - **Steps:**
-  - [ ] **Step 1:** Hoàn thiện CI đã mở rộng qua các phase: Go race/vet, build8ZIP, Next lint/typecheck/test/static build, Terraform fmt/init-backend=false/validate/test. Không đợi Phase6 mới chạy CI.
-  - [ ] **Step 2:** CD OIDC dùng id-token:write/contents:read, role-to-assume bootstrap output, exact aud/sub, protected environment và manual workflow_dispatch; serialized concurrency, không apply PR/fork không tin cậy. Pin actions lúc triển khai. Bootstrap operator chạy riêng khi được phép. Build Lambda → saved Terraform plan được review → apply app → lấy API/WS/Cognito/CF outputs → public config → Next static build → canary success → sync hashed assets trước HTML → invalidate. Build placeholder bị chặn; rollback/failure dừng publish frontend. Tuân thủ alias ownership ở kiến trúc6.
-  - [ ] **Step 3:** k6 dùng redirects:0, mặc định MODE=smoke 2VUs/10s với sleep1s sau mỗi request (tối đa khoảng2RPS); MODE=stress ramp40 chỉ khi được yêu cầu rõ, báo cả successful throughput và failed/throttled, không dùng benchmark Node làm baseline Go.
-  - [ ] **Step 4:** Tạo E2E scripts/runbook theo ma trận bên dưới: service ESM/DLQ, SFN execution history, OIDC negative trust, canary success và fault-induced rollback trong sandbox được phép. Ghi retention/chi phí/cleanup và redrive có đối soát vì DLQ14d dài hơn dedupe24h; không blanket replay dữ liệu cũ.
-  - [ ] **Step 5:** Chạy toàn bộ lệnh kiểm tra (`make check`), cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 6.2.
+  - [x] **Step 1:** Hoàn thiện CI đã mở rộng qua các phase: Go race/vet, build8ZIP, Next lint/typecheck/test/static build, Terraform fmt/init-backend=false/validate/test. Không đợi Phase6 mới chạy CI.
+  - [x] **Step 2:** CD OIDC dùng id-token:write/contents:read, role-to-assume bootstrap output, exact aud/sub, protected environment và manual workflow_dispatch; serialized concurrency, không apply PR/fork không tin cậy. Pin actions lúc triển khai. Bootstrap operator chạy riêng khi được phép. Build Lambda → saved Terraform plan được review → apply app → lấy API/WS/Cognito/CF outputs → public config → Next static build → canary success → sync hashed assets trước HTML → invalidate. Build placeholder bị chặn; rollback/failure dừng publish frontend. Tuân thủ alias ownership ở kiến trúc6.
+  - [x] **Step 3:** k6 dùng redirects:0, mặc định MODE=smoke 2VUs/10s với sleep1s sau mỗi request (tối đa khoảng2RPS); MODE=stress ramp40 chỉ khi được yêu cầu rõ, báo cả successful throughput và failed/throttled, không dùng benchmark Node làm baseline Go.
+  - [x] **Step 4:** Tạo E2E scripts/runbook theo ma trận bên dưới: service ESM/DLQ, SFN execution history, OIDC negative trust, canary success và fault-induced rollback trong sandbox được phép. Ghi retention/chi phí/cleanup và redrive có đối soát vì DLQ14d dài hơn dedupe24h; không blanket replay dữ liệu cũ.
+  - [x] **Step 5:** Chạy toàn bộ lệnh kiểm tra (`make check`), cập nhật `PROJECT_STATUS.md`, `task_plan.md`, `progress.md` và mở Pull Request riêng cho Task 6.2.
+
+- **Bằng chứng local:** xem `docs/e2e-verification-and-operations.md`; AWS/CD/canary thật pending. Task 6.1 có PR #89 độc lập, chưa merge.
 
 ---
 
