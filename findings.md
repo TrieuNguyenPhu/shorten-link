@@ -175,3 +175,11 @@
 - WebSocket URL thật có `/prod`, parser cũ chỉ nhận origin. Test hồi quy RED với lỗi `NEXT_PUBLIC_WS_URL must be an origin URL without a path`, GREEN sau khi giữ pathname cho WebSocket; vẫn từ chối credentials/query/fragment và WS không TLS ngoài loopback.
 - Đọc Google JSON và Cognito IdP trong bộ nhớ: client ID và secret đều khớp, không cần thay đổi tài nguyên AWS. Không in secret, không đưa JSON vào repository/assets.
 - Logo và favicon SVG dùng chung `/icon.svg`; ICO dự phòng được rasterize từ cùng SVG. Metadata static có title template `%s | Shrnk`, trang chủ giữ tagline riêng.
+
+
+## 2026-11-05 — Publish website sau PR #85
+
+- Website người dùng yêu cầu cập nhật là CloudFront `d2aamyg2mt28wl.cloudfront.net` hiện hữu, tài nguyên mang tên `dev`; không tạo environment mới hoặc thay backend.
+- Publisher và hosting smoke còn giữ route `/links/` đã được bỏ ở frontend refresh. Đổi preflight/smoke sang `/architecture/`; `bash -n`, publisher thật và hosting smoke PASS.
+- Publisher export env ưu tiên hơn `.env.local`: bundle production đã kiểm callback/logout CloudFront, WebSocket `/prod`, không có callback localhost hoặc Google client secret.
+- Bản mutable objects trước publish được sao lưu ở `/tmp/shrnk-frontend-rollback-20261105/`, hashed assets cũ được giữ trên S3. Không chạy Terraform apply hoặc load test.

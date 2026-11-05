@@ -23,7 +23,7 @@ if [[ $NEXT_PUBLIC_WS_URL != wss://*/prod || $site != https://*.cloudfront.net ]
 fi
 corepack pnpm@10.33.2 --dir "$frontend_root" install --frozen-lockfile
 corepack pnpm@10.33.2 --dir "$frontend_root" build
-for route in index.html login/index.html auth/callback/index.html dashboard/index.html links/index.html; do
+for route in index.html login/index.html auth/callback/index.html dashboard/index.html architecture/index.html; do
   if [[ ! -s "$out/$route" ]]; then
     printf 'Missing exported page %s\n' "$out/$route" >&2
     exit 1
