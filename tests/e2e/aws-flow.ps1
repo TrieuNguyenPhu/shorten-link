@@ -1,7 +1,9 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('Core', 'OIDC', 'Pipeline', 'Realtime')]
+    [ValidateSet('Core', 'OIDC', 'Pipeline', 'Realtime', 'Canary')]
     [string]$Scenario = 'Core',
+    [ValidateSet('success', 'rollback')]
+    [string]$CanaryScenario = 'success',
     [Parameter(Mandatory)]
     [string]$OutputsPath
 )
@@ -25,6 +27,13 @@ function Require-Environment([string]$Name) {
 }
 
 $outputs = Get-Content -LiteralPath $OutputsPath -Raw | ConvertFrom-Json -AsHashtable
+if ($Scenario -eq 'Canary') {
+    if ($env:E2E_CANARY_SANDBOX -ne '1') { throw 'Canary E2E requires explicit E2E_CANARY_SANDBOX=1 authorization.' }
+    if ($IsWindows) { throw 'Canary E2E requires Linux/WSL Bash.' }
+    & bash (Join-Path $PSScriptRoot 'canary.sh') $OutputsPath $CanaryScenario
+    if ($LASTEXITCODE -ne 0) { throw 'Canary E2E failed; inspect deployment/rollback history before retrying.' }
+    return
+}
 if ($Scenario -eq 'Realtime') {
     . (Join-Path $PSScriptRoot 'realtime.ps1')
     Invoke-Realtime $outputs

@@ -148,3 +148,18 @@ try {
 Write-Host 'Realtime parser, resource scope and missing-token preflight PASS; no AWS requests sent.'
 
 & (Join-Path $PSScriptRoot 'realtime-lifecycle.test.ps1')
+
+$canaryTemporary = Join-Path ([IO.Path]::GetTempPath()) ("url-shortener-canary-" + [guid]::NewGuid().ToString('N') + '.json')
+$originalCanaryAuthorization = $env:E2E_CANARY_SANDBOX
+try {
+    '{}' | Set-Content -LiteralPath $canaryTemporary
+    $env:E2E_CANARY_SANDBOX = ''
+    $rejected = $false
+    try { & $scriptPath -Scenario Canary -OutputsPath $canaryTemporary }
+    catch { $rejected = $_.Exception.Message -eq 'Canary E2E requires explicit E2E_CANARY_SANDBOX=1 authorization.' }
+    if (-not $rejected) { throw 'Canary must fail before invoking Bash/AWS without sandbox authorization.' }
+    Write-Host 'Canary authorization preflight PASS; no AWS requests sent.'
+} finally {
+    $env:E2E_CANARY_SANDBOX = $originalCanaryAuthorization
+    Remove-Item -LiteralPath $canaryTemporary -Force
+}

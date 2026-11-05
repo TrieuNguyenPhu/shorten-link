@@ -214,3 +214,17 @@
 
 ## 2026-11-05 — Squash #87 và ancestry của PR #88
 - Main `2b6ed24` có tree giống hệt head #87 `bfb8fdf`, nhưng squash đổi ancestry nên Git báo lại các thay đổi đã tồn tại trong #88. Kiểm tra tree trước khi resolve; giữ head #88 ở bảy file conflict. Sau resolution, toàn bộ staged tree giống head #88 trước merge, không bỏ thay đổi nào từ main.
+
+## Phase 6 / Task 6.2 — 2026-11-05
+
+**Status: in_progress**. Task 6.1 đã mở [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89), chưa merge. Task 6.2 trên branch riêng từ main `f5112f1`; pipeline yêu cầu merge/provision Task 6.1 trước sử dụng. Không apply/load test AWS.
+
+## Phase 6 / Task 6.2 — Kết quả 2026-11-05
+
+- Status: complete (implementation/local). Branch riêng từ main f5112f1; Task 6.1 [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89) CI #218 PASS. Không tự merge/apply.
+- RED script missing → GREEN 11 Python release/writer tests (subcases: same-version, active/weighted guard, response lost/unknown/timeout, rollback success/failure, manifest/digest mismatch, build/apply failure, config drift và không upload khi lỗi); 3 k6 tests PASS. Mocks ở process/CLI boundaries, không gọi AWS.
+- make check PASS: Go race/vet/build8ZIP, Terraform 22 bootstrap +19 dev plan tests, frontend lint/typecheck/build/27 tests, operations tests. Make 4.4.1 lấy từ Ubuntu package vào /tmp (host chưa có make); sửa Makefile pin corepack pnpm10.33.2 sau lần đầu host pnpm12 mismatch. Không bypass version check.
+- Bản ghép infrastructure hai task từ archive riêng: Terraform init-backend=false-lockfile-readonly/validate/23 bootstrap+21 dev=44 mock-plan tests PASS. Task 6.2 chỉ chứa diff riêng, không chép module Task6.1.
+- Go DynamoDB Local3.3 repository/HTTP-WebSocket integration -race PASS; k6 2.3.0 pinned digest với HTTP harness thật + DDB Local và PutEvents recorder: 20/20 301,~1.99 successful RPS, zero failure/throttle. Không chứng minh AWS event delivery/benchmark. Container DDB của phiên đã dừng.
+- actionlint1.7.11, Bash syntax,8 CloudFront rewrite tests và PS7.5 networknone offline preflight/lifecycle (thêm Canary authorization guard) PASS. Script dùng chung TS config validator chạy được trên Node26.
+- IAM hosting pin CloudFront IDs, không wildcard unknown resources; saved plan SSE trong state bucket/private prefix, hash/commit/package binding, write-once và lifecycle current/noncurrent2d. Không GitHub plan artifact chứa secret. Review diff/secrets/state thủ công và diff-check PASS. AWS deployment/OIDC/canary/rollback/Google account E2E vẫn pending; không gửi email hoặc chạy AWS load test.

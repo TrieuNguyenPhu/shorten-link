@@ -1,5 +1,10 @@
 # Task Plan: Serverless URL Shortener with Realtime Analytics (Go + Terraform + Next.js)
 
+## Phase 6 / Task 6.2 — 2026-11-05
+
+**Status: complete (implementation/local)**. Task 6.1 đã mở [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89), chưa merge. Task 6.2 trên branch riêng từ main `f5112f1`; pipeline yêu cầu merge/provision Task 6.1 trước sử dụng. Không apply/load test AWS.
+
+
 ## Goal
 Tái hiện hoàn chỉnh hệ thống **Serverless URL Shortener with Realtime Analytics** trên AWS theo chuỗi 21 bài và repository `nghiadaulau/serverless-url-shortener-aws`, chuyển đổi sang **Golang (`provided.al2023`, `arm64`)**, **Terraform (HCL)**, và **Next.js Static Export (`S3 + CloudFront OAC`)**, với mỗi Task hoàn thành được tạo một **Pull Request riêng** và luôn cập nhật trạng thái hiện tại của dự án.
 
@@ -53,9 +58,10 @@ Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e37
 - **Status:** complete (implementation/deployed; Google account E2E chưa thực hiện)
 
 ### Phase 6: Production Operations, Observability, Canary CI/CD & Load Testing
-- [ ] **Task 6.1:** Xây dựng Terraform Modules `observability` (CloudWatch Alarms, SNS, Dashboard, X-Ray) & `codedeploy_canary` (`LambdaCanary10Percent5Minutes` trên alias `live`).
-- [ ] **Task 6.2:** Thiết lập GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), kịch bản `tests/load/redirect.k6.js` & tài liệu vận hành E2E.
-- **Status:** pending
+- **Status:** complete (implementation/local); merge hai PR và AWS validation pending.
+- [x] **Task 6.1:** Xây dựng Terraform Modules `observability` (CloudWatch Alarms, SNS, Dashboard, X-Ray) & `codedeploy_canary` (`LambdaCanary10Percent5Minutes` trên alias `live`).
+- [x] **Task 6.2:** Thiết lập GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), kịch bản `tests/load/redirect.k6.js` & tài liệu vận hành E2E.
+- **Status:** complete (implementation/local); AWS/CD/canary thật pending
 
 ## Key Decisions
 | Decision | Rationale |

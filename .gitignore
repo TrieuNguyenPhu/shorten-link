@@ -54,3 +54,7 @@ tmp/
 **/backend.hcl
 *.tfplan.json
 tests/e2e/*.local.json
+
+# Python test bytecode
+__pycache__/
+*.pyc

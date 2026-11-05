@@ -44,3 +44,9 @@ Chi tiết vận hành nằm trong [`docs/operations.md`](docs/operations.md). T
 Website hiện tại: [Shrnk](https://d2aamyg2mt28wl.cloudfront.net). Public config local và cách chạy test tích hợp tại [docs/local-testing.md](docs/local-testing.md).
 
 Kiến trúc và schema: [docs/architecture-and-contracts.md](docs/architecture-and-contracts.md). Nguồn tham khảo: [series serverless AWS](https://kkloudtarus.net/blog/series/serverless-on-aws-event-driven) và [repository gốc](https://github.com/nghiadaulau/serverless-url-shortener-aws).
+
+## Phase 6: vận hành và phát hành
+
+Xem [runbook CI/CD và E2E](docs/e2e-verification-and-operations.md). CD chỉ manual từ main qua protected environment `dev`: tạo saved plan → review → apply đúng plan → build frontend → canary thành công → S3/CloudFront. Merge/provision Task 6.1 ([PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89)) trước sử dụng. Chưa apply Phase 6 hoặc kiểm chứng canary thật trên AWS.
+
+`make check` gồm Go race/vet, build tám ZIP, Terraform fmt/init/validate/mock tests, frontend lint/typecheck/build/tests và release/k6 contract tests. `DYNAMODB_ENDPOINT=<local-url> make test-integration` kiểm repository/HTTP/WebSocket với DynamoDB Local; AWS smoke/load test phải được cấp phép riêng.

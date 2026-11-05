@@ -1,5 +1,10 @@
 # PROJECT_STATUS.md — Trạng Thái Hiện Tại Của Dự Án
 
+## Phase 6 / Task 6.2 — 2026-11-05
+
+**Status: complete (implementation/local)**. Task 6.1 đã mở [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89), chưa merge. Task 6.2 trên branch riêng từ main `f5112f1`; pipeline yêu cầu merge/provision Task 6.1 trước sử dụng. Không apply/load test AWS.
+
+
 > **Cập nhật lần cuối:** 2026-11-05 (UI tối giản, review toàn project và production rollout).
 > **Quy tắc bắt buộc:** File này luôn được cập nhật ngay sau khi hoàn thành mỗi Task trước khi mở Pull Request tương ứng.
 
@@ -25,9 +30,9 @@
 
 | Hạng mục | Trạng thái | Chi tiết |
 | --- | --- | --- |
-| **Giai đoạn hiện tại (Current Phase)** | **Phase 5 — complete (implementation/deployed)** | Frontend tĩnh và hosting S3/CloudFront; Google account E2E chưa thực hiện |
-| **Task hiện tại** | **Task 5.5 — complete (implementation/deployed)** | UI refinement, dashboard lifecycle và project review |
-| **Task tiếp theo (Next Up)** | **Task 6.1** | Observability nâng cao và CodeDeploy canary |
+| **Giai đoạn hiện tại (Current Phase)** | **Phase 6 — complete (implementation/local)** | CI/CD, observability/canary và k6/runbook; AWS validation pending |
+| **Task hiện tại** | **Task 6.2 — complete (implementation/local)** | Manual OIDC CD, reviewed saved plan, canary gating, k6 và E2E runbook |
+| **Task tiếp theo (Next Up)** | **Review/merge Task 6.1 → Task 6.2; AWS validation** | Provision bootstrap/app và chạy canary sandbox khi được phép |
 | **Trạng thái AWS Cloud** | **Core/pipeline/realtime/hosting đang phục vụ** | Account 654822777701, ap-southeast-1; phiên này publish frontend, không apply Terraform |
 | **13 Bộ Skills & `AGENTS.md`** | **Đã kiểm tra file/config** | Đủ 13 file skill đại diện; 314 thư mục cấp đầu có `SKILL.md`. Có cấu hình trỏ `~/.agents/skills`; không suy ra mọi host đều tự nạp |
 
@@ -50,8 +55,8 @@
 | **Phase 5** | **Task 5.2** | Dashboard & My Links Doodle & Sketch, API thật & Native WebSocket Hook (`useRealtimeClicks`) | `feat/phase-05-task-02-dashboard-api-and-websocket` | complete (implementation/deployed) | [PR #82](https://github.com/TrieuNguyenPhu/shorten-link/pull/82) và Task 5.5 |
 | **Phase 5** | **Task 5.3** | Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + URL Rewrite) | `feat/phase-05-task-03-terraform-s3-cloudfront-oac-v2` | complete (implementation/local) | [PR #81](https://github.com/TrieuNguyenPhu/shorten-link/pull/81) |
 | **Phase 5** | **Task 5.5** | UI tối giản, font Lobster, lifecycle dashboard và project review/release | `fix/phase-05-ui-review-production` | complete (implementation/deployed) | [PR #88](https://github.com/TrieuNguyenPhu/shorten-link/pull/88) |
-| **Phase 6** | **Task 6.1** | Terraform Modules `observability` (Alarms, SNS, Dashboard, X-Ray) & `codedeploy_canary` (`live` alias) | `feat/phase-06-task-01-observability-and-canary` | ⏳ Pending | — |
-| **Phase 6** | **Task 6.2** | GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), k6 Load Test & Runbook E2E | `feat/phase-06-task-02-cicd-k6-and-runbook` | ⏳ Pending | — |
+| **Phase 6** | **Task 6.1** | Terraform Modules `observability` (Alarms, SNS, Dashboard, X-Ray) & `codedeploy_canary` (`live` alias) | `feat/phase-06-task-01-observability-and-canary-v2` | complete (implementation/local) | [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89) |
+| **Phase 6** | **Task 6.2** | GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), k6 Load Test & Runbook E2E | `feat/phase-06-task-02-cicd-k6-and-runbook` | complete (implementation/local) | PR chuẩn bị mở |
 
 ---
 
