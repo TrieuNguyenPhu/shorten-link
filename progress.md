@@ -199,3 +199,4 @@
 - PR #80 đã đóng do branch cũ chứa lịch sử tài liệu xung đột với PR #79. Đã tạo branch `feat/phase-05-task-03-terraform-s3-cloudfront-oac-v2` trực tiếp từ `origin/main` tại `702b97a`.
 - Chỉ đưa 14 file Terraform/frontend hosting, test và CI vào commit `20caa84`; không merge docs cũ.
 - Terraform dev `fmt -check`, `validate`, `test`: 19 pass, 0 fail.
+- Đã mở [PR #81](https://github.com/TrieuNguyenPhu/shorten-link/pull/81); base `main` tại `702b97a`, head `84e23bb`, trạng thái mergeable.

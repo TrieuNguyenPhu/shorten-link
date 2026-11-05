@@ -1,6 +1,6 @@
 # PROJECT_STATUS.md — Trạng Thái Hiện Tại Của Dự Án
 
-> **Cập nhật lần cuối:** 2026-11-05 (Task 5.3 đã hoàn tất implementation/local trên nhánh PR mới).
+> **Cập nhật lần cuối:** 2026-11-05 (PR #81 Task 5.3 đã mở từ nhánh sạch trên `main`).
 > **Quy tắc bắt buộc:** File này luôn được cập nhật ngay sau khi hoàn thành mỗi Task trước khi mở Pull Request tương ứng.
 
 ---
@@ -32,7 +32,7 @@
 | **Phase 4** | **Task 4.2** | Terraform Modules `websocket_api` (`$connect`, `$disconnect`, stage `prod`) & `moderation_sfn` | `feat/phase-04-task-02-terraform-websocket-and-sfn` | complete (đã merge main501c049; review fix riêng) | [PR #77](https://github.com/TrieuNguyenPhu/shorten-link/pull/77); [fix #78](https://github.com/TrieuNguyenPhu/shorten-link/pull/78) |
 | **Phase 5** | **Task 5.1** | Next.js static, Google-only qua Cognito PKCE, Landing/Login/Callback theo Doodle & Sketch UI | `feat/phase-05-task-01-nextjs-auth-and-pages` | complete (implementation/local) | [PR #79](https://github.com/TrieuNguyenPhu/shorten-link/pull/79), [PR #70 — scaffold/static export](https://github.com/TrieuNguyenPhu/shorten-link/pull/70) |
 | **Phase 5** | **Task 5.2** | Dashboard & My Links Doodle & Sketch, API thật & Native WebSocket Hook (`useRealtimeClicks`) | `feat/phase-05-task-02-dashboard-api-and-websocket` | ⏳ Pending | — |
-| **Phase 5** | **Task 5.3** | Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + URL Rewrite) | `feat/phase-05-task-03-terraform-s3-cloudfront-oac-v2` | complete (implementation/local) | PR mới chờ publish |
+| **Phase 5** | **Task 5.3** | Terraform Module `frontend_hosting` (Private S3 + CloudFront OAC + Cache Policies + URL Rewrite) | `feat/phase-05-task-03-terraform-s3-cloudfront-oac-v2` | complete (implementation/local) | [PR #81](https://github.com/TrieuNguyenPhu/shorten-link/pull/81) |
 | **Phase 6** | **Task 6.1** | Terraform Modules `observability` (Alarms, SNS, Dashboard, X-Ray) & `codedeploy_canary` (`live` alias) | `feat/phase-06-task-01-observability-and-canary` | ⏳ Pending | — |
 | **Phase 6** | **Task 6.2** | GitHub Actions CI/CD (AWS OIDC, Canary Deploy, S3/CloudFront Sync), k6 Load Test & Runbook E2E | `feat/phase-06-task-02-cicd-k6-and-runbook` | ⏳ Pending | — |
 
@@ -212,4 +212,4 @@
 - Commit code hosting: `20caa84` (`feat: add private S3 and CloudFront frontend hosting`).
 - Terraform dev: `fmt -check`, `validate` và `terraform test` PASS, tổng cộng 19 test pass; CloudFront viewer rewrite Node test được đưa vào CI.
 - Chưa chạy `terraform apply` trong bước tạo PR; tài nguyên AWS hiện hữu không bị thay đổi.
-- PR mới sẽ được tạo sau khi branch được push lên GitHub.
+- Đã mở [PR #81](https://github.com/TrieuNguyenPhu/shorten-link/pull/81) từ `main` (`702b97a`); GitHub xác nhận branch mergeable, không còn conflict.

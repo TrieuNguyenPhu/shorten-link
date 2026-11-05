@@ -72,3 +72,4 @@ Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e37
 - Không cherry-pick merge commit của PR #80. Branch mới được dựng trực tiếp từ `origin/main` (`702b97a`) rồi chép riêng 14 file implementation/test của hosting.
 - Commit `20caa84` giữ phạm vi Terraform/S3/CloudFront OAC, không đưa thay đổi backend hoặc tài liệu conflict cũ vào branch.
 - `terraform fmt -check -recursive`, `terraform validate` và `terraform test` PASS (19/19).
+- Đã mở [PR #81](https://github.com/TrieuNguyenPhu/shorten-link/pull/81) từ branch mới; GitHub xác nhận không còn conflict với `main`.
