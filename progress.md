@@ -216,3 +216,12 @@
 - Google JSON khớp IdP đang chạy. Không chạy Terraform apply, không publish CloudFront, không load test; Google federation sau bước nhập tài khoản vẫn chưa kiểm chứng. Không sửa các diff backend/Terraform có sẵn.
 
 - Đã mở [PR #85](https://github.com/TrieuNguyenPhu/shorten-link/pull/85) với code tree đã đối chiếu local/remote. Git HTTPS local chưa có credential; dùng GitHub connector để xuất bản đúng file đã kiểm tra. PR chờ review, chưa merge.
+
+
+## 2026-11-05 — Publish PR #85 lên website đang chạy
+
+- Người dùng yêu cầu cập nhật lên product; PR #85 đã merge main `2253a3c`. Nhánh vận hành `chore/phase-05-publish-frontend` từ main này; giữ nguyên các thay đổi ngoài phạm vi đang có.
+- Chạy `bash scripts/publish-frontend.sh`: install frozen lockfile, build static với Terraform public outputs, upload S3 hashed assets → data → HTML, invalidate `/*` và wait thành công.
+- Website: https://d2aamyg2mt28wl.cloudfront.net; bucket `url-shortener-dev-654822777701-frontend`; distribution `EP4W63KC4Y7HZ`; invalidation `I7A20EUFG6A2VDMZ6BOQAM2I67` Completed.
+- `pnpm test` 18/18, `bash -n`, production bundle config/secret scan và `tests/e2e/frontend-hosting.mjs` PASS. Đối chiếu byte HTML của năm route và SVG/ICO với build đều khớp; title riêng và favicon đúng. Browser production hiển thị form đã bỏ chú thích, nút Google mở accounts.google.com qua Cognito.
+- Chưa kiểm chứng federation sau bước nhập tài khoản Google. Không apply Terraform, thay backend, chạy load test hoặc tạo tài nguyên mới.
