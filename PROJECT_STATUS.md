@@ -7,10 +7,16 @@
 
 ## 1. Tổng Quan Trạng Thái Hiện Tại
 
+- **Đồng bộ PR #88 — complete (local):** kế thừa bản sửa conflict #87 và main sau #86; giữ UI đã deploy, callback về `/` và publisher chạy test trước upload.
+
 - **Task 5.5 — UI refinement và project review — complete (implementation/deployed)** — [PR #88](https://github.com/TrieuNguyenPhu/shorten-link/pull/88): đăng nhập về `/`; Navbar/Footer ở root layout; menu Trang chủ/Dashboard khi đăng nhập/Kiến trúc dự án có active/hover; login có logo và tiêu đề căn giữa; Lobster self-hosted; giảm copy. Sửa refresh gây nhấp nháy, giữ click mới trước snapshot cũ, chặn snapshot khôi phục link đã xóa, hiển thị/copy kết quả tạo link. Frontend 27 tests và lint/typecheck/build/audit PASS; [CI #209](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41974976600) PASS cả 4 jobs.
 - **Rà soát hệ thống:** Go 1.26.10 race/vet/build 8 ZIP, DynamoDB Local repository + HTTP/WebSocket E2E, govulncheck, 38 Terraform plan/mock tests (19 bootstrap + 19 dev), CloudFront rewrite và PowerShell offline PASS. Smoke AWS thật xác nhận HTTP JWT negatives; operator Lambda CRUD/owner isolation; 301 → EventBridge/SQS → counter → WebSocket; disconnect cleanup; moderation keyword. Chưa đăng nhập bằng tài khoản Google thật; browser đã tới `accounts.google.com`.
 
+- **Đồng bộ PR #87 — complete (local):** merge `main` sau PR #86 (`9fb63e1`); giữ cả lịch sử publish và PKCE. Không đổi implementation auth.
+
 - **OAuth callback state mismatch — `complete (implementation/deployed)` — [PR #87](https://github.com/TrieuNguyenPhu/shorten-link/pull/87):** sửa Navbar token check xóa PKCE và callback effect replay; 24 tests/lint/typecheck/build/audit production PASS. Đã publish lên CloudFront, invalidation `I32HVUHF141OJMAXY9B68R6FDG` Completed. Browser production với state đúng đi đến token endpoint (code chẩn đoán bị Cognito từ chối đúng); chưa kiểm chứng tài khoản Google thật. Nhánh `fix/phase-05-preserve-pkce-callback` từ `origin/main`.
+
+- **Publish frontend — `complete` — [PR #86](https://github.com/TrieuNguyenPhu/shorten-link/pull/86):** đã xuất bản PR #85 (`2253a3c`) lên [website đang chạy](https://d2aamyg2mt28wl.cloudfront.net). CloudFront `EP4W63KC4Y7HZ`, invalidation `I7A20EUFG6A2VDMZ6BOQAM2I67` đã `Completed`. Build production/18 tests, hosting smoke, title/favicon năm route và đối chiếu HTML/icon với artifact đều PASS. Browser production mở được Google qua Cognito; chưa kiểm chứng sau bước nhập tài khoản Google.
 
 - **Google login và metadata — `complete (implementation/local)` — [PR #85](https://github.com/TrieuNguyenPhu/shorten-link/pull/85):** local đã có public env từ Terraform outputs, nút Google mở được `accounts.google.com` qua Cognito; giữ stage WebSocket `/prod`, bỏ chú thích đăng nhập, favicon dùng logo link vàng và title riêng cho từng trang. Nhánh `fix/phase-05-google-login-and-page-metadata` từ `origin/main`.
 - Kiểm tra phiên sửa: `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm test` (18/18), `git diff --check` PASS. Google client/secret trong JSON khớp IdP AWS; `.env.local` chỉ chứa public config và bị Git bỏ qua. Chưa xác minh sau bước nhập tài khoản Google; chưa publish CloudFront trong phiên này.

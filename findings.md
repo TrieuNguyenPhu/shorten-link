@@ -177,6 +177,13 @@
 - Logo và favicon SVG dùng chung `/icon.svg`; ICO dự phòng được rasterize từ cùng SVG. Metadata static có title template `%s | Shrnk`, trang chủ giữ tagline riêng.
 
 
+## 2026-11-05 — Publish website sau PR #85
+
+- Website người dùng yêu cầu cập nhật là CloudFront `d2aamyg2mt28wl.cloudfront.net` hiện hữu, tài nguyên mang tên `dev`; không tạo environment mới hoặc thay backend.
+- Publisher và hosting smoke còn giữ route `/links/` đã được bỏ ở frontend refresh. Đổi preflight/smoke sang `/architecture/`; `bash -n`, publisher thật và hosting smoke PASS.
+- Publisher export env ưu tiên hơn `.env.local`: bundle production đã kiểm callback/logout CloudFront, WebSocket `/prod`, không có callback localhost hoặc Google client secret.
+- Bản mutable objects trước publish được sao lưu ở `/tmp/shrnk-frontend-rollback-20261105/`, hashed assets cũ được giữ trên S3. Không chạy Terraform apply hoặc load test.
+
 ## 2026-11-05 — Nguyên nhân OAuth callback state mismatch
 
 - `getAccessToken()` dùng `clearAuthSession()` khi token chưa có/hết hạn, xóa cả PKCE đang chờ. Navbar được mount trước AuthCallback, nên callback mất state/verifier dù URL chứa state đúng. Tái hiện cả bằng unit test RED và browser production với state đúng của phiên chẩn đoán.
@@ -196,3 +203,10 @@
 - Go build ban đầu fail vì dòng `*dest = strings.TrimRight(normalized, "/")` trong config bị xóa ở diff có sẵn. Khôi phục đúng dòng từ baseline; unit config có sẵn xác nhận hai endpoint được gán và bỏ trailing slash. Các diff dọn chú thích backend/Terraform/PowerShell và xóa tài liệu có sẵn được giữ ngoài PR; không tự hoàn nguyên.
 - Terraform test tại root có tfvars AWS thật làm 3 assertion về unpinned API sai fixture. Chạy bản sao sạch không tfvars/backend/state, kèm ASL và ZIP thật: 19 bootstrap + 19 dev PASS. Actual plan chỉ khác filename/hash Lambda do rebuild, không có thay đổi cấu hình/replace/destroy; không apply vì backend behavior không đổi và smoke deployed đã PASS.
 - Lobster TTF đầy đủ hỗ trợ tiếng Việt từ Google Fonts, kèm OFL; `next/font/local` preload/self-host, không gọi dịch vụ font ngoài runtime.
+
+## 2026-11-05 — Conflict PR #87
+- PR #86 và #87 chèn nội dung tại cùng vị trí trong bốn file trạng thái. Conflict chỉ ở tài liệu; publisher/hosting routes từ main được giữ. Không thay state/nonce/PKCE hoặc callback effect handling.
+
+
+## 2026-11-05 — Conflict PR #88
+- Đồng bộ qua merge head #87 đã chứa main #86 để giữ cùng lịch sử tổ tiên. Conflict ở bốn file trạng thái và vùng preflight publisher; giữ kiểm thử trước upload cùng route architecture. Mã `frontend/` không đổi so với PR #88 đã deploy.

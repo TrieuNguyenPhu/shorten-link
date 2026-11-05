@@ -9,6 +9,8 @@ Tái hiện hoàn chỉnh hệ thống **Serverless URL Shortener with Realtime 
 
 - [x] **Sửa callback state mismatch — `Status: complete (implementation/deployed)`:** giữ PKCE khi token chưa có/hết hạn, callback chỉ exchange một lần dù effect replay. 24 tests/checks PASS; đã publish và xác minh production không còn xóa state trước token exchange trong phiên chẩn đoán.
 
+- [x] **Publish frontend — `Status: complete`:** PR #85 (`2253a3c`) đã build với config CloudFront thật, upload S3, invalidation Completed. Hosting smoke/18 tests/title/favicon/HTML artifact comparison và Google redirect trên website thật PASS.
+
 - [x] **Sửa Google login và metadata — `Status: complete (implementation/local)`:** public env local từ Terraform outputs, WebSocket giữ `/prod`, bỏ chú thích đăng nhập, favicon/logo dùng chung SVG và title riêng từng trang. Lint/typecheck/build/18 tests PASS; browser mở được Google qua Cognito, chưa kiểm chứng đăng nhập bằng tài khoản Google.
 Review fix Task4.2 — complete (implementation/local): execution name/ARN được theo dõi trước StartExecution; cleanup chỉ xóa khi xác nhận terminal. Tám lifecycle regression tests và PS offline PASS; PR #77 đã merge main501c049; [PR fix #78](https://github.com/TrieuNguyenPhu/shorten-link/pull/78) từ main, CI #186 PASS, chờ review.
 
@@ -89,3 +91,10 @@ Phase 4 — complete (implementation/local). Task4.1/PR #76 đã merge mainf6e37
 
 - **Status: complete (implementation/deployed)**. Yêu cầu: đăng nhập về trang chủ; sửa dashboard nhấp nháy; layout chung; menu active/hover; login tối giản; font Lobster; review toàn project, sửa lỗi và triển khai production.
 - Nhánh `fix/phase-05-ui-review-production` tạo từ `origin/main` (`2253a3c`), kế thừa hai commit sửa PKCE #87 để giữ luồng đăng nhập an toàn. Giữ nguyên các diff có sẵn để rà soát, không tự hoàn nguyên.
+
+## 2026-11-05 — Đồng bộ PR #87
+- **Status: complete (local)**. Sửa conflict bốn file trạng thái với main sau PR #86; giữ lịch sử hai bên và publisher/hosting checks đã merge.
+
+
+## 2026-11-05 — Đồng bộ PR #88
+- **Status: complete (local)**. Merge bản #87 đã đồng bộ main, bảo toàn UI/PKCE và toàn bộ lịch sử rollout.
