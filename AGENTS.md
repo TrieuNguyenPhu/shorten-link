@@ -42,7 +42,7 @@ Bạn đang làm việc với vai trò **Senior AWS Serverless Architect + Golan
 
 ## 2. Hệ Sinh Thái 13 Bộ Skills Đã Cài Đặt (`~/.agents/skills` & `.agents/skills.json`)
 
-Kiểm tra ngày 2026-10-26 ghi nhận 314 thư mục cấp đầu có `SKILL.md`, 376 file `SKILL.md` khi đếm đệ quy (có bản trùng), cùng file đại diện cho 13 bộ dưới đây tại `~/.agents/skills`. Hai cấu hình `.agents/skills.json` và `~/.gemini/config/skills.json` đều trỏ tới thư mục này. Đây là bằng chứng hiện diện/cấu hình, không bảo đảm mọi host tự nạp skill hay xác thực độc lập nguồn gốc và phiên bản. Agent đọc và kích hoạt skill phù hợp với task; xem [bằng chứng audit](docs/phase-0-reference-audit.md#6-bằng-chứng-skills-và-giới-hạn-xác-minh).
+Kiểm tra ngày 2026-10-26 ghi nhận 314 thư mục cấp đầu có `SKILL.md`, 376 file `SKILL.md` khi đếm đệ quy (có bản trùng), cùng file đại diện cho 13 bộ dưới đây tại `~/.agents/skills`. Hai cấu hình `.agents/skills.json` và `~/.gemini/config/skills.json` đều trỏ tới thư mục này. Đây là bằng chứng hiện diện/cấu hình, không bảo đảm mọi host tự nạp skill hay xác thực độc lập nguồn gốc và phiên bản. Agent đọc và kích hoạt skill phù hợp với task.
 
 | # | Nguồn Skill / Framework | Các Skill Tiêu Biểu | Khi Nào Sử Dụng |
 | --- | --- | --- | --- |
@@ -64,7 +64,7 @@ Kiểm tra ngày 2026-10-26 ghi nhận 314 thư mục cấp đầu có `SKILL.md
 
 ## 3. Quy Trình Thực Thi Task, Git Branch, Pull Request & Cập Nhật Trạng Thái
 
-Mỗi Task trong kế hoạch (`docs/superpowers/plans/2026-10-26-serverless-url-shortener-plan.md` và `task_plan.md`) **BẮT BUỘC** tuân theo vòng đời 6 bước sau:
+Mỗi Task trong kế hoạch (`task_plan.md`) **BẮT BUỘC** tuân theo vòng đời 6 bước sau:
 
 ### Bước 1: Đồng bộ trạng thái (`planning-with-files`)
 - Đọc `PROJECT_STATUS.md`, `task_plan.md`, `findings.md`, và `progress.md` trước khi bắt đầu task.
@@ -147,7 +147,7 @@ shorten-link/
 ├── scripts/                   # Script build Lambda arm64 ZIP, deploy helper, local harness
 ├── tests/
 │   └── load/                  # Kịch bản k6 load test cho GET /{code}
-├── docs/                      # Tài liệu audit bản gốc, kiến trúc, hợp đồng API và kế hoạch
+├── docs/                      # Tài liệu kiến trúc hệ thống và hợp đồng API
 ├── .agents/
 │   └── skills.json            # Kết nối kho 13 bộ skills
 ├── .github/

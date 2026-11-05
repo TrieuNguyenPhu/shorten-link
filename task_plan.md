@@ -1,5 +1,9 @@
 # Task Plan: Serverless URL Shortener with Realtime Analytics (Go + Terraform + Next.js)
 
+## Documentation Cleanup & Refactor — 2026-11-05
+
+- [x] **Task Documentation Cleanup:** **Status: complete (implementation/local)**: Xóa các tài liệu dư thừa, tạm thời và trùng lặp (`docs/phase-0-reference-audit.md`, `docs/terraform-*.md`, `docs/websocket-*.md`, `docs/operations.md`, `docs/e2e-verification-and-operations.md`, `docs/local-testing.md`, `docs/phase-6-*.md`, `docs/superpowers/`, `frontend/AGENTS.md`, `frontend/README.md`); viết lại `README.md` tinh gọn theo chuẩn 3 phần: Công nghệ -> Workflow -> Cách chạy.
+
 ## Phase 6 — 2026-11-05
 
 - [x] **Task 6.1:** **Status: complete (đã merge main qua PR #89)**: Terraform Modules `observability` & `codedeploy_canary`.

@@ -2,7 +2,7 @@
 
 ## 1. Kết Quả Kiểm Toán Bản Gốc (`nghiadaulau/serverless-url-shortener-aws` & 21 Bài Viết)
 - **Mốc nguồn:** ngày 2026-10-26, commit [`a5ffed9780d0447fc75a42def3693732bdc87907`](https://github.com/nghiadaulau/serverless-url-shortener-aws/tree/a5ffed9780d0447fc75a42def3693732bdc87907), 21 file được Git theo dõi. Đã đọc các file triển khai; lockfile được dùng làm metadata dependency, không chạy code tham chiếu.
-- **Phạm vi bài viết:** ba lượt đọc toàn thân bài 1–7, 8–14, 15–21, theo liên kết trên cả hai trang series. Không còn bài chưa truy cập được. URL và đối chiếu từng bài nằm trong [reference audit](docs/phase-0-reference-audit.md).
+- **Phạm vi bài viết:** ba lượt đọc toàn thân bài 1–7, 8–14, 15–21, theo liên kết trên cả hai trang series. Không còn bài chưa truy cập được. URL và đối chiếu từng bài đã được phân tích đầy đủ ở Phase 0.
 - **8 Lambda Functions trong `template.yaml`:**
   1. `CreateLinkFunction` (`POST /links`, Cognito JWT)
   2. `ResolveLinkFunction` (`GET /{code}`, Public, alias `live` + CodeDeploy `Canary10Percent5Minutes`)
@@ -120,7 +120,7 @@
 - ESM UUID không biết trước; operator provision Terraform lần đầu rồi pin click_event_source_mapping_ids, maintenance exact UUID + lambda:FunctionArn alias live. Không CreateEventSourceMapping/wildcard TagResource để role claim mapping khác. Replacement cần operator/repin; đây là ruling theo nguyên tắc Cognito đã chốt ở Phase2, chưa apply AWS.
 - uvx Autopilot vẫn thiếu (exit127), fallback SAR JSON chính thức DynamoDB/Lambda/SQS/EventBridge. Get/Update/Delete ESM hỗ trợ FunctionArn; tag/list tag scope UUID riêng. SSE-SQS được AWS example xác nhận tương thích EventBridge, không nhầm với AWS managed KMS key.
 - Task3.2 thêm Scenario Pipeline thật theo ma trận master plan; chỉ parser/preflight offline được chạy. Script đọc config/account trước side effects, HTTP redirect→consistent counter, PutEvents poison→DLQ, đối chiếu event ID và cleanup code/receipt của test; không purge/redrive/tắt mapping. ApproximateReceiveCount ở DLQ được ghi như quan sát, không coi là số lần source consumer nhận.
-- Review phát hiện JSON scalar/array ở DLQ làm ContainsKey throw; regression RED→GREEN bằng Read-PipelineEnvelope/NoEnumerate/IDictionary/id string. Container PS7.5 --network none PASS, scoped re-review xác nhận đã sửa. Các ràng buộc quan trọng và giới hạn AWS pending được giữ trong docs/terraform-event-pipeline.md.
+- Review phát hiện JSON scalar/array ở DLQ làm ContainsKey throw; regression RED→GREEN bằng Read-PipelineEnvelope/NoEnumerate/IDictionary/id string. Container PS7.5 --network none PASS, scoped re-review xác nhận đã sửa. Các ràng buộc quan trọng và giới hạn AWS pending được ghi nhận trong ghi chú Phase 3.
 
 
 ## 2026-11-04 — Phase4 / Task4.1

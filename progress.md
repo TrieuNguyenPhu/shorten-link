@@ -26,14 +26,12 @@
   2. Xóa toàn bộ file và thư mục cũ tại workspace `d:\source code\shorten-link` (chỉ giữ `.git` để quản lý lịch sử và tạo Pull Request).
   3. Tải và cài đặt toàn bộ 13 bộ skills (`superpowers`, `ponytail`, `planning-with-files`, `caveman`, `trailofbits/skills`, `vercel-labs/agent-skills`, `anthropics/skills`, `gsd-core`, `understand-anything`, `open-code-review`, `ui-ux-pro-max-skill`, `taste-skill`, `claude-code-best-practice`) vào `~/.agents/skills` và cấu hình `.agents/skills.json` + `~/.gemini/config/skills.json`.
   4. Đọc toàn bộ 21 bài viết của series `kkloudtarus.net/blog/series/serverless-on-aws-event-driven` (trang 1 & 2) và toàn bộ 19 file trong repo `nghiadaulau/serverless-url-shortener-aws`.
-  5. Thiết lập `AGENTS.md`, `docs/phase-0-reference-audit.md`, `docs/architecture-and-contracts.md`, `docs/superpowers/plans/2026-10-26-serverless-url-shortener-plan.md`, `task_plan.md`, `findings.md`, `progress.md`, `PROJECT_STATUS.md`, và `README.md`.
+  5. Thiết lập `AGENTS.md`, `docs/architecture-and-contracts.md`, `task_plan.md`, `findings.md`, `progress.md`, `PROJECT_STATUS.md`, và `README.md`.
 - **Files created:**
   - `.gitignore`
   - `.agents/skills.json`
   - `AGENTS.md`
-  - `docs/phase-0-reference-audit.md`
   - `docs/architecture-and-contracts.md`
-  - `docs/superpowers/plans/2026-10-26-serverless-url-shortener-plan.md`
   - `task_plan.md`
   - `findings.md`
   - `progress.md`
@@ -90,7 +88,7 @@
 - Task 2.1 complete (chờ review/merge): test-first RED do repository/publisher/service/handler/harness APIs thiếu, GREEN sau implementation. Unit/race-count1-cover toàn bộ backend PASS; regression events/httpapi/runtime/harness chạy lại với race PASS. Vet/mod verify PASS trên Go1.26.10 Linux.
 - DynamoDB Local3.3.0 digest d89f8fcc…: integration/race-count1 PASS, gồm query>1MB, timestamps milliseconds, owner conditions, collision, delete giữ STAT/CLICK. HTTP E2E dùng handler/service/repository thật và SDK tới PutEvents recorder; CLI harness smoke create/list/IDOR/resolve/delete PASS. Không giả lập JWT/IAM hoặc analytics AWS.
 - Packaging bốn cmd thật PASS; kiểm từng ZIP bootstrap root0755/ELF64 AArch64/static. govulncheck v1.9.0 verbose exit0, 0 symbol/package và4 module-only advisories; CI thêm integration/E2E và build.
-- Đã rà soát owner condition, pagination, publish ack/retry/deadline, JSON/body limit, telemetry isolation và dependency diff; không thêm secret/state/tfvars/AWS calls. docs/local-testing.md ghi command/config/giới hạn; Phase2 in_progress, Task2.2 pending. CLI gh không có trong host, dùng GitHub connector mở PR sau push.
+- Đã rà soát owner condition, pagination, publish ack/retry/deadline, JSON/body limit, telemetry isolation và dependency diff; không thêm secret/state/tfvars/AWS calls. README.md ghi command/config/giới hạn; Phase2 in_progress, Task2.2 pending. CLI gh không có trong host, dùng GitHub connector mở PR sau push.
 
 - Git HTTPS push thiếu credential helper; đã xuất bản cùng tree40d4dc1 qua GitHub connector, kiểm SHA tree trùng local rồi đồng bộ branch. PR riêng [#71](https://github.com/TrieuNguyenPhu/shorten-link/pull/71), base main; chưa merge, chờ CI/review.
 - CI run#164 (41759270780) trên39fdbe8 PASS cả3jobs: backend gồm integration/E2E/build/scan; Windows packaging; frontend lint/typecheck/static build/tests/audit. Cập nhật cuối chỉ ghi bằng chứng tài liệu; chưa merge PR#71, Task2.2 tiếp theo.
@@ -103,7 +101,7 @@
 - Task2.2 implementation complete/local: TDD RED khi bootstrap resources chưa khai báo, GREEN sau cấu hình; regression API tag policy RED khi scope local chưa tồn tại, GREEN sau ID/path/ownership-tag protection.
 - Terraform1.17.1/provider6.71.0: fmt-check/init-backend=false-lockfile-readonly/validate/test PASS cả bootstrap/dev,8+8 plan/mock runs. Go1.26.10 test-race-count1/vet/build4ZIP PASS. PowerShell7.5 docker parser+Core/OIDC endpoint/role/missing-token preflight PASS; YAML/Markdown links/diff check PASS.
 - Lỗi môi trường: make không có, chạy command recipes trực tiếp; Autopilot không chạy vì uvx/pip/ensurepip thiếu, dùng SAR fallback104 action names/resource capabilities. Các lỗi assertion ban đầu do computed ARN unknown/collection type đã sửa fixture/assertion; không chạy AWS apply để né test.
-- Review core wiring/IAM/boundary/state lock/Google-only/alias ownership/negative auth script hoàn tất; chưa có dữ liệu AWS/account calls. Runbook docs/terraform-core-infrastructure.md ghi bootstrap độc lập, secret/state, Google setup, API ID pinning trước CD và AWS E2E pending. Chuẩn bị PR riêng với title/body tiếng Anh; Task3.1 kế tiếp sau review/merge.
+- Review core wiring/IAM/boundary/state lock/Google-only/alias ownership/negative auth script hoàn tất; chưa có dữ liệu AWS/account calls. README.md và bootstrap độc lập, secret/state, Google setup, API ID pinning trước CD và AWS E2E pending. Chuẩn bị PR riêng với title/body tiếng Anh; Task3.1 kế tiếp sau review/merge.
 
 - PR Task2.2: [#72](https://github.com/TrieuNguyenPhu/shorten-link/pull/72), base main158b127. Xuất bản bằng GitHub connector vì Git HTTPS chưa có credential helper; kiểm remote tree271147e trùng local trước đồng bộ branch. Commit/title/body tiếng Anh; chưa merge, CI xem tại PR.
 
@@ -164,7 +162,7 @@
 
 - Task4.2 implementation/local complete: RED missingmodules và bootstrapvariables/policies → GREEN; quota fullypinned12314byte RED→GREEN sau managedpolicy split. Regression provider SFN validation/versions quyềnthiếu RED→GREEN bằng đối chiếu source6.71.0/SAR. Lỗi testfixture computedSFNARN và script test scope Require-Environment đã sửa bằng mock ARN/entrypointthật, không apply để né tests.
 - Terraform1.17.1 fmt/init-backend=false-lockfile-readonly/validate,19bootstrap+18dev=37plan tests PASS. Go1.26.10 race/vet/build8ZIP PASS. PS7.5 networknone parser/preflightcho4scenarios và resource/missingtokennegatives PASS; CI tự bao gồm tests mới.
-- Rà soát thủ công IAM, trust, boundaries, quotaspinning, APIgatewaynativeenvelope/alias/prod và PS secret/resource/cleanup handling. Runbook mới docs/terraform-realtime-and-moderation.md nêu bootstrap input/operator-first, actualscenario pending và loggingPhase6. Chưa apply/callAWSaccount/E2Ecloud/loadtest.
+- Rà soát thủ công IAM, trust, boundaries, quotaspinning, APIgatewaynativeenvelope/alias/prod và PS secret/resource/cleanup handling. Ghi chú Phase 4 nêu bootstrap input/operator-first, actualscenario pending và loggingPhase6. Chưa apply/callAWSaccount/E2Ecloud/loadtest.
 - Phase4 complete implementation/local, Task5.1 tiếp theo sau Task4.2 review/merge. Chuẩn bị PR riêng; commit/title/bodytiếngAnh.
 
 - Kiểm tra cuối: 34 liên kết Markdown nội bộ,9ví dụJSON, cú pháp shell runbook, CI YAML và git diff --check PASS. Không chạy lại ứng dụng frontend tại local vì không sửa frontend; CI toàn repo sẽ kiểm tra hồi quy.
@@ -189,7 +187,7 @@
 
 2026-11-05: Kiểm tra full Go suite/vet sau Task 5.1 bị fail trước khi compile các package do diff có sẵn ở `backend/internal/config/config.go:27` (`dest` khai báo nhưng không dùng sau khi xóa phép gán). Giữ lỗi ngoài phạm vi, chưa sửa hoặc commit chung với frontend.
 
-2026-11-05: Bắt đầu Phase 5 trên nhánh `feat/phase-05-task-01-nextjs-auth-and-pages`; chốt phạm vi Task 5.1 cho static landing/login/callback, Google-only Cognito PKCE và Doodle UI. Đã ghi thiết kế tại `docs/superpowers/specs/2026-11-05-phase-5-task-5-1-frontend-design.md`; chưa chạy AWS hoặc Terraform apply.
+2026-11-05: Bắt đầu Phase 5 trên nhánh `feat/phase-05-task-01-nextjs-auth-and-pages`; chốt phạm vi Task 5.1 cho static landing/login/callback, Google-only Cognito PKCE và Doodle UI. Đã ghi thiết kế Doodle UI; chưa chạy AWS hoặc Terraform apply.
 
 - Đã mở [PR #79](https://github.com/TrieuNguyenPhu/shorten-link/pull/79) cho Task 5.1 từ main `f80c0dc`.
 
@@ -293,3 +291,23 @@ Task 6.1: [PR #89](https://github.com/TrieuNguyenPhu/shorten-link/pull/89), CI [
 - IAM hosting pin CloudFront IDs, không wildcard unknown resources; saved plan SSE trong state bucket/private prefix, hash/commit/package binding, write-once và lifecycle current/noncurrent2d. Không GitHub plan artifact chứa secret. Review diff/secrets/state thủ công và diff-check PASS. AWS deployment/OIDC/canary/rollback/Google account E2E vẫn pending; không gửi email hoặc chạy AWS load test.
 - CI [#222](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41982111683) PASS cả 5 jobs trên commit 2985818 sau cấu hình environment tường minh.
 - Giải quyết merge conflict và đồng bộ branch với `origin/main` sau khi PR #89 đã merge.
+
+## Documentation Cleanup & Refactor — 2026-11-05
+- **Nhánh:** `chore/cleanup-redundant-docs`
+- **Mục tiêu:** Xóa bỏ toàn bộ các tài liệu dư thừa, tạm thời và trùng lặp phát sinh qua các Phase trước; viết lại `README.md` theo cấu trúc tinh gọn: Công nghệ -> Workflow -> Cách chạy.
+- **Tài liệu đã xóa:**
+  - `docs/phase-0-reference-audit.md` (audit ban đầu của chuỗi 21 bài blog)
+  - `docs/terraform-core-infrastructure.md`, `docs/terraform-event-pipeline.md`, `docs/terraform-realtime-and-moderation.md` (ghi chú phase cũ)
+  - `docs/websocket-and-moderation.md`, `docs/phase-6-observability-and-canary.md` (ghi chú phase cũ)
+  - `docs/operations.md`, `docs/e2e-verification-and-operations.md` (runbook trùng lặp)
+  - `docs/local-testing.md` (hướng dẫn test đã được đưa trực tiếp vào README)
+  - Thư mục `docs/superpowers/` (các spec và kế hoạch cũ của SDD)
+  - `frontend/AGENTS.md`, `frontend/README.md`
+- **Tài liệu cốt lõi duy nhất được giữ lại:**
+  - `docs/architecture-and-contracts.md` (đặc tả kiến trúc hệ thống, schema DynamoDB Single-Table, EventBridge contracts, WebSocket protocol)
+- **README.md mới:**
+  - Mục 1: Công nghệ sử dụng (Go Lambda arm64, DynamoDB Single-Table, EventBridge, SQS+DLQ, API Gateway v2, Cognito Google PKCE, Step Functions, Next.js Doodle UI, S3 + CloudFront OAC, Terraform).
+  - Mục 2: Quy trình hoạt động (Sơ đồ Mermaid và diễn giải 4 luồng chính: Tạo & quản lý link, Rút gọn & Redirect, Analytics bất đồng bộ & Realtime push, Kiểm duyệt Step Functions).
+  - Mục 3: Cách chạy (Yêu cầu môi trường, Chạy & test local, Build Lambda arm64, Triển khai Terraform, Publish Frontend).
+  - Mục 4: Tài liệu tham khảo kỹ thuật.
+- **Kiểm tra:** Cập nhật đồng bộ các tham chiếu tài liệu trong `AGENTS.md`, `PROJECT_STATUS.md`, `task_plan.md`, `findings.md`, `progress.md`.

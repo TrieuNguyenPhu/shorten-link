@@ -1,5 +1,8 @@
 # PROJECT_STATUS.md — Trạng Thái Hiện Tại Của Dự Án
 
+## Documentation Cleanup & Refactor — 2026-11-05
+- **Task Documentation Cleanup:** **complete (implementation/local)**: Đã xóa các tài liệu dư thừa, tạm thời và trùng lặp; viết lại `README.md` tinh gọn theo 3 phần chính: Công nghệ sử dụng -> Quy trình hoạt động (Workflow) -> Cách chạy (How to run). Tài liệu chi tiết duy nhất được giữ lại trong `docs/` là `docs/architecture-and-contracts.md`.
+
 ## Phase 6 — 2026-11-05
 
 - **Task 6.1:** **complete (đã merge main qua PR #89)**: Terraform Modules `observability` & `codedeploy_canary`.
@@ -61,12 +64,10 @@
 
 ---
 
-## 3. Tài Liệu Cốt Lõi Đã Khởi Tạo Ở Phase 0
+## 3. Tài Liệu Cốt Lõi Dự Án
 
-- [`AGENTS.md`](./AGENTS.md): Quy chuẩn làm việc, kiến trúc bắt buộc, tích hợp 13 bộ skills và quy trình PR theo từng task.
-- [`docs/phase-0-reference-audit.md`](./docs/phase-0-reference-audit.md): Phân tích chi tiết 21 bài viết và toàn bộ mã nguồn repo tham chiếu `nghiadaulau/serverless-url-shortener-aws`.
+- [`AGENTS.md`](./AGENTS.md): Quy chuẩn làm việc, kiến trúc bắt buộc và quy trình làm việc.
 - [`docs/architecture-and-contracts.md`](./docs/architecture-and-contracts.md): Sơ đồ kiến trúc Mermaid, hợp đồng API HTTP/WebSocket, thiết kế DynamoDB Single-Table & giải thích 9 access patterns.
-- [`docs/superpowers/plans/2026-10-26-serverless-url-shortener-plan.md`](./docs/superpowers/plans/2026-10-26-serverless-url-shortener-plan.md): Kế hoạch triển khai chi tiết từng Phase (Phase 0 → Phase 6) và từng Task.
 - [`task_plan.md`](./task_plan.md), [`findings.md`](./findings.md), [`progress.md`](./progress.md): Hệ thống file quản lý bộ nhớ làm việc theo chuẩn `planning-with-files`.
 
 ## 4. Bằng Chứng Kiểm Tra Và Giới Hạn
@@ -128,7 +129,7 @@
 - DynamoDB Local3.3.0: `DYNAMODB_ENDPOINT=http://127.0.0.1:8000 go -C backend test -race -tags=integration -count=1 -v ./internal/repository/... ./tools/local-http/...` PASS. Pagination thật vượt1MB, timestamp trong cùng giây, chống IDOR và giữ STAT/CLICK khi delete. HTTP E2E và CLI smoke bốn route PASS; EventBridge recorder là fixture tại ranh giới HTTP, không phải service AWS.
 - `bash scripts/build-lambdas.sh` PASS: bốn ZIP trong backend/dist (ignored), mỗi ZIP chỉ bootstrap0755, ELF64 AArch64 không PT_INTERP. CI thêm DynamoDB Local integration/E2E và build4ZIP; fmt/diff/liên kết/JSON được kiểm trước commit.
 - govulncheck v1.9.0 verbose exit0: 0 symbol/package vulnerabilities; vẫn 4 module-only advisories như mục8, không suppress. AWS SDK v2 DynamoDB/EventBridge/config/credentials đã pin trong go.mod/go.sum.
-- Rà soát diff không secret/state/tfvars thực, không sửa frontend, không có transaction aggregator trong scope. Không chạy AWS/apply/load test; JWT/IAM/EventBridge pipeline và trace export giữ pending. Hướng dẫn tại [docs/local-testing.md](./docs/local-testing.md).
+- Rà soát diff không secret/state/tfvars thực, không sửa frontend, không có transaction aggregator trong scope. Không chạy AWS/apply/load test; JWT/IAM/EventBridge pipeline và trace export giữ pending. Hướng dẫn tại [README.md](./README.md).
 
 - PR Task 2.1: [#71](https://github.com/TrieuNguyenPhu/shorten-link/pull/71), base main, CI PASS, chờ review; chưa merge.
 - CI [run #164](https://github.com/TrieuNguyenPhu/shorten-link/actions/runs/41759270780) trên commit39fdbe8 PASS cả backend (race/vet/DynamoDB integration/HTTP E2E/build4ZIP/scan), packaging-windows và frontend (lint/typecheck/static build/tests/audit). Commit sau chỉ cập nhật bằng chứng tài liệu.
@@ -141,7 +142,7 @@
 - Terraform1.17.1/AWS provider6.71.0 + lockfiles: fmt-check, init-backend=false-lockfile-readonly, validate và test hai root PASS. 8 bootstrap +8 core runs đều plan/mock, không AWS apply. Go1.26.10 race/vet và build4ZIP PASS.
 - PowerShell7.5/container: tests/e2e/aws-flow.test.ps1 parser + Core/OIDC endpoint/role/missing-token preflight PASS; không gửi request AWS. aws-flow.ps1 Core/OIDC sẵn sàng cho hai Google identities/access tokens và ID/Google negative tokens khi được phép; E2E AWS chưa chạy.
 - Host thiếu make, đã chạy trực tiếp toàn bộ command tương đương, không tuyên bố make check thành công. IAM Policy Autopilot không chạy vì uvx/pip/ensurepip thiếu; fallback SAR xác minh104 action names và resource capabilities. Không upload policy hoặc gọi account AWS.
-- Giới hạn cần xử lý khi triển khai: chuẩn bị Google Web client/secret, bảo vệ remote state/plan, exact protected environment/main trust. API Gateway v2 child/tag endpoints scope ID/path, không dựa inheritance V1; pin http_api_ids output vào bootstrap sau first approved deployment và trước CD. DescribeUserPoolDomain cần wildcard read theo RequestedRegion. Chi tiết [runbook Terraform](./docs/terraform-core-infrastructure.md).
+- Giới hạn cần xử lý khi triển khai: chuẩn bị Google Web client/secret, bảo vệ remote state/plan, exact protected environment/main trust. API Gateway v2 child/tag endpoints scope ID/path, không dựa inheritance V1; pin http_api_ids output vào bootstrap sau first approved deployment và trước CD. DescribeUserPoolDomain cần wildcard read theo RequestedRegion. Chi tiết quy trình tại [README.md](./README.md).
 - CI thêm Terraform fmt/init/validate/16 plan tests và PowerShell parser/preflight; setup-terraform action pin SHA. Rà soát diff/IAM/boundary/alias/secret state và liên kết trước commit; chưa có AWS JWT/IAM/STS/X-Ray/pipeline evidence. Phase2 complete về implementation, kế tiếp Task3.1 sau review/merge Task2.2.
 
 - PR riêng Task2.2: [#72](https://github.com/TrieuNguyenPhu/shorten-link/pull/72), base main sau #71, title/body và commits tiếng Anh. Trạng thái CI hiện tại xem tại PR; chưa merge.
@@ -175,7 +176,7 @@
 
 ## 14. Phase3 / Task3.2 — 2026-11-04
 - Main113d969 sau PR#74 đã merge; nhánh riêng feat/phase-03-task-02-terraform-event-pipeline. Module nhận existing custom bus, tạo rule/envelope target/SQS standard30s/maxReceive3/DLQ14d/SSE-SQS/TLS/source policy/redrive allow và ESM batch10/partial failures/live aggregator alias. Aggregator dùng module Lambda chung; root outputs thêm queue/rule/ESM và năm role/alias.
-- Bootstrap boundary bổ sung UpdateItem/poll ClickQueue và năm handler. Managed policy pipeline tách khỏi inline do regression11256>10240; IAM deployment scope exact rule/queues, ESM operator provision lần đầu rồi pin UUID + FunctionArn live, bảo vệ ownership tags. Chi tiết/ruling tại docs/terraform-event-pipeline.md; không thay tài nguyên AWS trong phiên.
+- Bootstrap boundary bổ sung UpdateItem/poll ClickQueue và năm handler. Managed policy pipeline tách khỏi inline do regression11256>10240; IAM deployment scope exact rule/queues, ESM operator provision lần đầu rồi pin UUID + FunctionArn live, bảo vệ ownership tags. Chi tiết/ruling tại findings.md; không thay tài nguyên AWS trong phiên.
 - Terraform1.17.1/provider6.71.0: fmt-check/init-backend=false-lockfile-readonly/validate/test PASS cả hai root,14+13=27plan/mock tests. Go1.26.10 race/vet/build5ZIP PASS. PowerShell7.5 container --network none parser/preflight Core/OIDC/Pipeline/deletion/JSON shape regression PASS. Không có bằng chứng AWS pipeline delivery/DLQ thật.
 - Review độc lập Terraform không finding; PS JSON scalar/array finding đã sửa và scoped re-review PASS. IAM Autopilot unavailable (uvx exit127); dùng SAR4services kiểm action/resource/condition, không upload policy/call account. CI mở rộng tự chạy tests mới; runbook Pipeline nêu rõ exact account/output validation, bounded polls và cleanup test-only.
 - Phase3 complete về implementation/local, AWS rule/queues/aggregator/ESM chưa apply; Scenario Pipeline thật pending. Google Core E2E/OIDC trust matrix còn pending như Phase2. Task4.1 bắt đầu sau review/merge Task3.2; không tự merge hoặc triển khai AWS.
