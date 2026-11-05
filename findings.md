@@ -175,3 +175,11 @@
 - WebSocket URL thật có `/prod`, parser cũ chỉ nhận origin. Test hồi quy RED với lỗi `NEXT_PUBLIC_WS_URL must be an origin URL without a path`, GREEN sau khi giữ pathname cho WebSocket; vẫn từ chối credentials/query/fragment và WS không TLS ngoài loopback.
 - Đọc Google JSON và Cognito IdP trong bộ nhớ: client ID và secret đều khớp, không cần thay đổi tài nguyên AWS. Không in secret, không đưa JSON vào repository/assets.
 - Logo và favicon SVG dùng chung `/icon.svg`; ICO dự phòng được rasterize từ cùng SVG. Metadata static có title template `%s | Shrnk`, trang chủ giữ tagline riêng.
+
+
+## 2026-11-05 — Nguyên nhân OAuth callback state mismatch
+
+- `getAccessToken()` dùng `clearAuthSession()` khi token chưa có/hết hạn, xóa cả PKCE đang chờ. Navbar được mount trước AuthCallback, nên callback mất state/verifier dù URL chứa state đúng. Tái hiện cả bằng unit test RED và browser production với state đúng của phiên chẩn đoán.
+- Sửa đọc token chỉ dọn hai khóa access-token/expiry; logout và lỗi callback vẫn dọn cả PKCE. Không bỏ kiểm tra state/nonce hay thay storage sang localStorage.
+- Component integration bằng React DOM + jsdom phát hiện thêm StrictMode effect replay: effect thứ hai đọc query đã bị redaction rồi xóa phiên, trong khi request đầu đang chờ. Giữ một promise hoàn tất bằng `useRef`, chỉ đọc query/redact/exchange một lần; effect đang active nhận kết quả.
+- Thêm jsdom ở devDependencies; helper test transpile TSX bằng TypeScript sẵn có và nạp Next components thật. Chỉ mock fetch tại ranh giới token endpoint, không mock Navbar/AuthCallback/auth functions. Tests kiểm code/verifier/redirect, delayed response, redirect dashboard đúng một lần, dọn PKCE sau thành công, state/nonce sai bị từ chối.

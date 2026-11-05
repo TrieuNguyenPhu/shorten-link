@@ -5,6 +5,8 @@ Tái hiện hoàn chỉnh hệ thống **Serverless URL Shortener with Realtime 
 
 ## Current Phase
 
+- [x] **Sửa callback state mismatch — `Status: complete (implementation/deployed)`:** giữ PKCE khi token chưa có/hết hạn, callback chỉ exchange một lần dù effect replay. 24 tests/checks PASS; đã publish và xác minh production không còn xóa state trước token exchange trong phiên chẩn đoán.
+
 - [x] **Sửa Google login và metadata — `Status: complete (implementation/local)`:** public env local từ Terraform outputs, WebSocket giữ `/prod`, bỏ chú thích đăng nhập, favicon/logo dùng chung SVG và title riêng từng trang. Lint/typecheck/build/18 tests PASS; browser mở được Google qua Cognito, chưa kiểm chứng đăng nhập bằng tài khoản Google.
 Review fix Task4.2 — complete (implementation/local): execution name/ARN được theo dõi trước StartExecution; cleanup chỉ xóa khi xác nhận terminal. Tám lifecycle regression tests và PS offline PASS; PR #77 đã merge main501c049; [PR fix #78](https://github.com/TrieuNguyenPhu/shorten-link/pull/78) từ main, CI #186 PASS, chờ review.
 
