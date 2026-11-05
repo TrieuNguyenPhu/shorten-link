@@ -1,5 +1,6 @@
 mock_provider "aws" {
   override_during = plan
+  mock_resource "aws_cloudfront_distribution" { defaults = { domain_name = "dtest.cloudfront.net" } }
   mock_resource "aws_apigatewayv2_api" { defaults = { api_endpoint = "https://test.execute-api.ap-southeast-1.amazonaws.com", execution_arn = "arn:aws:execute-api:ap-southeast-1:111111111111:test" } }
   mock_data "aws_caller_identity" { defaults = { account_id = "111111111111" } }
   mock_resource "aws_iam_role" { defaults = { arn = "arn:aws:iam::111111111111:role/url-shortener/dev/test" } }
@@ -25,6 +26,16 @@ variables {
 }
 run "core_wiring" {
   command = plan
+  assert {
+    condition = (
+      output.frontend_url == "https://dtest.cloudfront.net" &&
+      local.frontend_callbacks == toset(["http://localhost:3000/auth/callback/", "https://dtest.cloudfront.net/auth/callback/"]) &&
+      local.frontend_logouts == toset(["http://localhost:3000/", "https://dtest.cloudfront.net/"]) &&
+      local.frontend_origins == toset(["http://localhost:3000", "https://dtest.cloudfront.net"]) &&
+      endswith(output.google_redirect_uri, ".amazoncognito.com/oauth2/idpresponse")
+    )
+    error_message = "CloudFront routes must extend the explicit callback, logout and CORS allowlists; Google redirects to Cognito."
+  }
   assert {
     condition     = toset(keys(module.functions)) == toset(["create-link", "resolve-link", "list-links", "delete-link"]) && module.functions["resolve-link"].environment_variables.EVENT_BUS == "url-shortener-events" && module.functions["create-link"].environment_variables.TABLE_NAME == "url-shortener"
     error_message = "The four real handlers must receive the real table and custom event bus."

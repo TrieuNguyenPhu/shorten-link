@@ -153,3 +153,10 @@
 - Task 5.1 dùng native Next.js App Router + Tailwind/CSS hiện có, không thêm component library. Static export tiếp tục dùng `output: "export"`, `trailingSlash: true`, `images.unoptimized: true`.
 - Browser auth chỉ dùng Cognito authorization code + PKCE S256 với Google IdP; không có password/signup flow và không đưa secret vào public config.
 - Builder review đã chốt thêm: đối chiếu `id_token.nonce`, lưu expiry và dọn query callback bằng `history.replaceState`; service URL production chỉ HTTPS/WSS, origin-only và reject placeholder/query/fragment.
+
+
+## Phase 5 / Task 5.3 — Recreated branch — 2026-11-05
+
+- Cách tránh conflict: dựng branch mới từ `origin/main`, áp dụng implementation hosting theo file, không mang merge commit `86a40ad` hoặc các thay đổi trạng thái đã xung đột của PR #80.
+- Module giữ S3 private + CloudFront OAC SigV4, bucket policy giới hạn distribution ARN, cache policy tách HTML/API assets và CloudFront Function rewrite cho static routes.
+- Bộ kiểm Terraform mock xác nhận frontend hosting wiring cùng core/event/realtime contracts vẫn pass 19/19; chưa apply AWS trong bước tạo PR.
