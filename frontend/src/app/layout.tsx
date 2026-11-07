@@ -14,5 +14,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  return <html className={lobster.variable} lang="vi"><body><div className="paper-shell"><a className="skip-link" href="#main-content">Đến nội dung</a><Navbar />{children}<Footer /></div></body></html>;
+  return <html className={lobster.variable} lang="vi" suppressHydrationWarning><head><script dangerouslySetInnerHTML={{ __html: `try { var t = localStorage.getItem("theme"); document.documentElement.dataset.theme = t === "dark" || (t !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light"; } catch (e) { document.documentElement.dataset.theme = "light"; }` }} /></head><body><div className="paper-shell"><a className="skip-link" href="#main-content">Đến nội dung</a><Navbar />{children}<Footer /></div></body></html>;
 }

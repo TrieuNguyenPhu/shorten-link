@@ -15,7 +15,7 @@ export default function Home() {
           </div>
         </div>
         <div aria-label="Biểu tượng link Shrnk" className="relative mx-auto w-full max-w-sm rotate-[2deg]">
-          <div className="sketch-card flex min-h-64 flex-col items-center justify-center gap-6 bg-sun p-8 shadow-[8px_8px_0_var(--ink)]">
+          <div className="sketch-card hero-illustration flex min-h-64 flex-col items-center justify-center gap-6 bg-[#e85f4f] p-8 shadow-[8px_8px_0_#24221e]">
             <LinkIcon className="h-28 w-28" />
             <span className="text-4xl">Dài thành ngắn.</span>
           </div>
