@@ -24,7 +24,8 @@ test("landing page has product copy and one Google login entry point", async () 
   assert.match(`${page}\n${layout}`, /aria-|focus|nav|main/i);
   assert.match(page, /Shrnk/);
   assert.match(page, /Source Code/);
-  assert.match(page, /Dashboard/);
+  assert.match(page, /className="sketch-button" href="\/login\/">Đăng nhập/);
+  assert.match(page, /className="sketch-button sketch-button-secondary" href="https:\/\/github\.com\/TrieuNguyenPhu\/shorten-link"[^>]*>Source Code/);
   assert.doesNotMatch(page, /Xem cách hoạt động|→|My Links/);
 });
 

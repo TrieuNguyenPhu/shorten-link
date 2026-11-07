@@ -10,8 +10,8 @@ export default function Home() {
           <h1 className="max-w-3xl font-display text-5xl leading-tight sm:text-7xl">Link ngắn.<br /><span className="relative inline-block text-coral">Chia sẻ dễ dàng.<span aria-hidden="true" className="scribble-underline" /></span></h1>
           <p className="mt-7 text-xl text-ink-muted">Rút gọn link, theo dõi lượt click realtime cùng Shrnk.</p>
           <div className="mt-9 flex flex-wrap gap-3">
-            <a className="sketch-button" href="https://github.com/TrieuNguyenPhu/shorten-link" rel="noreferrer" target="_blank">Source Code</a>
-            <Link className="sketch-button sketch-button-secondary" href="/dashboard/">Dashboard</Link>
+            <Link className="sketch-button" href="/login/">Đăng nhập</Link>
+            <a className="sketch-button sketch-button-secondary" href="https://github.com/TrieuNguyenPhu/shorten-link" rel="noreferrer" target="_blank">Source Code</a>
           </div>
         </div>
         <div aria-label="Biểu tượng link Shrnk" className="relative mx-auto w-full max-w-sm rotate-[2deg]">
