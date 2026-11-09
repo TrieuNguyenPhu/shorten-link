@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getAccessToken } from "@/lib/auth";
 import { LinkIcon } from "./LinkIcon";
+import { ThemeToggle } from "./ThemeToggle";
 import { LogoutButton } from "./LogoutButton";
 
 export function Navbar({ currentPath }: { currentPath?: string } = {}) {
@@ -32,7 +33,7 @@ export function Navbar({ currentPath }: { currentPath?: string } = {}) {
             <Link aria-current={(pathname?.replace(/\/$/, "") || "/") === (href.replace(/\/$/, "") || "/") ? "page" : undefined} className="nav-link" href={href} key={href}>{label}</Link>
           ))}
         </nav>
-        <div className="site-account">{signedIn ? <LogoutButton /> : <Link aria-current={pathname?.startsWith("/login") ? "page" : undefined} className="sketch-button sketch-button-small" href="/login/">Đăng nhập</Link>}</div>
+        <div className="site-account"><ThemeToggle />{signedIn ? <LogoutButton /> : <Link aria-current={pathname?.startsWith("/login") ? "page" : undefined} className="sketch-button sketch-button-small" href="/login/">Đăng nhập</Link>}</div>
       </div>
     </header>
   );
