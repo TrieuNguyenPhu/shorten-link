@@ -73,7 +73,9 @@ func (h *Handler) Create(ctx context.Context, req events.APIGatewayV2HTTPRequest
 		return failure(400, "body JSON qua lon")
 	}
 	var input *struct {
-		URL string `json:"url"`
+		URL        string `json:"url"`
+		Alias      string `json:"alias"`
+		ExpiryDays *int   `json:"expiryDays"`
 	}
 	decoder := json.NewDecoder(strings.NewReader(body))
 	if err := decoder.Decode(&input); err != nil || input == nil {
@@ -83,17 +85,29 @@ func (h *Handler) Create(ctx context.Context, req events.APIGatewayV2HTTPRequest
 	if err := decoder.Decode(&extra); err != io.EOF {
 		return failure(400, "body JSON khong hop le")
 	}
-	link, err := h.service.Create(ctx, owner, input.URL)
+	link, err := h.service.Create(ctx, owner, input.URL, input.Alias, input.ExpiryDays)
 	switch {
 	case errors.Is(err, service.ErrInvalidURL):
 		return failure(400, "thieu hoac sai dinh dang 'url' (chi nhan http/https cong khai, an toan)")
+	case errors.Is(err, service.ErrInvalidAlias):
+		return failure(400, "ten duong link khong hop le")
+	case errors.Is(err, service.ErrInvalidExpiry):
+		return failure(400, "thoi han phai tu 1 den 365 ngay")
+	case errors.Is(err, service.ErrAliasTaken):
+		return failure(409, "ten duong link da duoc su dung")
 	case errors.Is(err, service.ErrCodeExhausted):
 		return failure(500, "khong sinh duoc ma duy nhat, thu lai")
 	case err != nil:
 		h.log(ctx, req).Error("create link failed", "error", err)
 		return failure(500, "loi he thong")
 	}
-	return jsonResponse(201, map[string]string{"code": link.Code, "shortUrl": h.shortURL(req, link.Code), "target": link.Target, "status": link.Status})
+	return jsonResponse(201, struct {
+		Code      string `json:"code"`
+		ShortURL  string `json:"shortUrl"`
+		Target    string `json:"target"`
+		Status    string `json:"status"`
+		ExpiresAt int64  `json:"expiresAt,omitempty"`
+	}{link.Code, h.shortURL(req, link.Code), link.Target, link.Status, link.ExpiresAt})
 }
 
 func (h *Handler) List(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
@@ -124,13 +138,14 @@ func (h *Handler) List(ctx context.Context, req events.APIGatewayV2HTTPRequest) 
 		Target         string `json:"target"`
 		Clicks         int64  `json:"clicks"`
 		CreatedAt      string `json:"createdAt"`
+		ExpiresAt      int64  `json:"expiresAt,omitempty"`
 		RealtimeTicket string `json:"realtimeTicket,omitempty"`
 		Status         string `json:"status"`
 		StatusReason   string `json:"statusReason,omitempty"`
 	}
 	items := make([]item, 0, len(links))
 	for _, link := range links {
-		entry := item{Code: link.Code, ShortURL: h.shortURL(req, link.Code), Target: link.Target, Clicks: link.Clicks, CreatedAt: link.CreatedAt, Status: link.Status, StatusReason: link.StatusReason}
+		entry := item{Code: link.Code, ShortURL: h.shortURL(req, link.Code), Target: link.Target, Clicks: link.Clicks, CreatedAt: link.CreatedAt, ExpiresAt: link.ExpiresAt, Status: link.Status, StatusReason: link.StatusReason}
 		if ticket, ticketErr := h.service.IssueRealtimeTicketForLink(ctx, owner, link); ticketErr == nil {
 			entry.RealtimeTicket = ticket.Ticket
 		} else if !errors.Is(ticketErr, service.ErrTicketStoreUnavailable) {
@@ -151,7 +166,7 @@ func (h *Handler) Delete(ctx context.Context, req events.APIGatewayV2HTTPRequest
 		return failure(401, "thieu danh tinh nguoi dung")
 	}
 	code := req.PathParameters["code"]
-	if !domain.IsValidShortCode(code) {
+	if !domain.IsValidLinkCode(code) {
 		return failure(404, "link khong ton tai hoac khong thuoc ve ban")
 	}
 	err := h.service.Delete(ctx, code, owner)
@@ -167,7 +182,7 @@ func (h *Handler) Delete(ctx context.Context, req events.APIGatewayV2HTTPRequest
 
 func (h *Handler) Resolve(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 	code := req.PathParameters["code"]
-	if !domain.IsValidShortCode(code) {
+	if !domain.IsValidLinkCode(code) {
 		return events.APIGatewayV2HTTPResponse{StatusCode: 404, Headers: map[string]string{"Content-Type": "text/plain"}, Body: "khong tim thay link"}, nil
 	}
 	target, err := h.service.Resolve(ctx, code)

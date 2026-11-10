@@ -105,12 +105,54 @@ func TestIsValidShortCodeAndIsSafeTargetURL(t *testing.T) {
 	if !IsValidShortCode("Abc1234") || IsValidShortCode("short") || IsValidShortCode("toolong8") || IsValidShortCode("bad-chr") {
 		t.Fatal("invalid short code validation")
 	}
+	if !IsValidLinkCode("my-link") || !IsValidLinkCode("Abc1234") || IsValidLinkCode("links") || IsValidLinkCode("bad/chars") {
+		t.Fatal("invalid link code validation")
+	}
 	if !IsSafeTargetURL("https://devil.com/medieval-history") {
 		t.Fatal("false positive on substring match")
 	}
 	for _, unsafe := range []string{"https://evil.example.org", "https://example.org/malware-kit", "https://phishing.example.org", "http://127.0.0.1/"} {
 		if IsSafeTargetURL(unsafe) {
 			t.Fatalf("accepted unsafe URL %q", unsafe)
+		}
+	}
+}
+
+func TestValidateAlias(t *testing.T) {
+	longAlias := strings.Repeat("a", 32)
+	for _, tc := range []struct {
+		raw, want string
+	}{
+		{" abc ", "abc"},
+		{"my-link-2", "my-link-2"},
+		{longAlias, longAlias},
+		{"", ""},
+	} {
+		t.Run(tc.raw, func(t *testing.T) {
+			got, err := ValidateAlias(tc.raw)
+			if err != nil || got != tc.want {
+				t.Fatalf("got %q, %v; want %q", got, err, tc.want)
+			}
+		})
+	}
+	for _, raw := range []string{
+		"ab", strings.Repeat("a", 33), "-abc", "abc-", "a--b", "a_b", "a/b", "links", "LINKS",
+	} {
+		if got, err := ValidateAlias(raw); err == nil {
+			t.Fatalf("accepted invalid alias %q as %q", raw, got)
+		}
+	}
+}
+
+func TestValidateExpiryDays(t *testing.T) {
+	for _, days := range []int{1, 365} {
+		if err := ValidateExpiryDays(days); err != nil {
+			t.Fatalf("rejected %d days: %v", days, err)
+		}
+	}
+	for _, days := range []int{-1, 0, 366} {
+		if err := ValidateExpiryDays(days); err == nil {
+			t.Fatalf("accepted invalid expiry %d", days)
 		}
 	}
 }

@@ -71,7 +71,7 @@ func TestCreateRetriesOnlyCollisionsFiveTotalWrites(t *testing.T) {
 			}}, nil)
 			s.now = func() time.Time { return time.Date(2026, 11, 4, 0, 0, 0, 1000000, time.FixedZone("UTC+7", 7*3600)) }
 			s.generate = func() (string, error) { generated++; return "Abc1234", nil }
-			link, err := s.Create(context.Background(), "alice", "https://example.org")
+			link, err := s.Create(context.Background(), "alice", "https://example.org", "", nil)
 			if (err != nil) != tc.wantErr || calls != tc.wantCalls || generated != calls {
 				t.Fatalf("%+v %v calls=%d generated=%d", link, err, calls, generated)
 			}
@@ -94,7 +94,7 @@ func TestCreateStartsModerationFromPendingState(t *testing.T) {
 		}
 		return nil
 	}))
-	link, err := s.Create(context.Background(), "alice", "https://example.org")
+	link, err := s.Create(context.Background(), "alice", "https://example.org", "", nil)
 	if err != nil || link.Status != "pending" || !started {
 		t.Fatalf("link=%+v err=%v started=%v", link, err, started)
 	}
@@ -103,13 +103,50 @@ func TestCreateStartsModerationFromPendingState(t *testing.T) {
 func TestCreateRejectsInvalidURLAndGeneratorError(t *testing.T) {
 	s := New(repoStub{}, nil)
 	for _, raw := range []string{"javascript:alert(1)", "http://127.0.0.1/admin", "http://localhost:8080/internal", "http://169.254.169.254/latest/meta-data/", "https://phishing.example.org/login"} {
-		if _, err := s.Create(context.Background(), "alice", raw); !errors.Is(err, ErrInvalidURL) {
+		if _, err := s.Create(context.Background(), "alice", raw, "", nil); !errors.Is(err, ErrInvalidURL) {
 			t.Fatalf("raw=%q err=%v", raw, err)
 		}
 	}
 	s.generate = func() (string, error) { return "", errors.New("entropy unavailable") }
-	if _, err := s.Create(context.Background(), "alice", "https://example.org"); err == nil {
+	if _, err := s.Create(context.Background(), "alice", "https://example.org", "", nil); err == nil {
 		t.Fatal("expected entropy error")
+	}
+}
+
+func TestCreateSupportsCustomAliasAndExpiry(t *testing.T) {
+	var stored domain.Link
+	s := New(repoStub{create: func(link domain.Link) error {
+		stored = link
+		return nil
+	}}, nil)
+	s.now = func() time.Time { return time.Unix(1_000, 0) }
+	expiry := 3
+	link, err := s.Create(context.Background(), "alice", "https://example.org", "my-link", &expiry)
+	if err != nil || link.Code != "my-link" || link.ExpiresAt != 1_000+3*24*60*60 || stored.Code != link.Code || stored.ExpiresAt != link.ExpiresAt {
+		t.Fatalf("link=%+v stored=%+v err=%v", link, stored, err)
+	}
+}
+
+func TestCreateRejectsInvalidAliasAndExpiryBeforeStorage(t *testing.T) {
+	calls := 0
+	s := New(repoStub{create: func(domain.Link) error { calls++; return nil }}, nil)
+	if _, err := s.Create(context.Background(), "alice", "https://example.org", "bad alias", nil); !errors.Is(err, ErrInvalidAlias) {
+		t.Fatalf("alias err=%v", err)
+	}
+	expiry := 366
+	if _, err := s.Create(context.Background(), "alice", "https://example.org", "", &expiry); !errors.Is(err, ErrInvalidExpiry) {
+		t.Fatalf("expiry err=%v", err)
+	}
+	if calls != 0 {
+		t.Fatalf("storage calls=%d", calls)
+	}
+}
+
+func TestCreateCustomAliasCollisionIsNotRetried(t *testing.T) {
+	calls := 0
+	s := New(repoStub{create: func(domain.Link) error { calls++; return repository.ErrCollision }}, nil)
+	if _, err := s.Create(context.Background(), "alice", "https://example.org", "my-link", nil); !errors.Is(err, ErrAliasTaken) || calls != 1 {
+		t.Fatalf("err=%v calls=%d", err, calls)
 	}
 }
 
@@ -150,6 +187,21 @@ func TestResolveBlocksRejectedOrInvalidCodesAndReturnsTargetOnPublishError(t *te
 	s := New(repoStub{get: func(string) (domain.Link, error) { t.Fatal("invalid code queried storage"); return domain.Link{}, nil }}, nil)
 	if _, err := s.Resolve(context.Background(), "robots.txt"); !errors.Is(err, repository.ErrNotFound) {
 		t.Fatal(err)
+	}
+}
+
+func TestResolveRejectsExpiredLinks(t *testing.T) {
+	s := New(repoStub{get: func(string) (domain.Link, error) {
+		return domain.Link{Code: "Abc1234", Target: "https://example.org", Status: "active", ExpiresAt: 2_000}, nil
+	}}, nil)
+	s.now = func() time.Time { return time.Unix(2_000, 0) }
+	if _, err := s.Resolve(context.Background(), "Abc1234"); !errors.Is(err, repository.ErrNotFound) {
+		t.Fatalf("expired link resolved: %v", err)
+	}
+	s.now = func() time.Time { return time.Unix(1_999, 0) }
+	target, err := s.Resolve(context.Background(), "Abc1234")
+	if err != nil || target != "https://example.org" {
+		t.Fatalf("target=%q err=%v", target, err)
 	}
 }
 

@@ -117,6 +117,7 @@ export function LinksWorkspace() {
         code: created.code,
         target: created.target,
         shortUrl: created.shortUrl,
+        expiresAt: created.expiresAt,
         clicks: 0,
         createdAt: new Date().toISOString(),
       },

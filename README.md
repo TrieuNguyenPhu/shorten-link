@@ -376,7 +376,7 @@ bash scripts/publish-frontend.sh
 
 | Phương thức | Đường dẫn | Xác thực | Mô tả |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/links` | Bearer Token (Cognito) | Tạo một link rút gọn mới. Body: `{"target": "https://..."}` |
+| `POST` | `/links` | Bearer Token (Cognito) | Tạo link rút gọn. Body: `{"url": "https://...", "alias": "my-link", "expiryDays": 30}`; `alias` và `expiryDays` tùy chọn, bỏ trống thời hạn là vĩnh viễn. |
 | `GET` | `/{code}` | Không | Chuyển hướng 302 tới URL gốc và phát hành sự kiện analytics |
 | `GET` | `/links` | Bearer Token (Cognito) | Liệt kê danh sách link của tài khoản (hỗ trợ query param `?cursor=...`) |
 | `DELETE` | `/links/{code}` | Bearer Token (Cognito) | Xóa link thuộc quyền sở hữu của người dùng |
@@ -389,20 +389,24 @@ Authorization: Bearer <cognito_id_token>
 Content-Type: application/json
 
 {
-  "target": "https://example.com/very-long-url-path"
+  "url": "https://example.com/very-long-url-path",
+  "alias": "docs-example",
+  "expiryDays": 30
 }
 ```
 
 **Response (201 Created):**
 ```json
 {
-  "code": "aB3x9Z1",
+  "code": "docs-example",
   "target": "https://example.com/very-long-url-path",
-  "shortUrl": "https://<api-id>.execute-api.ap-southeast-1.amazonaws.com/aB3x9Z1",
-  "createdAt": "2026-11-05T14:00:00.000Z",
-  "clicks": 0
+  "shortUrl": "https://<api-id>.execute-api.ap-southeast-1.amazonaws.com/docs-example",
+  "status": "pending",
+  "expiresAt": 1794000000
 }
 ```
+
+`alias` phải dài 3–32 ký tự chữ, số hoặc dấu gạch ngang, không bắt đầu/kết thúc bằng dấu gạch ngang và không dùng tên route `links`. `expiryDays` nhận số nguyên từ 1 đến 365; khi không gửi trường này, link không hết hạn. Link hết hạn trả về `404` ngay cả khi DynamoDB chưa dọn bản ghi TTL.
 
 ---
 

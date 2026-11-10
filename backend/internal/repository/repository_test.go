@@ -45,14 +45,26 @@ func str(v types.AttributeValue) string { return v.(*types.AttributeValueMemberS
 
 func TestCreateConditionalAndCollision(t *testing.T) {
 	repo := New(sdkStub{put: func(in *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
-		if aws.ToString(in.TableName) != "url-shortener" || aws.ToString(in.ConditionExpression) != "attribute_not_exists(PK)" || str(in.Item["PK"]) != "LINK#Abc1234" || str(in.Item["SK"]) != "META" || str(in.Item["GSI1PK"]) != "USER#alice" || str(in.Item["GSI1SK"]) != "LINK#2026-11-04T00:00:00.001Z" {
+		if aws.ToString(in.TableName) != "url-shortener" || aws.ToString(in.ConditionExpression) != "attribute_not_exists(PK)" || str(in.Item["PK"]) != "LINK#Abc1234" || str(in.Item["SK"]) != "META" || str(in.Item["GSI1PK"]) != "USER#alice" || str(in.Item["GSI1SK"]) != "LINK#2026-11-04T00:00:00.001Z" || in.Item["ttl"].(*types.AttributeValueMemberN).Value != "1794000000" {
 			t.Fatalf("unsafe put: %+v", in)
 		}
 		return nil, &types.ConditionalCheckFailedException{}
 	}}, "url-shortener")
-	err := repo.CreateLink(context.Background(), domain.Link{Code: "Abc1234", OwnerID: "alice", Target: "https://example.org", CreatedAt: "2026-11-04T00:00:00.001Z"})
+	err := repo.CreateLink(context.Background(), domain.Link{Code: "Abc1234", OwnerID: "alice", Target: "https://example.org", CreatedAt: "2026-11-04T00:00:00.001Z", ExpiresAt: 1794000000})
 	if !errors.Is(err, ErrCollision) {
 		t.Fatalf("got %v", err)
+	}
+}
+
+func TestCreateOmitsTTLForPermanentLinks(t *testing.T) {
+	repo := New(sdkStub{put: func(in *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
+		if _, ok := in.Item["ttl"]; ok {
+			t.Fatal("permanent link unexpectedly has ttl")
+		}
+		return &dynamodb.PutItemOutput{}, nil
+	}}, "url-shortener")
+	if err := repo.CreateLink(context.Background(), domain.Link{Code: "Abc1234", OwnerID: "alice", Target: "https://example.org", CreatedAt: "2026-11-04T00:00:00.001Z"}); err != nil {
+		t.Fatal(err)
 	}
 }
 

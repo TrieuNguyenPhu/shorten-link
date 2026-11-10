@@ -118,6 +118,53 @@ func TestCreateReturnsAPIDomainAndIgnoresBodyOwner(t *testing.T) {
 	}
 }
 
+func TestCreateAcceptsAliasAndExpiry(t *testing.T) {
+	var stored map[string]types.AttributeValue
+	h := handler(sdkStub{put: func(in *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
+		stored = in.Item
+		return &dynamodb.PutItemOutput{}, nil
+	}}, nil, io.Discard)
+	h.service.SetModerationStarter(nil)
+	res, err := h.Create(context.Background(), request(`{"url":"https://example.org","alias":"my-link","expiryDays":7}`))
+	if err != nil || res.StatusCode != 201 {
+		t.Fatal(res, err)
+	}
+	var out map[string]any
+	if err := json.Unmarshal([]byte(res.Body), &out); err != nil {
+		t.Fatal(err)
+	}
+	if out["code"] != "my-link" || out["expiresAt"] == nil || stored["ttl"] == nil {
+		t.Fatalf("out=%v stored=%v", out, stored)
+	}
+}
+
+func TestCreateRejectsInvalidOptionsBeforeStorage(t *testing.T) {
+	calls := 0
+	h := handler(sdkStub{put: func(*dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
+		calls++
+		return &dynamodb.PutItemOutput{}, nil
+	}}, nil, io.Discard)
+	for _, body := range []string{`{"url":"https://example.org","alias":"bad alias"}`, `{"url":"https://example.org","expiryDays":366}`} {
+		res, err := h.Create(context.Background(), request(body))
+		if err != nil || res.StatusCode != 400 {
+			t.Fatalf("body=%s got %+v %v", body, res, err)
+		}
+	}
+	if calls != 0 {
+		t.Fatalf("storage calls=%d", calls)
+	}
+}
+
+func TestCreateReturnsConflictForAliasCollision(t *testing.T) {
+	h := handler(sdkStub{put: func(*dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
+		return nil, &types.ConditionalCheckFailedException{}
+	}}, nil, io.Discard)
+	res, err := h.Create(context.Background(), request(`{"url":"https://example.org","alias":"my-link"}`))
+	if err != nil || res.StatusCode != 409 {
+		t.Fatal(res, err)
+	}
+}
+
 func TestCreateCollisionReturns500AfterFiveWrites(t *testing.T) {
 	calls := 0
 	h := handler(sdkStub{put: func(*dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
@@ -158,6 +205,30 @@ func TestListReturnsOnlyPublicFieldsAndEmptyArray(t *testing.T) {
 		} else if len(out.Links) != 1 || len(out.Links[0]) != 7 || out.Links[0]["clicks"] != float64(4) || out.Links[0]["shortUrl"] != "https://redirect.example.org/Abc1234" || out.Links[0]["status"] != "ACTIVE" || out.Links[0]["realtimeTicket"] == "" {
 			t.Fatal(out)
 		}
+	}
+}
+
+func TestListIncludesOptionalExpiry(t *testing.T) {
+	h := handler(sdkStub{query: func(*dynamodb.QueryInput) (*dynamodb.QueryOutput, error) {
+		return &dynamodb.QueryOutput{
+			Items: []map[string]types.AttributeValue{{
+				"PK":        &types.AttributeValueMemberS{Value: "LINK#my-link"},
+				"ownerId":   &types.AttributeValueMemberS{Value: "alice"},
+				"target":    &types.AttributeValueMemberS{Value: "https://example.org"},
+				"createdAt": &types.AttributeValueMemberS{Value: "2026-11-04T00:00:00.000Z"},
+				"ttl":       &types.AttributeValueMemberN{Value: "1794000000"},
+			}},
+		}, nil
+	}}, nil, io.Discard)
+	res, err := h.List(context.Background(), request(""))
+	if err != nil || res.StatusCode != 200 {
+		t.Fatal(res, err)
+	}
+	var out struct {
+		Links []map[string]any `json:"links"`
+	}
+	if err := json.Unmarshal([]byte(res.Body), &out); err != nil || len(out.Links) != 1 || out.Links[0]["expiresAt"] != float64(1794000000) {
+		t.Fatalf("body=%s err=%v", res.Body, err)
 	}
 }
 
