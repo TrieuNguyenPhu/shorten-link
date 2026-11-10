@@ -24,10 +24,14 @@ resource "aws_iam_role_policy" "service" {
   role = aws_iam_role.service.id
   policy = jsonencode({ Version = "2012-10-17", Statement = [
     # AWS CodeDeploy's Lambda service integration evaluates these control-plane actions against Resource *; the role trust policy and deployment group still constrain who can assume/use the role.
-    { Effect = "Allow", Action = ["lambda:GetAlias", "lambda:UpdateAlias", "lambda:GetProvisionedConcurrencyConfig", "lambda:PutProvisionedConcurrencyConfig", "lambda:DeleteProvisionedConcurrencyConfig", "lambda:ListProvisionedConcurrencyConfigs", "lambda:GetFunction", "lambda:GetFunctionConfiguration", "lambda:PublishVersion", "sns:Publish"], Resource = ["*"] },
+    { Effect = "Allow", Action = ["lambda:GetAlias", "lambda:UpdateAlias", "lambda:GetProvisionedConcurrencyConfig", "lambda:PutProvisionedConcurrencyConfig", "lambda:DeleteProvisionedConcurrencyConfig", "lambda:ListProvisionedConcurrencyConfigs", "lambda:GetFunction", "lambda:GetFunctionConfiguration", "lambda:PublishVersion", "lambda:InvokeFunction", "sns:Publish"], Resource = ["*"] },
     # DescribeAlarms requires wildcard resources to include composite alarms.
     { Effect = "Allow", Action = ["cloudwatch:DescribeAlarms"], Resource = ["*"] }
   ] })
+}
+resource "aws_iam_role_policy_attachment" "service_managed" {
+  role       = aws_iam_role.service.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRoleForLambda"
 }
 resource "aws_codedeploy_deployment_group" "resolve" {
   app_name               = aws_codedeploy_app.resolve.name
@@ -47,5 +51,5 @@ resource "aws_codedeploy_deployment_group" "resolve" {
     enabled = true
     events  = ["DEPLOYMENT_FAILURE", "DEPLOYMENT_STOP_ON_ALARM", "DEPLOYMENT_STOP_ON_REQUEST"]
   }
-  depends_on = [aws_iam_role_policy.service]
+  depends_on = [aws_iam_role_policy.service, aws_iam_role_policy_attachment.service_managed]
 }

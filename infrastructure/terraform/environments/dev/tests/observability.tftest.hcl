@@ -50,12 +50,16 @@ run "canary_contract" {
     error_message = "CodeDeploy must use a bounded service role with the exact deployment-group trust policy."
   }
   assert {
-    condition     = alltrue([for action in ["lambda:GetAlias", "lambda:UpdateAlias", "lambda:GetFunction", "lambda:GetFunctionConfiguration", "lambda:PublishVersion"] : contains(flatten([for statement in jsondecode(aws_iam_role_policy.service.policy).Statement : statement.Action]), action)])
+    condition     = alltrue([for action in ["lambda:GetAlias", "lambda:UpdateAlias", "lambda:GetFunction", "lambda:GetFunctionConfiguration", "lambda:PublishVersion", "lambda:InvokeFunction"] : contains(flatten([for statement in jsondecode(aws_iam_role_policy.service.policy).Statement : statement.Action]), action)])
     error_message = "CodeDeploy must be able to inspect and publish the pinned Lambda version before shifting the live alias."
   }
   assert {
     condition     = jsondecode(aws_iam_role_policy.service.policy).Statement[0].Resource == ["*"]
     error_message = "AWS CodeDeploy Lambda service operations require the Lambda control-plane statement to use Resource *; trust remains bounded to this deployment group."
+  }
+  assert {
+    condition     = aws_iam_role_policy_attachment.service_managed.policy_arn == "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRoleForLambda"
+    error_message = "Use the AWS managed Lambda CodeDeploy policy so service-side canary operations remain compatible with the platform contract."
   }
   assert {
     condition     = try(jsondecode(aws_iam_role.service.assume_role_policy).Statement[0].Condition.StringEquals["aws:SourceAccount"], "") == "111111111111" && try(jsondecode(aws_iam_role.service.assume_role_policy).Statement[0].Condition.ArnEquals["aws:SourceArn"], "") == "arn:aws:codedeploy:ap-southeast-1:111111111111:deploymentgroup:url-shortener-dev-resolve/url-shortener-dev-resolve-live"
