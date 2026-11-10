@@ -7,6 +7,7 @@ import { JSDOM } from "jsdom";
 import { AUTH_STORAGE_KEYS } from "../src/lib/auth.ts";
 
 const { LinksWorkspace, mergeLinkSnapshot } = await import("../src/features/links/LinksWorkspace.tsx");
+const { LinksTable } = await import("../src/features/links/LinksTable.tsx");
 
 test("stale snapshots preserve pending creates and never restore deleted links", () => {
   const current = [
@@ -16,6 +17,26 @@ test("stale snapshots preserve pending creates and never restore deleted links",
   const merged = mergeLinkSnapshot(current, [], new Set(["New0001"]), new Set(["Deleted1"]));
   assert.deepEqual(merged.links.map((link) => link.code), ["New0001"]);
   assert.deepEqual([...merged.pendingCreated], ["New0001"]);
+});
+
+test("link table shows expiry and permanent status", async (t) => {
+  const dom = new JSDOM("<div id='root'></div>", { url: "https://shortn.dev/dashboard/" });
+  const globals = { window: globalThis.window, self: globalThis.self, document: globalThis.document, IS_REACT_ACT_ENVIRONMENT: globalThis.IS_REACT_ACT_ENVIRONMENT };
+  Object.assign(globalThis, { window: dom.window, self: dom.window, document: dom.window.document, IS_REACT_ACT_ENVIRONMENT: true });
+  const root = createRoot(document.getElementById("root"));
+  t.after(async () => { await act(async () => root.unmount()); Object.assign(globalThis, globals); dom.window.close(); });
+  await act(async () => root.render(createElement(LinksTable, {
+    apiBaseUrl: "https://api.shortn.dev",
+    links: [
+      { code: "Abc1234", target: "https://example.org", clicks: 0, createdAt: "2026-11-05T00:00:00Z", expiresAt: 1794000000 },
+      { code: "Def5678", target: "https://example.net", clicks: 0, createdAt: "2026-11-05T00:00:00Z" },
+    ],
+    onDelete: async () => undefined,
+    onReconnect: () => undefined,
+    websocketUrl: "wss://ws.shortn.dev",
+  })));
+  assert.match(document.body.textContent, /Hết hạn/);
+  assert.match(document.body.textContent, /Vĩnh viễn/);
 });
 
 test("dashboard keeps its table and sockets mounted while reconciling HTTP snapshots", async (t) => {

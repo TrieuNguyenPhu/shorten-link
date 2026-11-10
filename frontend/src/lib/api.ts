@@ -5,12 +5,13 @@ export type Link = {
   target: string;
   clicks: number;
   createdAt: string;
+  expiresAt?: number;
   shortUrl?: string;
   realtimeTicket?: string;
 };
 
 export type LinkPage = { links: Link[]; nextCursor?: string };
-export type CreatedLink = { code: string; shortUrl: string; target: string };
+export type CreatedLink = { code: string; shortUrl: string; target: string; expiresAt?: number };
 
 export class ApiError extends Error {
   readonly status: number;
@@ -29,11 +30,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isCreatedLink(value: unknown): value is CreatedLink {
-  return isRecord(value) && typeof value.code === "string" && typeof value.target === "string" && typeof value.shortUrl === "string";
+  return isRecord(value) && typeof value.code === "string" && typeof value.target === "string" && typeof value.shortUrl === "string" && (value.expiresAt === undefined || typeof value.expiresAt === "number");
 }
 
 function isLinkPage(value: unknown): value is LinkPage {
-  return isRecord(value) && Array.isArray(value.links) && value.links.every((link) => isRecord(link) && typeof link.code === "string" && typeof link.target === "string" && typeof link.clicks === "number" && typeof link.createdAt === "string");
+  return isRecord(value) && Array.isArray(value.links) && value.links.every((link) => isRecord(link) && typeof link.code === "string" && typeof link.target === "string" && typeof link.clicks === "number" && typeof link.createdAt === "string" && (link.expiresAt === undefined || typeof link.expiresAt === "number"));
 }
 
 async function readResponse<T>(response: Response, validate?: (value: unknown) => value is T): Promise<T> {
@@ -72,8 +73,13 @@ async function request(fetchImpl: FetchLike, url: string, init: RequestInit): Pr
   }
 }
 
-export async function createLink(config: PublicConfig, token: string, target: string, fetchImpl: FetchLike = fetch): Promise<CreatedLink> {
-  const response = await request(fetchImpl, `${config.apiBaseUrl}/links`, { method: "POST", headers: headers(token, crypto.randomUUID()), body: JSON.stringify({ url: target }) });
+export async function createLink(config: PublicConfig, token: string, target: string, optionsOrFetch: { alias?: string; expiryDays?: number } | FetchLike = {}, fetchImpl: FetchLike = fetch): Promise<CreatedLink> {
+  const options = typeof optionsOrFetch === "function" ? {} : optionsOrFetch;
+  const requestFetch = typeof optionsOrFetch === "function" ? optionsOrFetch : fetchImpl;
+  const payload: { url: string; alias?: string; expiryDays?: number } = { url: target };
+  if (options.alias) payload.alias = options.alias;
+  if (options.expiryDays !== undefined) payload.expiryDays = options.expiryDays;
+  const response = await request(requestFetch, `${config.apiBaseUrl}/links`, { method: "POST", headers: headers(token, crypto.randomUUID()), body: JSON.stringify(payload) });
   return readResponse<CreatedLink>(response, isCreatedLink);
 }
 

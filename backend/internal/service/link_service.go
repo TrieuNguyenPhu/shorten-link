@@ -16,6 +16,9 @@ import (
 var (
 	ErrPublish                = errors.New("click publication failed")
 	ErrInvalidURL             = errors.New("invalid URL")
+	ErrInvalidAlias           = errors.New("invalid alias")
+	ErrInvalidExpiry          = errors.New("invalid expiry")
+	ErrAliasTaken             = errors.New("alias already exists")
 	ErrCodeExhausted          = errors.New("could not allocate a unique short code")
 	ErrTicketStoreUnavailable = errors.New("realtime ticket store unavailable")
 	ErrModerationStart        = errors.New("moderation workflow could not be started")
@@ -62,7 +65,7 @@ func New(repo repository.LinkRepository, publisher ClickPublisher) *LinkService 
 }
 
 func (s *LinkService) IssueRealtimeTicket(ctx context.Context, owner, code string) (domain.RealtimeTicket, error) {
-	if !domain.IsValidShortCode(code) {
+	if !domain.IsValidLinkCode(code) {
 		return domain.RealtimeTicket{}, repository.ErrNotFound
 	}
 	if _, ok := s.repo.(RealtimeTicketStore); !ok {
@@ -76,7 +79,7 @@ func (s *LinkService) IssueRealtimeTicket(ctx context.Context, owner, code strin
 }
 
 func (s *LinkService) IssueRealtimeTicketForLink(ctx context.Context, owner string, link domain.Link) (domain.RealtimeTicket, error) {
-	if link.OwnerID != owner || !domain.IsValidShortCode(link.Code) {
+	if link.OwnerID != owner || !domain.IsValidLinkCode(link.Code) {
 		return domain.RealtimeTicket{}, repository.ErrNotFound
 	}
 	if _, ok := s.repo.(RealtimeTicketStore); !ok {
@@ -101,12 +104,36 @@ func (s *LinkService) issueRealtimeTicket(ctx context.Context, owner string, lin
 	return ticket, nil
 }
 
-func (s *LinkService) Create(ctx context.Context, owner, rawURL string) (domain.Link, error) {
+func (s *LinkService) Create(ctx context.Context, owner, rawURL, rawAlias string, expiryDays *int) (domain.Link, error) {
+	alias, aliasErr := domain.ValidateAlias(rawAlias)
+	if aliasErr != nil {
+		return domain.Link{}, ErrInvalidAlias
+	}
+	if expiryDays != nil {
+		if err := domain.ValidateExpiryDays(*expiryDays); err != nil {
+			return domain.Link{}, ErrInvalidExpiry
+		}
+	}
 	target, err := domain.ValidateTargetURL(rawURL)
 	if err != nil || !domain.IsSafeTargetURL(target) {
 		return domain.Link{}, ErrInvalidURL
 	}
-	link := domain.Link{OwnerID: owner, Target: target, CreatedAt: domain.FormatCreatedAt(s.now()), Status: "pending"}
+	createdAt := s.now()
+	link := domain.Link{OwnerID: owner, Target: target, CreatedAt: domain.FormatCreatedAt(createdAt), Status: "pending"}
+	if expiryDays != nil {
+		link.ExpiresAt = createdAt.Add(time.Duration(*expiryDays) * 24 * time.Hour).Unix()
+	}
+	if alias != "" {
+		link.Code = alias
+		err = s.repo.CreateLink(ctx, link)
+		if err == nil {
+			return s.startModeration(ctx, link)
+		}
+		if errors.Is(err, repository.ErrCollision) {
+			return domain.Link{}, ErrAliasTaken
+		}
+		return domain.Link{}, err
+	}
 	for range 5 {
 		link.Code, err = s.generate()
 		if err != nil {
@@ -114,12 +141,7 @@ func (s *LinkService) Create(ctx context.Context, owner, rawURL string) (domain.
 		}
 		err = s.repo.CreateLink(ctx, link)
 		if err == nil {
-			if s.moderator != nil {
-				if startErr := s.moderator.Start(ctx, domain.ModerationInput{Code: link.Code, Target: link.Target}); startErr != nil {
-					return link, fmt.Errorf("%w: %v", ErrModerationStart, startErr)
-				}
-			}
-			return link, nil
+			return s.startModeration(ctx, link)
 		}
 		if !errors.Is(err, repository.ErrCollision) {
 			return domain.Link{}, err
@@ -128,13 +150,25 @@ func (s *LinkService) Create(ctx context.Context, owner, rawURL string) (domain.
 	return domain.Link{}, ErrCodeExhausted
 }
 
+func (s *LinkService) startModeration(ctx context.Context, link domain.Link) (domain.Link, error) {
+	if s.moderator != nil {
+		if startErr := s.moderator.Start(ctx, domain.ModerationInput{Code: link.Code, Target: link.Target}); startErr != nil {
+			return link, fmt.Errorf("%w: %v", ErrModerationStart, startErr)
+		}
+	}
+	return link, nil
+}
+
 func (s *LinkService) Resolve(ctx context.Context, code string) (string, error) {
-	if !domain.IsValidShortCode(code) {
+	if !domain.IsValidLinkCode(code) {
 		return "", repository.ErrNotFound
 	}
 	link, err := s.repo.GetLink(ctx, code)
 	if err != nil {
 		return "", err
+	}
+	if link.ExpiresAt > 0 && s.now().Unix() >= link.ExpiresAt {
+		return "", repository.ErrNotFound
 	}
 	if !strings.EqualFold(link.Status, "active") || link.Target == "" {
 		return "", repository.ErrNotFound

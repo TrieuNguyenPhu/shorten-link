@@ -70,7 +70,33 @@ func NormalizeURL(raw string) (string, error) {
 const (
 	ShortCodeLength    = 7
 	MaxTargetURLLength = 2048
+	MinAliasLength     = 3
+	MaxAliasLength     = 32
+	MaxExpiryDays      = 365
 )
+
+func ValidateAlias(raw string) (string, error) {
+	alias := strings.TrimSpace(raw)
+	if alias == "" {
+		return "", nil
+	}
+	if len(alias) < MinAliasLength || len(alias) > MaxAliasLength || strings.EqualFold(alias, "links") || alias[0] == '-' || alias[len(alias)-1] == '-' || strings.Contains(alias, "--") {
+		return "", errors.New("alias must be 3-32 letters, numbers, or hyphens")
+	}
+	for _, c := range alias {
+		if !(c >= '0' && c <= '9' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c == '-') {
+			return "", errors.New("alias must be 3-32 letters, numbers, or hyphens")
+		}
+	}
+	return alias, nil
+}
+
+func ValidateExpiryDays(days int) error {
+	if days < 1 || days > MaxExpiryDays {
+		return errors.New("expiry must be between 1 and 365 days")
+	}
+	return nil
+}
 
 func IsValidShortCode(code string) bool {
 	if len(code) != ShortCodeLength {
@@ -83,6 +109,14 @@ func IsValidShortCode(code string) bool {
 		}
 	}
 	return true
+}
+
+func IsValidLinkCode(code string) bool {
+	if IsValidShortCode(code) {
+		return true
+	}
+	validated, err := ValidateAlias(code)
+	return err == nil && validated != ""
 }
 
 // ValidateTargetURL normalizes a user-supplied destination URL and blocks

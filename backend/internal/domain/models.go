@@ -7,6 +7,7 @@ type Link struct {
 	Target       string `json:"target" dynamodbav:"target"`
 	OwnerID      string `json:"-" dynamodbav:"ownerId"`
 	CreatedAt    string `json:"createdAt" dynamodbav:"createdAt"`
+	ExpiresAt    int64  `json:"expiresAt,omitempty" dynamodbav:"ttl,omitempty"`
 	Clicks       int64  `json:"clicks" dynamodbav:"clicks"`
 	Status       string `json:"status,omitempty" dynamodbav:"status,omitempty"`
 	StatusReason string `json:"statusReason,omitempty" dynamodbav:"statusReason,omitempty"`
