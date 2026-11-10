@@ -25,7 +25,7 @@ func (r *DynamoDB) RecordClickTransaction(ctx context.Context, eventID, code str
 	one := map[string]types.AttributeValue{":one": &types.AttributeValueMemberN{Value: "1"}}
 	out, err := r.client.TransactWriteItems(ctx, &dynamodb.TransactWriteItemsInput{TransactItems: []types.TransactWriteItem{
 		{Update: &types.Update{TableName: aws.String(r.table), Key: linkKey(code), UpdateExpression: aws.String("ADD clicks :one"), ConditionExpression: aws.String("attribute_exists(PK)"), ExpressionAttributeValues: one}},
-		{Put: &types.Put{TableName: aws.String(r.table), Item: map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: "CLICK#" + eventID}, "SK": &types.AttributeValueMemberS{Value: "CLICK"}, "ttl": &types.AttributeValueMemberN{Value: strconv.FormatInt(now.Unix()+86400, 10)}}, ConditionExpression: aws.String("attribute_not_exists(PK)")}},
+		{Put: &types.Put{TableName: aws.String(r.table), Item: map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: "CLICK#" + eventID}, "SK": &types.AttributeValueMemberS{Value: "CLICK"}, "ttl": &types.AttributeValueMemberN{Value: strconv.FormatInt(now.Unix()+15*24*60*60, 10)}}, ConditionExpression: aws.String("attribute_not_exists(PK)")}},
 	}})
 	if err == nil {
 		if out == nil {

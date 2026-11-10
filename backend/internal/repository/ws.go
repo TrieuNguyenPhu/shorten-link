@@ -19,6 +19,7 @@ func connectionKey(id string) map[string]types.AttributeValue {
 
 func (r *DynamoDB) SaveConnection(ctx context.Context, c domain.WSConnection) error {
 	item := connectionKey(c.ConnectionID)
+	item["ownerId"] = &types.AttributeValueMemberS{Value: c.OwnerID}
 	item["code"] = &types.AttributeValueMemberS{Value: c.Code}
 	item["GSI1PK"] = &types.AttributeValueMemberS{Value: "WSCODE#" + c.Code}
 	item["GSI1SK"] = &types.AttributeValueMemberS{Value: "CONN#" + c.ConnectionID}

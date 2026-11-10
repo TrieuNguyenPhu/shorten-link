@@ -59,6 +59,13 @@ run "pin_known_api_ids" {
     error_message = "Known API IDs must scope child resources without tag inheritance assumptions."
   }
 }
+run "unpinning_api_ids_grants_no_child_writes" {
+  command = plan
+  assert {
+    condition     = alltrue([for statement in jsondecode(aws_iam_policy.api_deployment.policy).Statement : alltrue([for action in statement.Action : !contains(["apigateway:POST", "apigateway:PUT", "apigateway:PATCH", "apigateway:DELETE"], action)]) || alltrue([for resource in statement.Resource : !strcontains(resource, "/apis/*/")])])
+    error_message = "Unknown API IDs must not grant wildcard child-resource writes."
+  }
+}
 run "reject_unscoped_state_key" {
   command = plan
   variables { state_key = "bootstrap/terraform.tfstate" }

@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/domain"
 	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/repository"
 	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/service"
 	"github.com/aws/aws-lambda-go/events"
@@ -46,7 +47,11 @@ func TestLocalWebSocketSubscriptionsAcrossOneMBPages(t *testing.T) {
 	before := time.Now().Unix()
 	for i := range 6 {
 		id := fmt.Sprintf("socket-%d", i)
-		res, err := ws.Connect(ctx, events.APIGatewayWebsocketProxyRequest{QueryStringParameters: map[string]string{"code": "Abc1234"}, RequestContext: events.APIGatewayWebsocketProxyRequestContext{ConnectionID: id}})
+		ticket := "ticket-" + id
+		if err := repo.PutRealtimeTicket(ctx, domain.RealtimeTicket{Ticket: ticket, OwnerID: "alice", Code: "Abc1234", TTL: time.Now().Unix() + 120}); err != nil {
+			t.Fatal(err)
+		}
+		res, err := ws.Connect(ctx, events.APIGatewayWebsocketProxyRequest{QueryStringParameters: map[string]string{"ticket": ticket}, RequestContext: events.APIGatewayWebsocketProxyRequestContext{ConnectionID: id}})
 		if err != nil || res.StatusCode != 200 {
 			t.Fatal(res, err)
 		}

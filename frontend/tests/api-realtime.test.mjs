@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 const { ApiError, createLink, deleteLink, listLinks } = await import("../src/lib/api.ts");
-const { mergeClickCount } = await import("../src/hooks/useRealtimeClicks.ts");
+const { mergeClickCount, calculateReconnectDelay } = await import("../src/hooks/useRealtimeClicks.ts");
 
 const config = {
   apiBaseUrl: "https://api.shortn.dev",
@@ -41,8 +41,27 @@ test("API client exposes HTTP status for delete failures", async () => {
   );
 });
 
+test("API client rejects HTML success bodies and aborts hung requests", async () => {
+  await assert.rejects(
+    createLink(config, "access-token", "https://example.org", async () => new Response("<html>", { status: 200 })),
+    (error) => error instanceof ApiError && /invalid/i.test(error.message),
+  );
+  await assert.rejects(
+    listLinks(config, "access-token", {}, (_url, options) => new Promise((_resolve, reject) => {
+      options.signal.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+    })),
+    (error) => error instanceof ApiError && /timed out|aborted/i.test(error.message),
+  );
+});
+
 test("realtime merge never moves a click count backwards", () => {
   assert.equal(mergeClickCount(7, 4), 7);
   assert.equal(mergeClickCount(7, 9), 9);
   assert.equal(mergeClickCount(0, 0), 0);
+});
+
+test("reconnect delay applies bounded jitter to exponential backoff", () => {
+  assert.equal(calculateReconnectDelay(1, () => 0), 125);
+  assert.equal(calculateReconnectDelay(3, () => 1), 1000);
+  assert.ok(calculateReconnectDelay(6, () => 0.5) <= 8000);
 });

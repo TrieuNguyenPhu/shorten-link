@@ -86,6 +86,21 @@ func TestValidateTargetURLBlocksPrivateHostsAndExcessiveLength(t *testing.T) {
 	}
 }
 
+func TestValidateTargetURLRejectsLegacyPrivateIPv4AndCredentials(t *testing.T) {
+	for _, raw := range []string{
+		"http://2130706433/",   // WHATWG decimal form for 127.0.0.1
+		"http://0x7f000001/",   // hexadecimal form
+		"http://017700000001/", // octal form
+		"http://0x7f.0.0.1/",   // mixed legacy form
+		"http://user:pass@example.com/",
+		"http://[::ffff:127.0.0.1]/",
+	} {
+		if got, err := ValidateTargetURL(raw); err == nil {
+			t.Fatalf("accepted unsafe or ambiguous URL %q as %q", raw, got)
+		}
+	}
+}
+
 func TestIsValidShortCodeAndIsSafeTargetURL(t *testing.T) {
 	if !IsValidShortCode("Abc1234") || IsValidShortCode("short") || IsValidShortCode("toolong8") || IsValidShortCode("bad-chr") {
 		t.Fatal("invalid short code validation")

@@ -20,19 +20,19 @@ export default function PrivacyPolicyPage() {
         </div>
 
         <p className="rounded-xl border-2 border-dashed border-coral/60 bg-sun/30 p-4 text-sm">
-          <strong>BẢN NHÁP</strong> do công cụ tạo từ mã nguồn website ngày 05/11/2026 theo khung Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15 và Nghị định 356/2025/NĐ-CP. Cần người có chuyên môn pháp lý xem lại và điền đầy đủ các mục <code>[ĐIỀN: ...]</code> trước khi vận hành chính thức.
+          Chính sách này áp dụng cho Shrnk và được cập nhật cùng phiên bản sản phẩm. Liên hệ về dữ liệu cá nhân: <a className="underline" href="mailto:privacy@npt-shortenlink.dev">privacy@npt-shortenlink.dev</a>.
         </p>
 
         {/* Căn cứ: điểm b khoản 2 Điều 9 Luật 91/2025/QH15: người dùng phải biết rõ bên kiểm soát dữ liệu khi đồng ý. */}
         <section className="space-y-2">
           <h2 className="font-display text-2xl font-bold">1. Chúng tôi là ai</h2>
           <p>
-            <strong>[ĐIỀN: Tên đơn vị / cá nhân vận hành Shrnk]</strong> (sau đây gọi là &ldquo;chúng tôi&rdquo;) là bên kiểm soát và xử lý dữ liệu cá nhân được thu thập qua ứng dụng rút gọn liên kết <strong>Shrnk</strong>.
+            <strong>Nhóm vận hành Shrnk</strong> (sau đây gọi là &ldquo;chúng tôi&rdquo;) là bên kiểm soát và xử lý dữ liệu cá nhân được thu thập qua ứng dụng rút gọn liên kết <strong>Shrnk</strong>.
           </p>
           <ul className="list-disc space-y-1 pl-6 text-ink-muted">
-            <li>Mã số doanh nghiệp / hộ kinh doanh (nếu có): <code>[ĐIỀN]</code></li>
-            <li>Địa chỉ liên hệ: <code>[ĐIỀN]</code></li>
-            <li>Email tiếp nhận yêu cầu về dữ liệu cá nhân: <code>[ĐIỀN: email liên hệ]</code></li>
+            <li>Mã số doanh nghiệp / hộ kinh doanh: Chưa áp dụng.</li>
+            <li>Địa chỉ liên hệ: Việt Nam.</li>
+            <li>Email tiếp nhận yêu cầu về dữ liệu cá nhân: <a className="underline" href="mailto:privacy@npt-shortenlink.dev">privacy@npt-shortenlink.dev</a></li>
           </ul>
         </section>
 
@@ -60,7 +60,7 @@ export default function PrivacyPolicyPage() {
                   <td className="p-3">Chuyển hướng liên kết rút gọn và hiển thị số lượt click theo thời gian thực trên Dashboard</td>
                 </tr>
                 <tr>
-                  <td className="p-3">Nhật ký kỹ thuật (mã yêu cầu, đường dẫn API, mã trạng thái HTTP)</td>
+              <td className="p-3">Nhật ký kỹ thuật (mã yêu cầu, đường dẫn API, mã trạng thái HTTP, địa chỉ IP nguồn, user-agent)</td>
                   <td className="p-3">Khi trình duyệt gọi API hoặc kết nối WebSocket</td>
                   <td className="p-3">Vận hành kỹ thuật, xử lý sự cố và bảo đảm an ninh mạng</td>
                 </tr>
@@ -93,7 +93,7 @@ export default function PrivacyPolicyPage() {
             Toàn bộ dữ liệu tài khoản và liên kết rút gọn được lưu trữ trên hạ tầng <strong>Amazon Web Services (AWS) đặt tại Singapore (region <code>ap-southeast-1</code>)</strong>. Việc lưu trữ này thuộc trường hợp chuyển dữ liệu cá nhân xuyên biên giới theo khoản 1 Điều 20 Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15.
           </p>
           <p>
-            <strong>Thời hạn lưu trữ:</strong> Liên kết rút gọn được lưu cho đến khi bạn chủ động xóa trên Dashboard hoặc yêu cầu xóa tài khoản; bản ghi chống trùng sự kiện click tự động xóa sau 24 giờ; trạng thái kết nối WebSocket tự động xóa sau 2 giờ; nhật ký kỹ thuật trên AWS CloudWatch được lưu tối đa theo cấu hình vận hành (<code>[KIỂM TRA: 14 ngày trên môi trường dev / tối thiểu 12 tháng khi vận hành chính thức theo NĐ 333/2026/NĐ-CP]</code>).
+            <strong>Thời hạn lưu trữ:</strong> Liên kết rút gọn được lưu cho đến khi bạn chủ động xóa trên Dashboard hoặc yêu cầu xóa tài khoản; bản ghi chống trùng sự kiện click và trạng thái kết nối có TTL để dọn nền; nhật ký kỹ thuật trên AWS CloudWatch được lưu theo cấu hình môi trường (mặc định 365 ngày trong Terraform).
           </p>
         </section>
 
@@ -115,7 +115,7 @@ export default function PrivacyPolicyPage() {
             Theo khoản 1 Điều 4 Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15, bạn có quyền được biết, đồng ý hoặc rút lại sự đồng ý, xem, chỉnh sửa hoặc yêu cầu chỉnh sửa, yêu cầu cung cấp, xóa, hạn chế xử lý, phản đối xử lý dữ liệu cá nhân, cũng như khiếu nại, tố cáo, khởi kiện và yêu cầu bồi thường theo quy định pháp luật.
           </p>
           <p>
-            Bạn có thể xóa trực tiếp từng liên kết rút gọn tại trang Dashboard hoặc gửi yêu cầu về tài khoản/dữ liệu cá nhân tới email <code>[ĐIỀN: email liên hệ]</code>. Theo Điều 5 Nghị định 356/2025/NĐ-CP, chúng tôi thực hiện trong các thời hạn sau:
+            Bạn có thể xóa trực tiếp từng liên kết rút gọn tại trang Dashboard hoặc gửi yêu cầu về tài khoản/dữ liệu cá nhân tới email <a className="underline" href="mailto:privacy@npt-shortenlink.dev">privacy@npt-shortenlink.dev</a>. Theo Điều 5 Nghị định 356/2025/NĐ-CP, chúng tôi thực hiện trong các thời hạn sau:
           </p>
           <ul className="list-disc space-y-1 pl-6">
             <li>Xác nhận đã nhận yêu cầu và hướng dẫn thủ tục: trong <strong>2 ngày làm việc</strong>.</li>

@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import type { PublicConfig } from "@/lib/config";
 import { ApiError, createLink, type CreatedLink } from "@/lib/api";
+import { AUTH_STORAGE_KEYS, getAccessToken } from "@/lib/auth";
 
 function messageFor(error: unknown): string {
   if (error instanceof ApiError) {
@@ -18,7 +19,7 @@ type Props = { config: PublicConfig; token: string; onCreated?: (created: Create
 export function CreateLinkForm({ config, token, onCreated }: Props) {
   const [created, setCreated] = useState<CreatedLink | null>(null);
   const [copied, setCopied] = useState(false);
-  const [target, setTarget] = useState("");
+  const [target, setTarget] = useState(() => (typeof window === "undefined" ? "" : window.sessionStorage.getItem(AUTH_STORAGE_KEYS.pendingTarget) ?? ""));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,12 +35,24 @@ export function CreateLinkForm({ config, token, onCreated }: Props) {
     }
     setPending(true);
     try {
-      const created = await createLink(config, token, target.trim());
+      const freshToken = window.sessionStorage.getItem(AUTH_STORAGE_KEYS.accessToken) === null ? token : getAccessToken(window.sessionStorage);
+      if (!freshToken) {
+        window.sessionStorage.setItem(AUTH_STORAGE_KEYS.pendingTarget, target.trim());
+        window.location.replace(`/login/?returnTo=${encodeURIComponent(window.location.pathname)}`);
+        return;
+      }
+      const created = await createLink(config, freshToken, target.trim());
       setCreated(created);
       onCreated?.(created);
       setCopied(false);
       setTarget("");
+      window.sessionStorage.removeItem(AUTH_STORAGE_KEYS.pendingTarget);
     } catch (reason) {
+      if (reason instanceof ApiError && reason.status === 401) {
+        window.sessionStorage.setItem(AUTH_STORAGE_KEYS.pendingTarget, target.trim());
+        window.location.replace(`/login/?returnTo=${encodeURIComponent(window.location.pathname)}`);
+        return;
+      }
       setError(messageFor(reason));
     } finally {
       setPending(false);

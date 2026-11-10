@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/domain"
@@ -82,11 +83,11 @@ func TestModerationStateMachineContract(t *testing.T) {
 		if err := json.Unmarshal(encoded, &params); err != nil {
 			t.Fatal(err)
 		}
-		if params.TableName != "${TableName}" || params.Key["PK"]["S.$"] != "States.Format('LINK#{}', $.code)" || params.Key["SK"]["S"] != "META" || params.ConditionExpression != "attribute_exists(PK)" || params.UpdateExpression != "SET #s = :"+status || params.ExpressionAttributeNames["#s"] != "status" || params.ExpressionAttributeValues[":"+status]["S"] != status {
+		if params.TableName != "${TableName}" || params.Key["PK"]["S.$"] != "States.Format('LINK#{}', $.code)" || params.Key["SK"]["S"] != "META" || !strings.Contains(params.ConditionExpression, "attribute_exists(PK)") || params.ExpressionAttributeNames["#s"] != "status" || params.ExpressionAttributeValues[":"+status]["S"] != status || (name == "Activate" && !strings.Contains(params.UpdateExpression, "REMOVE #r")) || (name == "Reject" && params.ExpressionAttributeNames["#r"] != "statusReason") {
 			t.Fatal(params)
 		}
 	}
-	if fail := machine.States["MarkError"]; fail.Type != "Fail" || fail.Error != "ModerationFailed" {
+	if fail := machine.States["MarkError"]; fail.Type != "Task" || fail.Resource != "arn:aws:states:::dynamodb:updateItem" || !fail.End {
 		t.Fatal(fail)
 	}
 }

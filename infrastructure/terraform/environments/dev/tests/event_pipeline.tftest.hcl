@@ -13,6 +13,10 @@ mock_provider "aws" {
     target = aws_sqs_queue.dlq
     values = { arn = "arn:aws:sqs:ap-southeast-1:111111111111:url-shortener-dev-ClickDLQ", url = "https://sqs.ap-southeast-1.amazonaws.com/111111111111/url-shortener-dev-ClickDLQ" }
   }
+  override_resource {
+    target = aws_sqs_queue.delivery_dlq
+    values = { arn = "arn:aws:sqs:ap-southeast-1:111111111111:url-shortener-dev-EventDeliveryDLQ", url = "https://sqs.ap-southeast-1.amazonaws.com/111111111111/url-shortener-dev-EventDeliveryDLQ" }
+  }
 }
 variables {
   name_prefix          = "url-shortener-dev"
@@ -51,6 +55,10 @@ run "event_rule_and_queue_policy" {
   assert {
     condition     = jsondecode(aws_sqs_queue_policy.clicks.policy).Statement[1].Effect == "Deny" && jsondecode(aws_sqs_queue_policy.clicks.policy).Statement[1].Condition.Bool["aws:SecureTransport"] == "false" && jsondecode(aws_sqs_queue_policy.dlq.policy).Statement[0].Condition.Bool["aws:SecureTransport"] == "false"
     error_message = "Both queues must deny insecure transport."
+  }
+  assert {
+    condition     = aws_cloudwatch_event_target.clicks.dead_letter_config[0].arn == aws_sqs_queue.delivery_dlq.arn && aws_cloudwatch_event_target.clicks.retry_policy[0].maximum_retry_attempts == 8 && aws_cloudwatch_event_target.clicks.retry_policy[0].maximum_event_age_in_seconds == 86400 && aws_sqs_queue.delivery_dlq.message_retention_seconds == 1209600
+    error_message = "EventBridge delivery failures need a dedicated DLQ and bounded retry policy."
   }
 }
 run "aggregator_permissions_and_mapping" {

@@ -131,3 +131,11 @@ variable "alarm_email_addresses" {
   type    = set(string)
   default = []
 }
+variable "frontend_domain_name" {
+  type    = string
+  default = null
+}
+variable "frontend_certificate_arn" {
+  type    = string
+  default = null
+}

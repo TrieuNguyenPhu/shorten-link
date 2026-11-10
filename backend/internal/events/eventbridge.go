@@ -28,7 +28,8 @@ func NewPublisher(client EventBridgeAPI, bus string) *Publisher {
 }
 
 func (p *Publisher) Publish(ctx context.Context, event domain.ClickEvent) error {
-	ctx, cancel := context.WithTimeout(ctx, 1500*time.Millisecond)
+	// Publication is best-effort; keep redirect latency bounded below the API budget.
+	ctx, cancel := context.WithTimeout(ctx, 250*time.Millisecond)
 	defer cancel()
 	if strings.TrimSpace(p.bus) == "" {
 		return errors.New("EVENT_BUS is required")

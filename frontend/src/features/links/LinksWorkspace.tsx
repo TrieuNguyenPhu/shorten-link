@@ -18,6 +18,19 @@ function errorMessage(error: unknown): string {
   return "Không tải được dữ liệu. Thử lại sau.";
 }
 
+export function mergeLinkSnapshot(current: Link[], snapshot: Link[], pendingCreated: Set<string>, deletedCodes: Set<string>): { links: Link[]; pendingCreated: Set<string> } {
+  const nextPending = new Set(pendingCreated);
+  const visibleSnapshot = snapshot.filter((link) => !deletedCodes.has(link.code));
+  const snapshotCodes = new Set(visibleSnapshot.map((link) => link.code));
+  for (const code of nextPending) {
+    if (snapshotCodes.has(code)) nextPending.delete(code);
+  }
+  const preserved = current.filter((link) => nextPending.has(link.code) && !deletedCodes.has(link.code) && !snapshotCodes.has(link.code));
+  const byCode = new Map<string, Link>();
+  for (const link of [...preserved, ...visibleSnapshot]) byCode.set(link.code, link);
+  return { links: [...byCode.values()], pendingCreated: nextPending };
+}
+
 export function LinksWorkspace() {
   const [config, setConfig] = useState<PublicConfig | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -27,17 +40,27 @@ export function LinksWorkspace() {
 
   const refresh = useRef<Promise<void> | null>(null);
   const deletedCodes = useRef(new Set<string>());
-  const reload = useCallback((currentConfig: PublicConfig, currentToken: string) => {
+  const pendingCreated = useRef(new Set<string>());
+  const reload = useCallback((currentConfig: PublicConfig) => {
     if (refresh.current) return refresh.current;
     setError(null);
     // Background snapshots must preserve the table and its live subscriptions.
     refresh.current = (async () => {
       try {
-        const snapshot = await listAllLinks(currentConfig, currentToken);
-        setLinks(snapshot.filter((link) => !deletedCodes.current.has(link.code)));
+        const freshToken = getAccessToken(window.sessionStorage);
+        if (!freshToken) {
+          window.location.replace(`/login/?returnTo=${encodeURIComponent(window.location.pathname)}`);
+          return;
+        }
+        const snapshot = await listAllLinks(currentConfig, freshToken);
+        setLinks((current) => {
+          const merged = mergeLinkSnapshot(current, snapshot, pendingCreated.current, deletedCodes.current);
+          pendingCreated.current = merged.pendingCreated;
+          return merged.links;
+        });
       } catch (reason) {
         if (reason instanceof ApiError && reason.status === 401) {
-          window.location.replace("/login/");
+          window.location.replace(`/login/?returnTo=${encodeURIComponent(window.location.pathname)}`);
           return;
         }
         setError(errorMessage(reason));
@@ -59,7 +82,7 @@ export function LinksWorkspace() {
       }
       setConfig(currentConfig);
       setToken(currentToken);
-      void reload(currentConfig, currentToken);
+      void reload(currentConfig);
     } catch (reason) {
       setError(errorMessage(reason));
       setLoading(false);
@@ -69,16 +92,26 @@ export function LinksWorkspace() {
   async function handleDelete(code: string) {
     if (!config || !token) return;
     try {
-      await deleteLink(config, token, code);
+      const freshToken = getAccessToken(window.sessionStorage);
+      if (!freshToken) {
+        window.location.replace(`/login/?returnTo=${encodeURIComponent(window.location.pathname)}`);
+        return;
+      }
+      await deleteLink(config, freshToken, code);
       deletedCodes.current.add(code);
       setLinks((current) => current.filter((link) => link.code !== code));
     } catch (reason) {
+      if (reason instanceof ApiError && reason.status === 401) {
+        window.location.replace(`/login/?returnTo=${encodeURIComponent(window.location.pathname)}`);
+        return;
+      }
       setError(errorMessage(reason));
     }
   }
 
   function handleCreated(created: CreatedLink) {
     deletedCodes.current.delete(created.code);
+    pendingCreated.current.add(created.code);
     setLinks((current) => [
       {
         code: created.code,
@@ -101,7 +134,7 @@ export function LinksWorkspace() {
       ) : null}
       {error ? <div aria-live="polite" className="mb-5 rounded-xl border-2 border-red-300 bg-red-50 p-4 text-red-800">{error}</div> : null}
       {loading ? <section aria-live="polite" className="sketch-card text-center">Đang tải…</section> : config ? (
-        <LinksTable apiBaseUrl={config.apiBaseUrl} links={links} onDelete={handleDelete} onReconnect={() => { if (token) void reload(config, token); }} websocketUrl={config.websocketUrl} />
+        <LinksTable apiBaseUrl={config.apiBaseUrl} links={links} onDelete={handleDelete} onReconnect={() => { if (token) void reload(config); }} websocketUrl={config.websocketUrl} />
       ) : null}
     </main>
   );

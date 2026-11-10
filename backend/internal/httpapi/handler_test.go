@@ -31,6 +31,9 @@ func (s sdkStub) TransactWriteItems(context.Context, *dynamodb.TransactWriteItem
 }
 
 func (s sdkStub) PutItem(_ context.Context, in *dynamodb.PutItemInput, _ ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error) {
+	if s.put == nil {
+		return &dynamodb.PutItemOutput{}, nil
+	}
 	return s.put(in)
 }
 
@@ -105,7 +108,7 @@ func TestCreateReturnsAPIDomainAndIgnoresBodyOwner(t *testing.T) {
 	if err := json.Unmarshal([]byte(res.Body), &out); err != nil {
 		t.Fatal(err)
 	}
-	if len(out) != 3 || len(out["code"]) != 7 || out["target"] != "https://example.org/path" || out["shortUrl"] != "https://redirect.example.org/"+out["code"] || stored["ownerId"].(*types.AttributeValueMemberS).Value != "alice" {
+	if len(out) != 4 || len(out["code"]) != 7 || out["target"] != "https://example.org/path" || out["shortUrl"] != "https://redirect.example.org/"+out["code"] || out["status"] != "pending" || stored["ownerId"].(*types.AttributeValueMemberS).Value != "alice" {
 		t.Fatal(out, stored)
 	}
 	h.baseURL = ""
@@ -152,7 +155,7 @@ func TestListReturnsOnlyPublicFieldsAndEmptyArray(t *testing.T) {
 			if res.Body != `{"links":[]}` {
 				t.Fatal(res.Body)
 			}
-		} else if len(out.Links) != 1 || len(out.Links[0]) != 5 || out.Links[0]["clicks"] != float64(4) || out.Links[0]["shortUrl"] != "https://redirect.example.org/Abc1234" {
+		} else if len(out.Links) != 1 || len(out.Links[0]) != 7 || out.Links[0]["clicks"] != float64(4) || out.Links[0]["shortUrl"] != "https://redirect.example.org/Abc1234" || out.Links[0]["status"] != "ACTIVE" || out.Links[0]["realtimeTicket"] == "" {
 			t.Fatal(out)
 		}
 	}
@@ -188,7 +191,7 @@ func TestResolveRedirectsWith302NoStoreAndBestEffortAnalytics(t *testing.T) {
 		{name: "accepted", status: 302, metric: "LinkResolved"},
 		{name: "missing", missing: true, status: 404, metric: "LinkNotFound"},
 		{name: "publish failed still redirects", publishFail: true, status: 302, metric: "ClickPublishFailed"},
-		{name: "read failed", readFail: true, status: 500},
+		{name: "read failed", readFail: true, status: 500, metric: "ResolveFailed"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var metrics bytes.Buffer
@@ -200,7 +203,7 @@ func TestResolveRedirectsWith302NoStoreAndBestEffortAnalytics(t *testing.T) {
 				if tc.missing {
 					return &dynamodb.GetItemOutput{}, nil
 				}
-				return &dynamodb.GetItemOutput{Item: map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: "LINK#Abc1234"}, "target": &types.AttributeValueMemberS{Value: "https://example.org"}}}, nil
+				return &dynamodb.GetItemOutput{Item: map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: "LINK#Abc1234"}, "target": &types.AttributeValueMemberS{Value: "https://example.org"}, "status": &types.AttributeValueMemberS{Value: "active"}}}, nil
 			}}, func(_ context.Context, e domain.ClickEvent) error {
 				published = true
 				if e.Code != "Abc1234" {
@@ -235,7 +238,7 @@ func (brokenWriter) Write([]byte) (int, error) { return 0, errors.New("telemetry
 func TestTelemetryFailureDoesNotRepublishOrFailRedirect(t *testing.T) {
 	calls := 0
 	h := handler(sdkStub{get: func(*dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
-		return &dynamodb.GetItemOutput{Item: map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: "LINK#Abc1234"}, "target": &types.AttributeValueMemberS{Value: "https://example.org"}}}, nil
+		return &dynamodb.GetItemOutput{Item: map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: "LINK#Abc1234"}, "target": &types.AttributeValueMemberS{Value: "https://example.org"}, "status": &types.AttributeValueMemberS{Value: "active"}}}, nil
 	}}, func(context.Context, domain.ClickEvent) error { calls++; return nil }, brokenWriter{})
 	res, err := h.Resolve(context.Background(), request(""))
 	if err != nil || res.StatusCode != 302 || calls != 1 {

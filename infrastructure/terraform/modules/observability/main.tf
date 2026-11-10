@@ -22,11 +22,37 @@ resource "aws_cloudwatch_metric_alarm" "resolve" {
   treat_missing_data  = "notBreaching"
   alarm_actions       = [aws_sns_topic.alarms.arn]
 }
+resource "aws_cloudwatch_metric_alarm" "resolve_http" {
+  alarm_name          = "${var.name_prefix}-resolve-http-5xx"
+  namespace           = "UrlShortener"
+  metric_name         = "ResolveFailed"
+  dimensions          = { service = "resolve-link" }
+  statistic           = "Sum"
+  period              = 60
+  evaluation_periods  = 1
+  threshold           = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.alarms.arn]
+}
 resource "aws_cloudwatch_metric_alarm" "dlq" {
   alarm_name          = "${var.name_prefix}-click-dlq"
   namespace           = "AWS/SQS"
   metric_name         = "ApproximateNumberOfMessagesVisible"
   dimensions          = { QueueName = var.dlq_name }
+  statistic           = "Maximum"
+  period              = 60
+  evaluation_periods  = 1
+  threshold           = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.alarms.arn]
+}
+resource "aws_cloudwatch_metric_alarm" "delivery_dlq" {
+  alarm_name          = "${var.name_prefix}-event-delivery-dlq"
+  namespace           = "AWS/SQS"
+  metric_name         = "ApproximateNumberOfMessagesVisible"
+  dimensions          = { QueueName = var.delivery_dlq_name }
   statistic           = "Maximum"
   period              = 60
   evaluation_periods  = 1
@@ -71,6 +97,7 @@ resource "aws_cloudwatch_dashboard" "operations" {
       title = "Accepted publishes / failed publishes / discarded after deletion", region = var.aws_region, period = 60, stat = "Sum",
       metrics = [
         ["UrlShortener", "LinkResolved", "service", "resolve-link"],
+        ["UrlShortener", "ResolveFailed", "service", "resolve-link"],
         ["UrlShortener", "ClickPublishFailed", "service", "resolve-link"],
         ["UrlShortener", "ClickDiscardedDeleted", "service", "click-aggregator"]
       ]
@@ -87,7 +114,7 @@ resource "aws_sns_topic_policy" "alarms" {
     Action = "sns:Publish", Resource = aws_sns_topic.alarms.arn,
     Condition = {
       StringEquals = { "aws:SourceAccount" = data.aws_caller_identity.current.account_id }
-      ArnEquals    = { "aws:SourceArn" = concat([for alarm in aws_cloudwatch_metric_alarm.resolve : alarm.arn], [aws_cloudwatch_metric_alarm.dlq.arn, aws_cloudwatch_metric_alarm.publish.arn]) }
+      ArnEquals    = { "aws:SourceArn" = concat([for alarm in aws_cloudwatch_metric_alarm.resolve : alarm.arn], [aws_cloudwatch_metric_alarm.resolve_http.arn, aws_cloudwatch_metric_alarm.dlq.arn, aws_cloudwatch_metric_alarm.delivery_dlq.arn, aws_cloudwatch_metric_alarm.publish.arn]) }
     }
   }] })
 }

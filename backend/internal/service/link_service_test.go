@@ -15,6 +15,7 @@ type repoStub struct {
 	get    func(string) (domain.Link, error)
 	list   func(string, int, string) (domain.LinkPage, error)
 	delete func(string, string) error
+	ticket func(domain.RealtimeTicket) error
 }
 
 func (r repoStub) CreateLink(_ context.Context, l domain.Link) error { return r.create(l) }
@@ -27,9 +28,22 @@ func (r repoStub) ListUserLinks(_ context.Context, u string, limit int, cursor s
 
 func (r repoStub) DeleteUserLink(_ context.Context, c, u string) error { return r.delete(c, u) }
 
+func (r repoStub) PutRealtimeTicket(_ context.Context, ticket domain.RealtimeTicket) error {
+	if r.ticket == nil {
+		return errors.New("ticket store unavailable")
+	}
+	return r.ticket(ticket)
+}
+
 type publisherStub func(context.Context, domain.ClickEvent) error
 
 func (p publisherStub) Publish(ctx context.Context, e domain.ClickEvent) error { return p(ctx, e) }
+
+type moderationStarterStub func(context.Context, domain.ModerationInput) error
+
+func (m moderationStarterStub) Start(ctx context.Context, in domain.ModerationInput) error {
+	return m(ctx, in)
+}
 
 func TestCreateRetriesOnlyCollisionsFiveTotalWrites(t *testing.T) {
 	for _, tc := range []struct {
@@ -62,6 +76,27 @@ func TestCreateRetriesOnlyCollisionsFiveTotalWrites(t *testing.T) {
 				t.Fatalf("%+v %v calls=%d generated=%d", link, err, calls, generated)
 			}
 		})
+	}
+}
+
+func TestCreateStartsModerationFromPendingState(t *testing.T) {
+	started := false
+	s := New(repoStub{create: func(link domain.Link) error {
+		if link.Status != "pending" {
+			t.Fatalf("created link status=%q", link.Status)
+		}
+		return nil
+	}}, nil)
+	s.SetModerationStarter(moderationStarterStub(func(_ context.Context, in domain.ModerationInput) error {
+		started = true
+		if in.Code == "" || in.Target != "https://example.org" {
+			t.Fatalf("bad moderation input: %+v", in)
+		}
+		return nil
+	}))
+	link, err := s.Create(context.Background(), "alice", "https://example.org")
+	if err != nil || link.Status != "pending" || !started {
+		t.Fatalf("link=%+v err=%v started=%v", link, err, started)
 	}
 }
 
@@ -104,8 +139,35 @@ func TestResolveBlocksRejectedOrInvalidCodesAndReturnsTargetOnPublishError(t *te
 	if _, err := rejected.Resolve(context.Background(), "Abc1234"); !errors.Is(err, repository.ErrNotFound) {
 		t.Fatal("rejected link resolved:", err)
 	}
+	for _, status := range []string{"pending", "disabled", ""} {
+		blocked := New(repoStub{get: func(c string) (domain.Link, error) {
+			return domain.Link{Code: c, Target: "https://example.org", Status: status}, nil
+		}}, nil)
+		if _, err := blocked.Resolve(context.Background(), "Abc1234"); !errors.Is(err, repository.ErrNotFound) {
+			t.Fatalf("status %q resolved: %v", status, err)
+		}
+	}
 	s := New(repoStub{get: func(string) (domain.Link, error) { t.Fatal("invalid code queried storage"); return domain.Link{}, nil }}, nil)
 	if _, err := s.Resolve(context.Background(), "robots.txt"); !errors.Is(err, repository.ErrNotFound) {
 		t.Fatal(err)
+	}
+}
+
+func TestIssueRealtimeTicketRequiresOwnedLinkAndStoresShortLivedTicket(t *testing.T) {
+	var stored domain.RealtimeTicket
+	s := New(repoStub{
+		get: func(string) (domain.Link, error) {
+			return domain.Link{Code: "Abc1234", OwnerID: "alice", Target: "https://example.org"}, nil
+		},
+		ticket: func(ticket domain.RealtimeTicket) error { stored = ticket; return nil },
+	}, nil)
+	s.now = func() time.Time { return time.Unix(100, 0) }
+	s.generateTicket = func() (string, error) { return "ticket-1", nil }
+	ticket, err := s.IssueRealtimeTicket(context.Background(), "alice", "Abc1234")
+	if err != nil || ticket != (domain.RealtimeTicket{Ticket: "ticket-1", OwnerID: "alice", Code: "Abc1234", TTL: 220}) || stored != ticket {
+		t.Fatalf("ticket=%+v stored=%+v err=%v", ticket, stored, err)
+	}
+	if _, err := s.IssueRealtimeTicket(context.Background(), "bob", "Abc1234"); !errors.Is(err, repository.ErrNotFound) {
+		t.Fatalf("cross-owner ticket: %v", err)
 	}
 }

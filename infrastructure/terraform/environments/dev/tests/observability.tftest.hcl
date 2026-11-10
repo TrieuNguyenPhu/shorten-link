@@ -13,10 +13,15 @@ run "alarm_contract" {
     resolve_function_name = "url-shortener-dev-resolve-link"
     queue_name            = "url-shortener-dev-ClickQueue"
     dlq_name              = "url-shortener-dev-ClickDLQ"
+    delivery_dlq_name     = "url-shortener-dev-EventDeliveryDLQ"
   }
   assert {
     condition     = alltrue([for a in aws_cloudwatch_metric_alarm.resolve : a.statistic == "Sum" && a.period == 60 && a.evaluation_periods == 1 && a.threshold == 1 && a.treat_missing_data == "notBreaching" && a.dimensions.FunctionName == var.resolve_function_name])
     error_message = "Preserve both source alarms, Sum >= 1 per minute, on the real resolve function."
+  }
+  assert {
+    condition     = aws_cloudwatch_metric_alarm.resolve_http.namespace == "UrlShortener" && aws_cloudwatch_metric_alarm.resolve_http.metric_name == "ResolveFailed" && aws_cloudwatch_metric_alarm.resolve_http.dimensions.service == "resolve-link" && contains(output.canary_alarm_names, aws_cloudwatch_metric_alarm.resolve_http.alarm_name)
+    error_message = "Handled HTTP 5xx responses must be visible to the canary alarm set."
   }
   assert {
     condition     = aws_cloudwatch_metric_alarm.dlq.metric_name == "ApproximateNumberOfMessagesVisible" && aws_cloudwatch_metric_alarm.dlq.statistic == "Maximum" && aws_cloudwatch_metric_alarm.dlq.dimensions.QueueName == var.dlq_name && aws_cloudwatch_metric_alarm.publish.dimensions.service == "resolve-link" && aws_cloudwatch_metric_alarm.publish.namespace == "UrlShortener" && length(aws_sns_topic_subscription.email) == 0
