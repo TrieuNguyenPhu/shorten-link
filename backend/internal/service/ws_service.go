@@ -35,7 +35,7 @@ func (s *WebSocketService) Connect(ctx context.Context, req events.APIGatewayWeb
 	ctx, cancel := context.WithTimeout(ctx, 4*time.Second)
 	defer cancel()
 	claim, err := s.repo.ConsumeRealtimeTicket(ctx, ticket, s.now())
-	if err != nil || !domain.IsValidShortCode(claim.Code) || claim.OwnerID == "" {
+	if err != nil || !domain.IsValidLinkCode(claim.Code) || claim.OwnerID == "" {
 		if err != nil {
 			middleware.WithRequestID(ctx, s.logger).WarnContext(ctx, "invalid realtime ticket", "error", err)
 		}

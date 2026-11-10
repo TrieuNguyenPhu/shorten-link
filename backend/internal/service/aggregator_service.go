@@ -88,7 +88,7 @@ func (s *AggregatorService) process(ctx context.Context, body string, logger *sl
 	if clickID == "" {
 		clickID = strings.TrimSpace(envelope.ID)
 	}
-	if strings.TrimSpace(envelope.ID) == "" || clickID == "" || !domain.IsValidShortCode(envelope.Detail.Code) || envelope.Source != "urlshortener" || envelope.DetailType != "link.clicked" {
+	if strings.TrimSpace(envelope.ID) == "" || clickID == "" || !domain.IsValidLinkCode(envelope.Detail.Code) || envelope.Source != "urlshortener" || envelope.DetailType != "link.clicked" {
 		return "", false, errors.New("invalid click envelope")
 	}
 	at, err := time.Parse(time.RFC3339Nano, envelope.Detail.At)

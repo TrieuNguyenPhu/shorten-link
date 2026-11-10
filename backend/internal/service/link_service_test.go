@@ -205,6 +205,17 @@ func TestResolveRejectsExpiredLinks(t *testing.T) {
 	}
 }
 
+func TestDeleteAcceptsCustomAlias(t *testing.T) {
+	deleted := false
+	s := New(repoStub{delete: func(code, owner string) error {
+		deleted = code == "my-link" && owner == "alice"
+		return nil
+	}}, nil)
+	if err := s.Delete(context.Background(), "my-link", "alice"); err != nil || !deleted {
+		t.Fatalf("err=%v deleted=%v", err, deleted)
+	}
+}
+
 func TestIssueRealtimeTicketRequiresOwnedLinkAndStoresShortLivedTicket(t *testing.T) {
 	var stored domain.RealtimeTicket
 	s := New(repoStub{
