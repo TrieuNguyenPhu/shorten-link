@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/domain"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -14,8 +16,9 @@ import (
 )
 
 var (
-	ErrCollision = errors.New("short code already exists")
-	ErrNotFound  = errors.New("link not found or not owned")
+	ErrCollision      = errors.New("short code already exists")
+	ErrNotFound       = errors.New("link not found or not owned")
+	ErrTicketNotFound = errors.New("realtime ticket not found or expired")
 )
 
 type LinkRepository interface {
@@ -42,6 +45,52 @@ func New(client DynamoDBAPI, table string) *DynamoDB { return &DynamoDB{client: 
 
 func linkKey(code string) map[string]types.AttributeValue {
 	return map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: "LINK#" + code}, "SK": &types.AttributeValueMemberS{Value: "META"}}
+}
+
+func realtimeTicketKey(ticket string) map[string]types.AttributeValue {
+	return map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: "TICKET#" + ticket}, "SK": &types.AttributeValueMemberS{Value: "META"}}
+}
+
+func (r *DynamoDB) PutRealtimeTicket(ctx context.Context, ticket domain.RealtimeTicket) error {
+	item := realtimeTicketKey(ticket.Ticket)
+	item["ownerId"] = &types.AttributeValueMemberS{Value: ticket.OwnerID}
+	item["code"] = &types.AttributeValueMemberS{Value: ticket.Code}
+	item["ttl"] = &types.AttributeValueMemberN{Value: strconv.FormatInt(ticket.TTL, 10)}
+	_, err := r.client.PutItem(ctx, &dynamodb.PutItemInput{TableName: aws.String(r.table), Item: item, ConditionExpression: aws.String("attribute_not_exists(PK)")})
+	var conditional *types.ConditionalCheckFailedException
+	if errors.As(err, &conditional) {
+		return ErrTicketNotFound
+	}
+	return err
+}
+
+func (r *DynamoDB) ConsumeRealtimeTicket(ctx context.Context, ticket string, now time.Time) (domain.RealtimeTicket, error) {
+	out, err := r.client.GetItem(ctx, &dynamodb.GetItemInput{TableName: aws.String(r.table), Key: realtimeTicketKey(ticket), ConsistentRead: aws.Bool(true)})
+	if err != nil || out == nil || len(out.Item) == 0 {
+		if err != nil {
+			return domain.RealtimeTicket{}, err
+		}
+		return domain.RealtimeTicket{}, ErrTicketNotFound
+	}
+	owner, ownerOK := out.Item["ownerId"].(*types.AttributeValueMemberS)
+	code, codeOK := out.Item["code"].(*types.AttributeValueMemberS)
+	ttl, ttlOK := out.Item["ttl"].(*types.AttributeValueMemberN)
+	if !ownerOK || !codeOK || !ttlOK {
+		return domain.RealtimeTicket{}, ErrTicketNotFound
+	}
+	expires, parseErr := strconv.ParseInt(ttl.Value, 10, 64)
+	if parseErr != nil || expires < now.Unix() {
+		return domain.RealtimeTicket{}, ErrTicketNotFound
+	}
+	_, err = r.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{TableName: aws.String(r.table), Key: realtimeTicketKey(ticket), ConditionExpression: aws.String("attribute_exists(PK)")})
+	var conditional *types.ConditionalCheckFailedException
+	if errors.As(err, &conditional) {
+		return domain.RealtimeTicket{}, ErrTicketNotFound
+	}
+	if err != nil {
+		return domain.RealtimeTicket{}, err
+	}
+	return domain.RealtimeTicket{Ticket: ticket, OwnerID: owner.Value, Code: code.Value, TTL: expires}, nil
 }
 
 func (r *DynamoDB) CreateLink(ctx context.Context, link domain.Link) error {

@@ -69,6 +69,9 @@ jobs:
         run: pnpm test
       - name: Audit production dependencies
         run: pnpm audit --prod
+      - name: Audit development dependency advisories
+        # Full audit output is retained in the job; high/critical advisories fail CI.
+        run: pnpm audit --audit-level=high
 
   terraform:
     runs-on: ubuntu-latest

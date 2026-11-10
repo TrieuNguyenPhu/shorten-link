@@ -3,6 +3,7 @@ variable "aws_region" { type = string }
 variable "resolve_function_name" { type = string }
 variable "queue_name" { type = string }
 variable "dlq_name" { type = string }
+variable "delivery_dlq_name" { type = string }
 variable "alarm_email_addresses" {
   type    = set(string)
   default = []

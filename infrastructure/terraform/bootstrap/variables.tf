@@ -72,7 +72,7 @@ variable "event_bus_name" {
 variable "http_api_ids" {
   type        = set(string)
   default     = []
-  description = "Known HTTP API IDs for child-resource IAM scope. Empty permits bootstrap discovery within this region; pin the output API ID after first approved deployment."
+  description = "Known HTTP API IDs for child-resource IAM scope. Leave empty until the operator pins exact IDs; no wildcard discovery permissions are granted."
   validation {
     condition     = alltrue([for id in var.http_api_ids : can(regex("^[a-z0-9]+$", id))])
     error_message = "Use actual HTTP API IDs, without wildcard characters."

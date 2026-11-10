@@ -3,23 +3,33 @@ package domain
 import "time"
 
 type Link struct {
-	Code      string `json:"code" dynamodbav:"code"`
-	Target    string `json:"target" dynamodbav:"target"`
-	OwnerID   string `json:"-" dynamodbav:"ownerId"`
-	CreatedAt string `json:"createdAt" dynamodbav:"createdAt"`
-	Clicks    int64  `json:"clicks" dynamodbav:"clicks"`
-	Status    string `json:"status,omitempty" dynamodbav:"status,omitempty"`
+	Code         string `json:"code" dynamodbav:"code"`
+	Target       string `json:"target" dynamodbav:"target"`
+	OwnerID      string `json:"-" dynamodbav:"ownerId"`
+	CreatedAt    string `json:"createdAt" dynamodbav:"createdAt"`
+	Clicks       int64  `json:"clicks" dynamodbav:"clicks"`
+	Status       string `json:"status,omitempty" dynamodbav:"status,omitempty"`
+	StatusReason string `json:"statusReason,omitempty" dynamodbav:"statusReason,omitempty"`
 }
 
 type ClickEvent struct {
-	Code string `json:"code"`
-	At   string `json:"at"`
+	Code    string `json:"code"`
+	At      string `json:"at"`
+	ClickID string `json:"clickId"`
 }
 
 type WSConnection struct {
 	ConnectionID string
+	OwnerID      string
 	Code         string `json:"code" dynamodbav:"code"`
 	TTL          int64  `json:"ttl" dynamodbav:"ttl"`
+}
+
+type RealtimeTicket struct {
+	Ticket  string
+	OwnerID string
+	Code    string
+	TTL     int64
 }
 
 type ModerationCheck struct {

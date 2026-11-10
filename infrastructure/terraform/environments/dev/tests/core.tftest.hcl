@@ -26,6 +26,10 @@ variables {
 }
 run "core_wiring" {
   command = plan
+  variables {
+    frontend_domain_name     = null
+    frontend_certificate_arn = null
+  }
   assert {
     condition = (
       output.frontend_url == "https://dtest.cloudfront.net" &&
@@ -37,7 +41,7 @@ run "core_wiring" {
     error_message = "CloudFront routes must extend the explicit callback, logout and CORS allowlists; Google redirects to Cognito."
   }
   assert {
-    condition     = toset(keys(module.functions)) == toset(["create-link", "resolve-link", "list-links", "delete-link"]) && module.functions["resolve-link"].environment_variables.EVENT_BUS == "url-shortener-events" && module.functions["create-link"].environment_variables.TABLE_NAME == "url-shortener"
+    condition     = toset(keys(module.functions)) == toset(["create-link", "resolve-link", "list-links", "delete-link"]) && module.functions["resolve-link"].environment_variables.EVENT_BUS == "url-shortener-events" && module.functions["create-link"].environment_variables.TABLE_NAME == "url-shortener" && contains(keys(module.functions["create-link"].environment_variables), "MODERATION_STATE_MACHINE_ARN")
     error_message = "The four real handlers must receive the real table and custom event bus."
   }
   assert {
@@ -55,7 +59,7 @@ run "pipeline_root_wiring" {
 run "per_handler_permissions" {
   command = plan
   assert {
-    condition     = local.permissions["create-link"][0].actions == ["dynamodb:PutItem"] && local.permissions["list-links"][0].actions == ["dynamodb:Query"] && local.permissions["list-links"][0].resources == ["arn:aws:dynamodb:ap-southeast-1:111111111111:table/url-shortener/index/GSI1"] && local.permissions["delete-link"][0].actions == ["dynamodb:DeleteItem"] && local.permissions["resolve-link"][1].actions == ["events:PutEvents"] && length(local.permissions["resolve-link"]) == 2
+    condition     = local.permissions["create-link"][0].actions == ["dynamodb:PutItem"] && local.permissions["create-link"][1].actions == ["states:StartExecution"] && length(local.permissions["create-link"][1].resources) == 1 && local.permissions["list-links"][0].actions == ["dynamodb:Query"] && local.permissions["list-links"][0].resources == ["arn:aws:dynamodb:ap-southeast-1:111111111111:table/url-shortener/index/GSI1"] && local.permissions["list-links"][1].actions == ["dynamodb:GetItem", "dynamodb:PutItem"] && local.permissions["delete-link"][0].actions == ["dynamodb:DeleteItem"] && local.permissions["resolve-link"][1].actions == ["events:PutEvents"] && length(local.permissions["resolve-link"]) == 2
     error_message = "Business permissions must match each handler; only resolve can publish clicks."
   }
 }

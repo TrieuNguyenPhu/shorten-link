@@ -84,14 +84,18 @@ func (s *AggregatorService) process(ctx context.Context, body string, logger *sl
 	if err := json.Unmarshal([]byte(body), &envelope); err != nil {
 		return "", false, fmt.Errorf("decode click envelope: %w", err)
 	}
-	if strings.TrimSpace(envelope.ID) == "" || !domain.IsValidShortCode(envelope.Detail.Code) || envelope.Source != "urlshortener" || envelope.DetailType != "link.clicked" {
+	clickID := strings.TrimSpace(envelope.Detail.ClickID)
+	if clickID == "" {
+		clickID = strings.TrimSpace(envelope.ID)
+	}
+	if strings.TrimSpace(envelope.ID) == "" || clickID == "" || !domain.IsValidShortCode(envelope.Detail.Code) || envelope.Source != "urlshortener" || envelope.DetailType != "link.clicked" {
 		return "", false, errors.New("invalid click envelope")
 	}
 	at, err := time.Parse(time.RFC3339Nano, envelope.Detail.At)
 	if err != nil {
 		return "", false, fmt.Errorf("invalid click timestamp: %w", err)
 	}
-	outcome, err := s.repo.RecordClickTransaction(ctx, envelope.ID, envelope.Detail.Code, at, s.now())
+	outcome, err := s.repo.RecordClickTransaction(ctx, clickID, envelope.Detail.Code, at, s.now())
 	if err != nil {
 		return "", false, err
 	}

@@ -10,16 +10,18 @@ import (
 )
 
 type Config struct {
-	TableName             string
-	EventBusName          string
-	WSEndpoint            string
-	PublicRedirectBaseURL string
+	TableName                 string
+	EventBusName              string
+	WSEndpoint                string
+	PublicRedirectBaseURL     string
+	ModerationStateMachineARN string
 }
 
 func Load() (*Config, error) {
 	cfg := &Config{
-		TableName:    strings.TrimSpace(os.Getenv("TABLE_NAME")),
-		EventBusName: strings.TrimSpace(os.Getenv("EVENT_BUS")),
+		TableName:                 strings.TrimSpace(os.Getenv("TABLE_NAME")),
+		EventBusName:              strings.TrimSpace(os.Getenv("EVENT_BUS")),
+		ModerationStateMachineARN: strings.TrimSpace(os.Getenv("MODERATION_STATE_MACHINE_ARN")),
 	}
 	if cfg.TableName == "" {
 		return nil, fmt.Errorf("TABLE_NAME is required")

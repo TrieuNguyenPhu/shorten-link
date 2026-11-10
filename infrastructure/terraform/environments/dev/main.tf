@@ -16,9 +16,11 @@ module "event_bus" {
   name   = var.event_bus_name
 }
 module "frontend_hosting" {
-  source      = "../../modules/frontend_hosting"
-  name_prefix = var.name_prefix
-  bucket_name = "${var.name_prefix}-${var.aws_account_id}-frontend"
+  source          = "../../modules/frontend_hosting"
+  name_prefix     = var.name_prefix
+  bucket_name     = "${var.name_prefix}-${var.aws_account_id}-frontend"
+  domain_name     = var.frontend_domain_name
+  certificate_arn = var.frontend_certificate_arn
 }
 
 locals {
@@ -29,13 +31,13 @@ locals {
   frontend_logouts        = setunion(var.logout_urls, ["${module.frontend_hosting.url}/"])
   frontend_origins        = setunion(var.cors_origins, [module.frontend_hosting.url])
   permissions = {
-    create-link  = [{ actions = ["dynamodb:PutItem"], resources = [module.table.arn] }]
+    create-link  = [{ actions = ["dynamodb:PutItem"], resources = [module.table.arn] }, { actions = ["states:StartExecution"], resources = [module.moderation_sfn.arn] }]
     resolve-link = [{ actions = ["dynamodb:GetItem"], resources = [module.table.arn] }, { actions = ["events:PutEvents"], resources = [module.event_bus.arn] }]
-    list-links   = [{ actions = ["dynamodb:Query"], resources = [module.table.index_arn] }]
+    list-links   = [{ actions = ["dynamodb:Query"], resources = [module.table.index_arn] }, { actions = ["dynamodb:GetItem", "dynamodb:PutItem"], resources = [module.table.arn] }]
     delete-link  = [{ actions = ["dynamodb:DeleteItem"], resources = [module.table.arn] }]
   }
   realtime_permissions = {
-    ws-connect     = [{ actions = ["dynamodb:PutItem"], resources = [module.table.arn] }]
+    ws-connect     = [{ actions = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:DeleteItem"], resources = [module.table.arn] }]
     ws-disconnect  = [{ actions = ["dynamodb:DeleteItem"], resources = [module.table.arn] }]
     moderate-check = []
   }
@@ -62,7 +64,7 @@ module "functions" {
   canary_managed       = each.key == "resolve-link"
   log_retention_days   = var.log_retention_days
   environment_variables = merge({ TABLE_NAME = module.table.name },
-    each.key == "create-link" ? { PUBLIC_REDIRECT_BASE_URL = module.http_api.endpoint } : {},
+    each.key == "create-link" ? { PUBLIC_REDIRECT_BASE_URL = module.http_api.endpoint, MODERATION_STATE_MACHINE_ARN = module.moderation_sfn.arn } : {},
   each.key == "resolve-link" ? { EVENT_BUS = module.event_bus.name } : {})
 }
 module "http_api" {
@@ -126,6 +128,7 @@ module "observability" {
   resolve_function_name = module.functions["resolve-link"].function_name
   queue_name            = "${var.name_prefix}-ClickQueue"
   dlq_name              = "${var.name_prefix}-ClickDLQ"
+  delivery_dlq_name     = "${var.name_prefix}-EventDeliveryDLQ"
   alarm_email_addresses = var.alarm_email_addresses
 }
 module "codedeploy_canary" {

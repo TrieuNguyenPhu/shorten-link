@@ -4,6 +4,12 @@ resource "aws_sqs_queue" "dlq" {
   message_retention_seconds = 1209600
   sqs_managed_sse_enabled   = true
 }
+resource "aws_sqs_queue" "delivery_dlq" {
+  fifo_queue                = false
+  name                      = "${var.name_prefix}-EventDeliveryDLQ"
+  message_retention_seconds = 1209600
+  sqs_managed_sse_enabled   = true
+}
 resource "aws_sqs_queue" "clicks" {
   fifo_queue                 = false
   name                       = "${var.name_prefix}-ClickQueue"
@@ -51,13 +57,32 @@ resource "aws_sqs_queue_policy" "dlq" {
     ]
   })
 }
+resource "aws_sqs_queue_policy" "delivery_dlq" {
+  queue_url = aws_sqs_queue.delivery_dlq.url
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "AllowEventBridgeDelivery", Effect = "Allow", Principal = { Service = "events.amazonaws.com" },
+        Action    = "sqs:SendMessage", Resource = aws_sqs_queue.delivery_dlq.arn,
+        Condition = { ArnEquals = { "aws:SourceArn" = aws_cloudwatch_event_rule.clicked.arn }, StringEquals = { "aws:SourceAccount" = split(":", var.event_bus_arn)[4] } }
+      },
+      { Sid = "DenyInsecureTransport", Effect = "Deny", Principal = "*", Action = "sqs:*", Resource = aws_sqs_queue.delivery_dlq.arn, Condition = { Bool = { "aws:SecureTransport" = "false" } } }
+    ]
+  })
+}
 resource "aws_cloudwatch_event_target" "clicks" {
   target_id      = "ClickQueue"
   rule           = aws_cloudwatch_event_rule.clicked.name
   event_bus_name = var.event_bus_name
   arn            = aws_sqs_queue.clicks.arn
+  dead_letter_config { arn = aws_sqs_queue.delivery_dlq.arn }
+  retry_policy {
+    maximum_event_age_in_seconds = 86400
+    maximum_retry_attempts       = 8
+  }
   # Forward the entire EventBridge envelope, including id for deduplication.
-  depends_on = [aws_sqs_queue_policy.clicks]
+  depends_on = [aws_sqs_queue_policy.clicks, aws_sqs_queue_policy.delivery_dlq]
 }
 locals {
   aggregator_permissions = [

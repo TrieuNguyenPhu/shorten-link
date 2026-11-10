@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/domain"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -127,6 +128,43 @@ func TestRepositoryPropagatesFailuresAndEmptyList(t *testing.T) {
 	}
 	if err := repo.DeleteUserLink(ctx, "x", "alice"); !errors.Is(err, failure) {
 		t.Fatal(err)
+	}
+}
+
+func TestRealtimeTicketIsSingleUseAndBoundToOwnerCode(t *testing.T) {
+	deleted := false
+	repo := New(sdkStub{
+		put: func(in *dynamodb.PutItemInput) (*dynamodb.PutItemOutput, error) {
+			if str(in.Item["PK"]) != "TICKET#ticket-1" || aws.ToString(in.ConditionExpression) != "attribute_not_exists(PK)" {
+				t.Fatalf("unsafe ticket put: %+v", in)
+			}
+			return &dynamodb.PutItemOutput{}, nil
+		},
+		get: func(in *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
+			if str(in.Key["PK"]) != "TICKET#ticket-1" || !aws.ToBool(in.ConsistentRead) {
+				t.Fatalf("unsafe ticket get: %+v", in)
+			}
+			return &dynamodb.GetItemOutput{Item: map[string]types.AttributeValue{
+				"ownerId": &types.AttributeValueMemberS{Value: "alice"},
+				"code":    &types.AttributeValueMemberS{Value: "Abc1234"},
+				"ttl":     &types.AttributeValueMemberN{Value: "220"},
+			}}, nil
+		},
+		delete: func(in *dynamodb.DeleteItemInput) (*dynamodb.DeleteItemOutput, error) {
+			deleted = true
+			if aws.ToString(in.ConditionExpression) != "attribute_exists(PK)" {
+				t.Fatalf("unsafe ticket consume: %+v", in)
+			}
+			return &dynamodb.DeleteItemOutput{}, nil
+		},
+	}, "url-shortener")
+	ticket := domain.RealtimeTicket{Ticket: "ticket-1", OwnerID: "alice", Code: "Abc1234", TTL: 220}
+	if err := repo.PutRealtimeTicket(context.Background(), ticket); err != nil {
+		t.Fatal(err)
+	}
+	got, err := repo.ConsumeRealtimeTicket(context.Background(), "ticket-1", time.Unix(100, 0))
+	if err != nil || got != ticket || !deleted {
+		t.Fatalf("got=%+v err=%v deleted=%v", got, err, deleted)
 	}
 }
 

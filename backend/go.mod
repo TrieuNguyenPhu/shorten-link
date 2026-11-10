@@ -11,6 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/apigatewaymanagementapi v1.41.3
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.72.3
 	github.com/aws/aws-sdk-go-v2/service/eventbridge v1.55.7
+	github.com/aws/aws-sdk-go-v2/service/sfn v1.39.4
 	github.com/aws/aws-xray-sdk-go v1.8.5
 	github.com/aws/smithy-go v1.28.7
 )

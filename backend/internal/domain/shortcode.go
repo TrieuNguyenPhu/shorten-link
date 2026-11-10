@@ -103,6 +103,12 @@ func ValidateTargetURL(raw string) (string, error) {
 		return "", err
 	}
 	host := strings.ToLower(strings.TrimSuffix(u.Hostname(), "."))
+	if u.User != nil {
+		return "", errors.New("URL must not include credentials")
+	}
+	if isLegacyIPv4Literal(host) {
+		return "", errors.New("URL host must use canonical public addressing")
+	}
 	if host == "localhost" || strings.HasSuffix(host, ".localhost") || strings.HasSuffix(host, ".local") {
 		return "", errors.New("URL host must be publicly routable")
 	}
@@ -113,6 +119,37 @@ func ValidateTargetURL(raw string) (string, error) {
 		}
 	}
 	return normalized, nil
+}
+
+func isLegacyIPv4Literal(host string) bool {
+	if host == "" {
+		return false
+	}
+	if strings.Contains(host, "x") {
+		for _, c := range host {
+			if c != 'x' && c != '.' && !(c >= '0' && c <= '9' || c >= 'a' && c <= 'f') {
+				return false
+			}
+		}
+		return true
+	}
+	if strings.Contains(host, ".") {
+		return false
+	}
+	if len(host) > 1 && host[0] == '0' {
+		for _, c := range host {
+			if c < '0' || c > '7' {
+				return false
+			}
+		}
+		return true
+	}
+	for _, c := range host {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // IsSafeTargetURL validates the target URL and checks token boundaries for

@@ -7,6 +7,7 @@ export const AUTH_STORAGE_KEYS = {
   accessTokenExpiresAt: "shorten-link.access-token-expires-at",
   pkce: "shorten-link.pkce",
   privacyConsent: "shorten-link.privacy-consent",
+  pendingTarget: "shorten-link.pending-target",
 } as const;
 
 export type PrivacyConsentRecord = {

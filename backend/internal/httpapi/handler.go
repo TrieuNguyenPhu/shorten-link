@@ -93,7 +93,7 @@ func (h *Handler) Create(ctx context.Context, req events.APIGatewayV2HTTPRequest
 		h.log(ctx, req).Error("create link failed", "error", err)
 		return failure(500, "loi he thong")
 	}
-	return jsonResponse(201, map[string]string{"code": link.Code, "shortUrl": h.shortURL(req, link.Code), "target": link.Target})
+	return jsonResponse(201, map[string]string{"code": link.Code, "shortUrl": h.shortURL(req, link.Code), "target": link.Target, "status": link.Status})
 }
 
 func (h *Handler) List(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
@@ -119,15 +119,25 @@ func (h *Handler) List(ctx context.Context, req events.APIGatewayV2HTTPRequest) 
 		return failure(500, "loi he thong")
 	}
 	type item struct {
-		Code      string `json:"code"`
-		ShortURL  string `json:"shortUrl"`
-		Target    string `json:"target"`
-		Clicks    int64  `json:"clicks"`
-		CreatedAt string `json:"createdAt"`
+		Code           string `json:"code"`
+		ShortURL       string `json:"shortUrl"`
+		Target         string `json:"target"`
+		Clicks         int64  `json:"clicks"`
+		CreatedAt      string `json:"createdAt"`
+		RealtimeTicket string `json:"realtimeTicket,omitempty"`
+		Status         string `json:"status"`
+		StatusReason   string `json:"statusReason,omitempty"`
 	}
 	items := make([]item, 0, len(links))
 	for _, link := range links {
-		items = append(items, item{link.Code, h.shortURL(req, link.Code), link.Target, link.Clicks, link.CreatedAt})
+		entry := item{Code: link.Code, ShortURL: h.shortURL(req, link.Code), Target: link.Target, Clicks: link.Clicks, CreatedAt: link.CreatedAt, Status: link.Status, StatusReason: link.StatusReason}
+		if ticket, ticketErr := h.service.IssueRealtimeTicketForLink(ctx, owner, link); ticketErr == nil {
+			entry.RealtimeTicket = ticket.Ticket
+		} else if !errors.Is(ticketErr, service.ErrTicketStoreUnavailable) {
+			h.log(ctx, req).Error("issue realtime ticket failed", "code", link.Code, "error", ticketErr)
+			return failure(500, "loi he thong")
+		}
+		items = append(items, entry)
 	}
 	return jsonResponse(200, struct {
 		Links      []item `json:"links"`
@@ -172,6 +182,7 @@ func (h *Handler) Resolve(ctx context.Context, req events.APIGatewayV2HTTPReques
 			h.metric(ctx, req, "ClickPublishFailed")
 			return events.APIGatewayV2HTTPResponse{StatusCode: 302, Headers: map[string]string{"Location": target, "Cache-Control": "private, no-store, no-cache, must-revalidate"}, Body: ""}, nil
 		}
+		h.metric(ctx, req, "ResolveFailed")
 		return events.APIGatewayV2HTTPResponse{StatusCode: 500, Headers: map[string]string{"Content-Type": "text/plain"}, Body: "loi he thong"}, nil
 	}
 	h.log(ctx, req).Info("link resolved", "code", code)

@@ -28,7 +28,9 @@ resource "aws_s3_bucket_policy" "state_tls" {
   })
 }
 locals {
-  api_ids = length(var.http_api_ids) > 0 ? setunion(var.http_api_ids, var.websocket_api_ids) : toset(["*"])
+  # Child-resource permissions are intentionally empty until the operator pins
+  # exact API IDs. A discovery wildcard would allow writes to unrelated APIs.
+  api_ids = setunion(var.http_api_ids, var.websocket_api_ids)
   api_resource_arns = flatten([for id in local.api_ids : [
     "arn:${data.aws_partition.current.partition}:apigateway:${var.aws_region}::/apis/${id}",
     "arn:${data.aws_partition.current.partition}:apigateway:${var.aws_region}::/apis/${id}/stages/*"

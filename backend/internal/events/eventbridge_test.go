@@ -45,7 +45,7 @@ func TestPublishValidatesEntryAndDeadline(t *testing.T) {
 			publisher := NewPublisher(putStub(func(ctx context.Context, in *eventbridge.PutEventsInput, _ ...func(*eventbridge.Options)) (*eventbridge.PutEventsOutput, error) {
 				calls++
 				deadline, ok := ctx.Deadline()
-				if !ok || time.Until(deadline) > 1500*time.Millisecond {
+				if !ok || time.Until(deadline) > 250*time.Millisecond {
 					t.Fatal("unbounded deadline")
 				}
 				if len(in.Entries) != 1 || aws.ToString(in.Entries[0].EventBusName) != "bus" || aws.ToString(in.Entries[0].Source) != "urlshortener" || aws.ToString(in.Entries[0].DetailType) != "link.clicked" {

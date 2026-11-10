@@ -73,4 +73,22 @@ run "static_hosting_contract" {
     )
     error_message = "Exported pages need viewer rewrites, short cache and native errors. Hashed assets must cache for one year."
   }
+  assert {
+    condition     = one(aws_cloudfront_distribution.site.default_cache_behavior).response_headers_policy_id == aws_cloudfront_response_headers_policy.html.id && one(one(aws_cloudfront_response_headers_policy.html.security_headers_config).content_security_policy).override && one(one(aws_cloudfront_response_headers_policy.html.security_headers_config).strict_transport_security).override && one(one(aws_cloudfront_response_headers_policy.html.security_headers_config).content_type_options).override && one(one(aws_cloudfront_response_headers_policy.html.security_headers_config).frame_options).frame_option == "DENY" && one(one(aws_cloudfront_response_headers_policy.html.security_headers_config).referrer_policy).referrer_policy == "strict-origin-when-cross-origin"
+    error_message = "HTML responses must carry CSP, HSTS, nosniff, frame protection and referrer policy."
+  }
+}
+run "custom_domain_is_reproducible" {
+  command = plan
+  module { source = "../../modules/frontend_hosting" }
+  variables {
+    name_prefix     = "test"
+    bucket_name     = "test-frontend"
+    domain_name     = "shortn.dev"
+    certificate_arn = "arn:aws:acm:us-east-1:111111111111:certificate/11111111-1111-4111-8111-111111111111"
+  }
+  assert {
+    condition     = contains(aws_cloudfront_distribution.site.aliases, "shortn.dev") && one(aws_cloudfront_distribution.site.viewer_certificate).acm_certificate_arn == var.certificate_arn
+    error_message = "Custom domain, certificate and canonical URL must be managed in Terraform."
+  }
 }

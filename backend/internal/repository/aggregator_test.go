@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
@@ -40,7 +41,7 @@ func TestRecordClickWritesAtomicCountersAndMarker(t *testing.T) {
 		if str(meta.Key["PK"]) != "LINK#Abc1234" || str(meta.Key["SK"]) != "META" || aws.ToString(meta.ConditionExpression) != "attribute_exists(PK)" || aws.ToString(meta.UpdateExpression) != "ADD clicks :one" || meta.ExpressionAttributeValues[":one"].(*types.AttributeValueMemberN).Value != "1" {
 			t.Fatal(meta)
 		}
-		if str(marker.Item["PK"]) != "CLICK#event-1" || str(marker.Item["SK"]) != "CLICK" || marker.Item["ttl"].(*types.AttributeValueMemberN).Value != "1793840400" || len(marker.Item) != 3 || aws.ToString(marker.ConditionExpression) != "attribute_not_exists(PK)" {
+		if str(marker.Item["PK"]) != "CLICK#event-1" || str(marker.Item["SK"]) != "CLICK" || marker.Item["ttl"].(*types.AttributeValueMemberN).Value != strconv.FormatInt(now.Add(15*24*time.Hour).Unix(), 10) || len(marker.Item) != 3 || aws.ToString(marker.ConditionExpression) != "attribute_not_exists(PK)" {
 			t.Fatal(marker)
 		}
 		return &dynamodb.TransactWriteItemsOutput{}, nil

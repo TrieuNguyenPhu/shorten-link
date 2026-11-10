@@ -6,7 +6,17 @@ import { createRoot } from "react-dom/client";
 import { JSDOM } from "jsdom";
 import { AUTH_STORAGE_KEYS } from "../src/lib/auth.ts";
 
-const { LinksWorkspace } = await import("../src/features/links/LinksWorkspace.tsx");
+const { LinksWorkspace, mergeLinkSnapshot } = await import("../src/features/links/LinksWorkspace.tsx");
+
+test("stale snapshots preserve pending creates and never restore deleted links", () => {
+  const current = [
+    { code: "New0001", target: "https://new.example", clicks: 0, createdAt: "2026-11-05T00:00:00Z" },
+    { code: "Deleted1", target: "https://deleted.example", clicks: 0, createdAt: "2026-11-04T00:00:00Z" },
+  ];
+  const merged = mergeLinkSnapshot(current, [], new Set(["New0001"]), new Set(["Deleted1"]));
+  assert.deepEqual(merged.links.map((link) => link.code), ["New0001"]);
+  assert.deepEqual([...merged.pendingCreated], ["New0001"]);
+});
 
 test("dashboard keeps its table and sockets mounted while reconciling HTTP snapshots", async (t) => {
   const dom = new JSDOM("<div id='root'></div>", { url: "https://shortn.dev/dashboard/" });
@@ -29,7 +39,7 @@ test("dashboard keeps its table and sockets mounted while reconciling HTTP snaps
     constructor(url) { this.url = url; this.closed = false; sockets.push(this); }
     close() { this.closed = true; this.onclose?.(); }
   };
-  const links = [{ code: "Abc1234", target: "https://example.org", clicks: 3, createdAt: "2026-11-05T00:00:00Z" }];
+  const links = [{ code: "Abc1234", target: "https://example.org", clicks: 3, createdAt: "2026-11-05T00:00:00Z", realtimeTicket: "ticket-1" }];
   let calls = 0;
   let completeRefresh;
   globalThis.fetch = async (_url, options) => {

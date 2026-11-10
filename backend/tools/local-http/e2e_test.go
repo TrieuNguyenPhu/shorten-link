@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/domain"
 	appevents "github.com/TrieuNguyenPhu/shorten-link/backend/internal/events"
 	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/httpapi"
 	"github.com/TrieuNguyenPhu/shorten-link/backend/internal/repository"
@@ -137,7 +138,11 @@ func TestLocalHTTPEndToEnd(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
 	ws := service.NewWebSocket(repo, logger)
 	for id, code := range map[string]string{"a-live": link.Code, "b-gone": link.Code, "c-denied": link.Code, "other-code": "Other01"} {
-		response, err := ws.Connect(ctx, events.APIGatewayWebsocketProxyRequest{QueryStringParameters: map[string]string{"code": code}, RequestContext: events.APIGatewayWebsocketProxyRequestContext{ConnectionID: id}})
+		ticket := "ticket-" + id
+		if err := repo.PutRealtimeTicket(ctx, domain.RealtimeTicket{Ticket: ticket, OwnerID: "alice", Code: code, TTL: time.Now().Unix() + 120}); err != nil {
+			t.Fatal(err)
+		}
+		response, err := ws.Connect(ctx, events.APIGatewayWebsocketProxyRequest{QueryStringParameters: map[string]string{"ticket": ticket}, RequestContext: events.APIGatewayWebsocketProxyRequestContext{ConnectionID: id}})
 		if err != nil || response.StatusCode != 200 {
 			t.Fatal(response, err)
 		}

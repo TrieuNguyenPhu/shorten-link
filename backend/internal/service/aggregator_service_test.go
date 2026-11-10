@@ -111,6 +111,24 @@ func TestAggregatorDoesNotNotifyDuplicatesOrDeletedLinks(t *testing.T) {
 	}
 }
 
+func TestAggregatorUsesStableClickIDAcrossEnvelopeRetries(t *testing.T) {
+	var ids []string
+	svc := NewAggregator(clickRepoStub(func(_ context.Context, id, _ string, _, _ time.Time) (repository.ClickOutcome, error) {
+		ids = append(ids, id)
+		return repository.ClickDuplicate, nil
+	}), nil, quietLogger(), io.Discard)
+	message := func(envelopeID string) events.SQSMessage {
+		body := fmt.Sprintf(`{"id":%q,"source":"urlshortener","detail-type":"link.clicked","detail":{"code":"Abc1234","at":"2026-11-03T23:59:59.123Z","clickId":"stable-click"}}`, envelopeID)
+		return events.SQSMessage{MessageId: envelopeID, Body: body}
+	}
+	if _, err := svc.HandleBatch(context.Background(), events.SQSEvent{Records: []events.SQSMessage{message("envelope-a"), message("envelope-b")}}); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(ids, []string{"stable-click", "stable-click"}) {
+		t.Fatal(ids)
+	}
+}
+
 func TestAggregatorNotificationAndMetricFailuresDoNotRetryCommittedClick(t *testing.T) {
 	calls := 0
 	var logs bytes.Buffer

@@ -56,7 +56,7 @@ run "moderation_contract" {
     moderate_check_arn = "arn:aws:lambda:ap-southeast-1:111111111111:function:url-shortener-dev-moderate-check:live"
   }
   assert {
-    condition     = aws_sfn_state_machine.moderation.type == "STANDARD" && jsondecode(aws_sfn_state_machine.moderation.definition).States.CheckSafety.Resource == var.moderate_check_arn && jsondecode(aws_sfn_state_machine.moderation.definition).States.Activate.Parameters.TableName == var.table_name && jsondecode(aws_sfn_state_machine.moderation.definition).States.MarkError.Type == "Fail"
+    condition     = aws_sfn_state_machine.moderation.type == "STANDARD" && jsondecode(aws_sfn_state_machine.moderation.definition).States.CheckSafety.Resource == var.moderate_check_arn && jsondecode(aws_sfn_state_machine.moderation.definition).States.Activate.Parameters.TableName == var.table_name && jsondecode(aws_sfn_state_machine.moderation.definition).States.MarkError.Type == "Task" && jsondecode(aws_sfn_state_machine.moderation.definition).States.Reject.Parameters.ExpressionAttributeNames["#r"] == "statusReason"
     error_message = "Use the real rendered ASL with direct Lambda alias, existing table and Fail branch."
   }
   assert {
@@ -75,7 +75,7 @@ run "realtime_root_wiring" {
     error_message = "Expose all eight handlers while wiring the real WebSocket management URL into the aggregator."
   }
   assert {
-    condition     = local.realtime_permissions["ws-connect"][0].actions == ["dynamodb:PutItem"] && local.realtime_permissions["ws-disconnect"][0].actions == ["dynamodb:DeleteItem"] && length(local.realtime_permissions["moderate-check"]) == 0 && length(local.permissions["create-link"]) == 1 && length(local.permissions["resolve-link"]) == 2
+    condition     = local.realtime_permissions["ws-connect"][0].actions == ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:DeleteItem"] && local.realtime_permissions["ws-disconnect"][0].actions == ["dynamodb:DeleteItem"] && length(local.realtime_permissions["moderate-check"]) == 0 && length(local.permissions["create-link"]) == 2 && length(local.permissions["resolve-link"]) == 2
     error_message = "Each new Lambda must receive only its own permissions; create/redirect must not start moderation."
   }
 }
