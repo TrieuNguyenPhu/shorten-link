@@ -76,6 +76,19 @@ func TestAggregatorPartialBatchRetriesOnlyFailedRecords(t *testing.T) {
 	}
 }
 
+func TestAggregatorAcceptsCustomAliasClicks(t *testing.T) {
+	called := false
+	svc := NewAggregator(clickRepoStub(func(_ context.Context, _, code string, _, _ time.Time) (repository.ClickOutcome, error) {
+		called = code == "my-link"
+		return repository.ClickApplied, nil
+	}), nil, quietLogger(), io.Discard)
+	body := `{"id":"event-1","source":"urlshortener","detail-type":"link.clicked","detail":{"code":"my-link","at":"2026-11-03T23:59:59.123Z","clickId":"click-1"}}`
+	response, err := svc.HandleBatch(context.Background(), events.SQSEvent{Records: []events.SQSMessage{{MessageId: "message-1", Body: body}}})
+	if err != nil || len(response.BatchItemFailures) != 0 || !called {
+		t.Fatalf("response=%+v called=%v err=%v", response, called, err)
+	}
+}
+
 func TestAggregatorRejectsMalformedEnvelopesBeforeWriting(t *testing.T) {
 	valid := clickMessage(t, "id").Body
 	invalid := []string{"{", "null", "[]", valid + " {}", strings.Replace(valid, `"id":"id"`, `"id":""`, 1), strings.Replace(valid, `"id":"id"`, `"id":null`, 1), strings.Replace(valid, `"code":"Abc1234"`, `"code":" "`, 1), strings.Replace(valid, `"source":"urlshortener"`, `"source":"other"`, 1), strings.Replace(valid, `"detail-type":"link.clicked"`, `"detail-type":"other"`, 1), strings.Replace(valid, `"at":"2026-11-03T23:59:59.123Z"`, `"at":"invalid"`, 1), strings.Replace(valid, `"at":"2026-11-03T23:59:59.123Z"`, `"at":null`, 1), strings.Replace(valid, `"code":"Abc1234"`, `"code":22`, 1)}

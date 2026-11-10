@@ -83,3 +83,12 @@ func TestWebSocketConnectAndDisconnect(t *testing.T) {
 		t.Fatal(res, err)
 	}
 }
+
+func TestWebSocketConnectAcceptsCustomAlias(t *testing.T) {
+	repo := &connectionStub{ticket: domain.RealtimeTicket{Ticket: "ticket-1", OwnerID: "alice", Code: "my-link", TTL: 7300}}
+	s := NewWebSocket(repo, slog.New(slog.NewJSONHandler(io.Discard, nil)))
+	res, err := s.Connect(context.Background(), events.APIGatewayWebsocketProxyRequest{QueryStringParameters: map[string]string{"ticket": "ticket-1"}, RequestContext: events.APIGatewayWebsocketProxyRequestContext{ConnectionID: "socket="}})
+	if err != nil || res.StatusCode != 200 || repo.saved.Code != "my-link" {
+		t.Fatalf("res=%+v saved=%+v err=%v", res, repo.saved, err)
+	}
+}

@@ -24,7 +24,7 @@ type linkCursor struct {
 
 func (c linkCursor) valid(owner string) bool {
 	code := strings.TrimPrefix(c.PK, "LINK#")
-	if c.OwnerKey != "USER#"+owner || c.SK != "META" || !strings.HasPrefix(c.PK, "LINK#") || !domain.IsValidShortCode(code) {
+	if c.OwnerKey != "USER#"+owner || c.SK != "META" || !strings.HasPrefix(c.PK, "LINK#") || !domain.IsValidLinkCode(code) {
 		return false
 	}
 	if !strings.HasPrefix(c.SortKey, "LINK#") {

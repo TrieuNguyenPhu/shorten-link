@@ -9,6 +9,10 @@ import (
 )
 
 func TestModerationCheckPreservesInputAndRejectsKeywords(t *testing.T) {
+	custom, err := CheckSafety(context.Background(), domain.ModerationInput{Code: "my-link", Target: "https://example.org/docs"})
+	if err != nil || custom.Code != "my-link" || !custom.Safe {
+		t.Fatalf("custom alias rejected: %+v %v", custom, err)
+	}
 	for _, tc := range []struct {
 		target string
 		safe   bool

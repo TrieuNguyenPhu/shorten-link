@@ -191,6 +191,21 @@ func TestCursorCannotSelectAnotherOwner(t *testing.T) {
 	}
 }
 
+func TestCursorAcceptsCustomAlias(t *testing.T) {
+	cursor, err := encodeCursor("alice", map[string]types.AttributeValue{
+		"PK":     &types.AttributeValueMemberS{Value: "LINK#my-link"},
+		"SK":     &types.AttributeValueMemberS{Value: "META"},
+		"GSI1PK": &types.AttributeValueMemberS{Value: "USER#alice"},
+		"GSI1SK": &types.AttributeValueMemberS{Value: "LINK#2026-11-04T00:00:00.000Z"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := decodeCursor("alice", cursor); err != nil {
+		t.Fatalf("custom alias cursor rejected: %v", err)
+	}
+}
+
 func TestCursorRejectsForgedKeyShapes(t *testing.T) {
 	valid := `{"pk":"LINK#Abc1234","sk":"META","owner":"USER#alice","sort":"LINK#2026-11-04T00:00:00.000Z"}`
 	for _, raw := range []string{

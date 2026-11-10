@@ -12,7 +12,7 @@ func CheckSafety(ctx context.Context, in domain.ModerationInput) (domain.Moderat
 	if err := ctx.Err(); err != nil {
 		return domain.ModerationCheck{}, err
 	}
-	if !domain.IsValidShortCode(strings.TrimSpace(in.Code)) || strings.TrimSpace(in.Target) == "" {
+	if !domain.IsValidLinkCode(strings.TrimSpace(in.Code)) || strings.TrimSpace(in.Target) == "" {
 		return domain.ModerationCheck{}, errors.New("valid code and target are required")
 	}
 	return domain.ModerationCheck{

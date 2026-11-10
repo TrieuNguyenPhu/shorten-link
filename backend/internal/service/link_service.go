@@ -190,7 +190,7 @@ func (s *LinkService) List(ctx context.Context, owner string, limit int, cursor 
 }
 
 func (s *LinkService) Delete(ctx context.Context, code, owner string) error {
-	if !domain.IsValidShortCode(code) {
+	if !domain.IsValidLinkCode(code) {
 		return repository.ErrNotFound
 	}
 	return s.repo.DeleteUserLink(ctx, code, owner)
