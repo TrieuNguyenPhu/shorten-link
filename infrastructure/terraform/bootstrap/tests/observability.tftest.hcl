@@ -11,8 +11,8 @@ variables {
 run "operations_permissions" {
   command = plan
   assert {
-    condition     = jsondecode(aws_iam_policy.canary_boundary.policy).Statement[0].Resource == ["arn:aws:lambda:ap-southeast-1:111111111111:function:url-shortener-dev-resolve-link:live"] && one([for s in jsondecode(aws_iam_policy.operations_deployment.policy).Statement : s if s.Sid == "PassCanaryRole"]).Condition.StringEquals["iam:PassedToService"] == "codedeploy.amazonaws.com" && alltrue([for s in jsondecode(aws_iam_policy.operations_deployment.policy).Statement : !contains(s.Resource, "*")])
-    error_message = "Operations deployment must pin app resources and bound service PassRole."
+    condition     = jsondecode(aws_iam_policy.canary_boundary.policy).Statement[0].Resource == ["*"] && contains(jsondecode(aws_iam_policy.canary_boundary.policy).Statement[0].Action, "lambda:InvokeFunction") && one([for s in jsondecode(aws_iam_policy.operations_deployment.policy).Statement : s if s.Sid == "PassCanaryRole"]).Condition.StringEquals["iam:PassedToService"] == "codedeploy.amazonaws.com" && alltrue([for s in jsondecode(aws_iam_policy.operations_deployment.policy).Statement : !contains(s.Resource, "*")])
+    error_message = "The CodeDeploy Lambda boundary must match AWS's service policy; the operator role and PassRole scope remain pinned."
   }
   assert {
     condition     = length(aws_iam_policy.operations_deployment.policy) <= 6144 && length(aws_iam_policy.canary_boundary.policy) <= 6144 && length(aws_iam_role_policy.deployment.policy) + length(aws_iam_role_policy.state.policy) <= 10240

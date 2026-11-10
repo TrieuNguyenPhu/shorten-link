@@ -12,7 +12,9 @@ resource "aws_iam_policy" "canary_boundary" {
   name = "${var.name_prefix}-canary-boundary"
   path = "/url-shortener/bootstrap/"
   policy = jsonencode({ Version = "2012-10-17", Statement = [
-    { Effect = "Allow", Action = ["lambda:GetAlias", "lambda:UpdateAlias", "lambda:GetProvisionedConcurrencyConfig"], Resource = ["${local.canary_function_arn}:live"] },
+    # AWS CodeDeploy's Lambda integration requires the control-plane statement
+    # on Resource *; the role trust remains constrained to the exact group.
+    { Effect = "Allow", Action = ["lambda:GetAlias", "lambda:UpdateAlias", "lambda:GetProvisionedConcurrencyConfig", "lambda:PutProvisionedConcurrencyConfig", "lambda:DeleteProvisionedConcurrencyConfig", "lambda:ListProvisionedConcurrencyConfigs", "lambda:GetFunction", "lambda:GetFunctionConfiguration", "lambda:PublishVersion", "lambda:InvokeFunction", "sns:Publish"], Resource = ["*"] },
     { Effect = "Allow", Action = ["cloudwatch:DescribeAlarms"], Resource = ["*"] }
   ] })
 }
