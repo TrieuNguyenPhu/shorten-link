@@ -134,6 +134,15 @@ func TestLocalHTTPEndToEnd(t *testing.T) {
 	if err := json.Unmarshal([]byte(created), &link); err != nil || len(link.Code) != 7 || link.ShortURL != "http://127.0.0.1:8080/"+link.Code {
 		t.Fatal(created, err)
 	}
+	if _, err := ddb.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+		TableName:                 aws.String(cfg.TableName),
+		Key:                       map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: "LINK#" + link.Code}, "SK": &types.AttributeValueMemberS{Value: "META"}},
+		UpdateExpression:          aws.String("SET #status = :active"),
+		ExpressionAttributeNames:  map[string]string{"#status": "status"},
+		ExpressionAttributeValues: map[string]types.AttributeValue{":active": &types.AttributeValueMemberS{Value: "active"}},
+	}); err != nil {
+		t.Fatal(err)
+	}
 	repo := repository.New(ddb, cfg.TableName)
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
 	ws := service.NewWebSocket(repo, logger)
@@ -247,12 +256,19 @@ func TestLocalHTTPEndToEnd(t *testing.T) {
 		}
 	}
 	var event struct {
-		ID string
+		ID     string
+		Detail struct {
+			ClickID string `json:"clickId"`
+		} `json:"detail"`
 	}
 	if err := json.Unmarshal([]byte(message.Body), &event); err != nil {
 		t.Fatal(err)
 	}
-	item, err := ddb.GetItem(ctx, &dynamodb.GetItemInput{TableName: aws.String(cfg.TableName), Key: map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: "CLICK#" + event.ID}, "SK": &types.AttributeValueMemberS{Value: "CLICK"}}, ConsistentRead: aws.Bool(true)})
+	clickID := event.Detail.ClickID
+	if clickID == "" {
+		clickID = event.ID
+	}
+	item, err := ddb.GetItem(ctx, &dynamodb.GetItemInput{TableName: aws.String(cfg.TableName), Key: map[string]types.AttributeValue{"PK": &types.AttributeValueMemberS{Value: "CLICK#" + clickID}, "SK": &types.AttributeValueMemberS{Value: "CLICK"}}, ConsistentRead: aws.Bool(true)})
 	if err != nil {
 		t.Fatal(err)
 	}

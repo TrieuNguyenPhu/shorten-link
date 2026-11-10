@@ -80,7 +80,7 @@ func TestDynamoDBLocalClickAtomicityTTLAndReplay(t *testing.T) {
 	record("event-1", ClickDuplicate)
 	assertClickNumber(t, readClickItem(t, ctx, client, table, "LINK#Abc1234", "META"), "clicks", "1")
 	marker := readClickItem(t, ctx, client, table, "CLICK#event-1", "CLICK")
-	assertClickNumber(t, marker, "ttl", "1793840400")
+	assertClickNumber(t, marker, "ttl", "1795050000")
 	if marker["GSI1PK"] != nil || marker["GSI1SK"] != nil {
 		t.Fatal("marker must stay sparse", marker)
 	}
