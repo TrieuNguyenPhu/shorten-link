@@ -50,6 +50,10 @@ run "canary_contract" {
     error_message = "CodeDeploy may manage only the live resolve alias, using a bounded service role."
   }
   assert {
+    condition     = alltrue([for action in ["lambda:GetAlias", "lambda:UpdateAlias", "lambda:GetFunction", "lambda:GetFunctionConfiguration", "lambda:PublishVersion"] : contains(flatten([for statement in jsondecode(aws_iam_role_policy.service.policy).Statement : statement.Action]), action)])
+    error_message = "CodeDeploy must be able to inspect and publish the pinned Lambda version before shifting the live alias."
+  }
+  assert {
     condition     = try(jsondecode(aws_iam_role.service.assume_role_policy).Statement[0].Condition.StringEquals["aws:SourceAccount"], "") == "111111111111" && try(jsondecode(aws_iam_role.service.assume_role_policy).Statement[0].Condition.ArnEquals["aws:SourceArn"], "") == "arn:aws:codedeploy:ap-southeast-1:111111111111:deploymentgroup:url-shortener-dev-resolve/url-shortener-dev-resolve-live"
     error_message = "Only the exact deployment group in this account may assume the CodeDeploy role."
   }
