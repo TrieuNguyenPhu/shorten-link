@@ -1,0 +1,207 @@
+{
+  "as_of_client_date": "2026-11-12",
+  "region": "ap-southeast-1",
+  "currency": "USD",
+  "policy": "Paid first-tier rates; ignore free tiers/credits; DynamoDB storage uses paid marginal rate for all modeled GB; CloudFront Asia edge traffic; costs exclude tax, domain registration and retained v1 resources.",
+  "rates": {
+    "lambda_request": {
+      "usd": "0.0000002000",
+      "unit": "Requests",
+      "sku": "V5T5H5YEU5SUN3C2",
+      "usage_type": "APS1-Request-ARM",
+      "range_begin": "0",
+      "description": "AWS Lambda - Total Requests for ARM - Asia Pacific (Singapore)",
+      "service": "AWSLambda"
+    },
+    "lambda_gb_second": {
+      "usd": "0.0000133334",
+      "unit": "Lambda-GB-Second",
+      "sku": "KSD76ZR243WEPWRS",
+      "usage_type": "APS1-Lambda-GB-Second-ARM",
+      "range_begin": "0",
+      "description": "AWS Lambda - Total Compute for ARM - Asia Pacific (Singapore)-Tier-1",
+      "service": "AWSLambda"
+    },
+    "http_api_request": {
+      "usd": "0.0000012500",
+      "unit": "Requests",
+      "sku": "HTX6VZU3YCMMNRM5",
+      "usage_type": "APS1-ApiGatewayHttpRequest",
+      "range_begin": "0",
+      "description": "$1.25/million requests - API Gateway HTTP API (first 300 million)",
+      "service": "AmazonApiGateway"
+    },
+    "ddb_write_unit": {
+      "usd": "0.0000007100",
+      "unit": "WriteRequestUnits",
+      "sku": "PZTVP859DVDCGT8X",
+      "usage_type": "APS1-WriteRequestUnits",
+      "range_begin": "0",
+      "description": "$0.71 per million write request units (Asia Pacific (Singapore))",
+      "service": "AmazonDynamoDB"
+    },
+    "ddb_read_unit": {
+      "usd": "0.0000001425",
+      "unit": "ReadRequestUnits",
+      "sku": "XF4WN9CQUFPSY9SQ",
+      "usage_type": "APS1-ReadRequestUnits",
+      "range_begin": "0",
+      "description": "$0.1425 per million read request units (Asia Pacific (Singapore))",
+      "service": "AmazonDynamoDB"
+    },
+    "ddb_storage_gb_month": {
+      "usd": "0.2850000000",
+      "unit": "GB-Mo",
+      "sku": "YCMS8QPJ7DRVHAXD",
+      "usage_type": "APS1-TimedStorage-ByteHrs",
+      "range_begin": "25",
+      "description": "$0.285 per GB-Month of storage used beyond first 25 free GB-Months",
+      "service": "AmazonDynamoDB"
+    },
+    "ddb_pitr_gb_month": {
+      "usd": "0.2280000000",
+      "unit": "GB-Mo",
+      "sku": "GSSDTS2TPQ4RHW4R",
+      "usage_type": "APS1-TimedPITRStorage-ByteHrs",
+      "range_begin": "0",
+      "description": "$0.228 per GB-Month of storage used for DynamoDB PITR backup",
+      "service": "AmazonDynamoDB"
+    },
+    "sqs_request": {
+      "usd": "0.0000004000",
+      "unit": "Requests",
+      "sku": "PVF7MDBNRK7V9S5H",
+      "usage_type": "APS1-Requests-Tier1",
+      "range_begin": "0",
+      "description": "$0.40 per million Amazon SQS standard requests in Tier1 in Asia Pacific (Singapore)",
+      "service": "AWSQueueService"
+    },
+    "s3_put_request": {
+      "usd": "0.0000050000",
+      "unit": "Requests",
+      "sku": "VHRJWKRHEA6VHEFY",
+      "usage_type": "APS1-Requests-Tier1",
+      "range_begin": "0",
+      "description": "$0.005 per 1,000 PUT, COPY, POST, or LIST requests",
+      "service": "AmazonS3"
+    },
+    "s3_get_request": {
+      "usd": "0.0000004000",
+      "unit": "Requests",
+      "sku": "T469UNPYX78434EG",
+      "usage_type": "APS1-Requests-Tier2",
+      "range_begin": "0",
+      "description": "$0.004 per 10,000 GET and all other requests",
+      "service": "AmazonS3"
+    },
+    "s3_storage_gb_month": {
+      "usd": "0.0250000000",
+      "unit": "GB-Mo",
+      "sku": "M6MTARCQFUQBQ2V3",
+      "usage_type": "APS1-TimedStorage-ByteHrs",
+      "range_begin": "0",
+      "description": "$0.025 per GB - first 50 TB / month of storage used",
+      "service": "AmazonS3"
+    },
+    "logs_ingest_gb": {
+      "usd": "0.7000000000",
+      "unit": "GB",
+      "sku": "ZEKCE7VGMSM5XZPW",
+      "usage_type": "APS1-DataProcessing-Bytes",
+      "range_begin": "0",
+      "description": "$0.70 per GB custom log data ingested in Standard log class - Asia Pacific (Singapore)",
+      "service": "AmazonCloudWatch"
+    },
+    "logs_storage_gb_month": {
+      "usd": "0.0300000000",
+      "unit": "GB-Mo",
+      "sku": "RKCBFFXUWXG8KUQY",
+      "usage_type": "APS1-TimedStorage-ByteHrs",
+      "range_begin": "0",
+      "description": "$0.03 per GB-mo of log storage - Asia Pacific (Singapore)",
+      "service": "AmazonCloudWatch"
+    },
+    "custom_metric_month": {
+      "usd": "0.3000000000",
+      "unit": "Metrics",
+      "sku": "2BF5WZ4QVWF9XRRT",
+      "usage_type": "APS1-CW:MetricMonitorUsage",
+      "range_begin": "0",
+      "description": "$0.30 per metric-month for the first 10,000 metrics - Asia Pacific (Singapore)",
+      "service": "AmazonCloudWatch"
+    },
+    "standard_alarm_month": {
+      "usd": "0.1000000000",
+      "unit": "Alarms",
+      "sku": "ERS2PGV5BX4XH4WQ",
+      "usage_type": "APS1-CW:AlarmMonitorUsage",
+      "range_begin": "0",
+      "description": "$0.10 per alarm metric month (standard resolution) - Asia Pacific (Singapore)",
+      "service": "AmazonCloudWatch"
+    },
+    "cloudfront_https_request": {
+      "usd": "0.0000012000",
+      "unit": "Requests",
+      "sku": "W6KHTEW6VCKTZFTR",
+      "usage_type": "AP-Requests-Tier2-HTTPS",
+      "range_begin": "0",
+      "description": "$0.012 per 10,000 HTTPS Requests",
+      "service": "AmazonCloudFront"
+    },
+    "cloudfront_outbound_gb": {
+      "usd": "0.1200000000",
+      "unit": "GB",
+      "sku": "A86N9S7CGUKZHH8P",
+      "usage_type": "AP-DataTransfer-Out-Bytes",
+      "range_begin": "0",
+      "description": "$0.120 per GB - first 10 TB / month data transfer out",
+      "service": "AmazonCloudFront"
+    },
+    "cloudfront_to_origin_gb": {
+      "usd": "0.0600000000",
+      "unit": "GB",
+      "sku": "U8P37H38743VG7RS",
+      "usage_type": "AP-DataTransfer-Out-OBytes",
+      "range_begin": "0",
+      "description": "$0.060 per GB - All data transfer out to Origin (Asia)",
+      "service": "AmazonCloudFront"
+    }
+  },
+  "sources": {
+    "AWSLambda": {
+      "url": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSLambda/current/ap-southeast-1/index.json",
+      "publication_date": "2026-11-11T22:30:04Z",
+      "catalog_sha256": "507b2ef1e3565fa99711aa342d0cfb94fd4222f3276fc8cfee3e89ce03f9ec67"
+    },
+    "AmazonApiGateway": {
+      "url": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonApiGateway/current/ap-southeast-1/index.json",
+      "publication_date": "2026-10-13T00:30:44Z",
+      "catalog_sha256": "1b68d3d8297d075649914fdecd8d47c39e426af4788f8ecb11e3feeb9fcaf107"
+    },
+    "AmazonDynamoDB": {
+      "url": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonDynamoDB/current/ap-southeast-1/index.json",
+      "publication_date": "2026-11-11T15:36:12Z",
+      "catalog_sha256": "6161a616cc9c84d1532a8a949317e9a32a28d509c886e2d1b0a6142bab7774d7"
+    },
+    "AWSQueueService": {
+      "url": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSQueueService/current/ap-southeast-1/index.json",
+      "publication_date": "2026-11-11T15:35:51Z",
+      "catalog_sha256": "e85a7df241b073095852bd71763436efc25437124b38af9f040c729269ca4706"
+    },
+    "AmazonS3": {
+      "url": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonS3/current/ap-southeast-1/index.json",
+      "publication_date": "2026-11-09T15:43:10Z",
+      "catalog_sha256": "556ee114cb7da7b108b7745e93085dce04e9f15c1f1c71f1a715f3d6ac4799be"
+    },
+    "AmazonCloudWatch": {
+      "url": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonCloudWatch/current/ap-southeast-1/index.json",
+      "publication_date": "2026-11-04T21:35:32Z",
+      "catalog_sha256": "506b24f7271de8eace822fe30561862a687b5778443804fef1559acce183c9e1"
+    },
+    "AmazonCloudFront": {
+      "url": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonCloudFront/current/index.json",
+      "publication_date": "2026-10-19T15:05:00Z",
+      "catalog_sha256": "17e3e9aeb5add88d1f6ba78f7fdcfb2405a83a9388228adc46c8ae09da9ca2ce"
+    }
+  }
+}
